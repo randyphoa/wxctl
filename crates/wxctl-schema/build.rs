@@ -735,9 +735,13 @@ fn main() {
                 }
 
                 // Build absolute include_str! path (include_str! in generated files
-                // resolves relative to OUT_DIR, so we must use absolute paths)
+                // resolves relative to OUT_DIR, so we must use absolute paths).
+                // Normalize to forward slashes: the path is embedded verbatim into an
+                // include_str!("...") literal, and on Windows the backslash separators
+                // would be parsed as invalid string escapes (\a, \w, ...). rustc accepts
+                // forward slashes in include paths on all platforms.
                 let file_name = path.file_name().unwrap().to_str().unwrap();
-                let abs_path = src_dir.join(include_prefix).join(file_name).to_str().unwrap().to_string();
+                let abs_path = src_dir.join(include_prefix).join(file_name).to_str().unwrap().replace('\\', "/");
                 include_paths.insert(name, abs_path);
 
                 all_schemas.push(schema_file.resource);
