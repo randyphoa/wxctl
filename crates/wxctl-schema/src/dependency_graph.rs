@@ -638,7 +638,9 @@ mod tests {
             std::fs::write(golden_path, &actual).expect("write golden snapshot");
             return;
         }
-        let expected = std::fs::read_to_string(golden_path).unwrap_or_default();
+        // Normalize line endings: git may check out the golden file with CRLF on
+        // Windows, whereas the generated snapshot always uses LF (writeln!).
+        let expected = std::fs::read_to_string(golden_path).unwrap_or_default().replace("\r\n", "\n");
         assert_eq!(actual, expected, "dependency graph drifted from the committed golden snapshot.\nIf this change is intentional, regenerate and review the diff:\n    WXCTL_REGEN_GRAPH_GOLDEN=1 cargo test -p wxctl-schema -- graph_snapshot");
     }
 

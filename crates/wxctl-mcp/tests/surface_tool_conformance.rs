@@ -20,7 +20,8 @@ fn wxctl_bin() -> PathBuf {
     // manifest_dir = .../wxctl/crates/wxctl-mcp
     // workspace root = .../wxctl
     let workspace_root = manifest_dir.parent().expect("crates/").parent().expect("wxctl root/");
-    workspace_root.join("target").join("debug").join("wxctl")
+    // EXE_SUFFIX is ".exe" on Windows, "" elsewhere — the built binary is wxctl.exe there.
+    workspace_root.join("target").join("debug").join(format!("wxctl{}", std::env::consts::EXE_SUFFIX))
 }
 
 // Config-tier tools every end-to-end surface must expose (always present, both modes).
