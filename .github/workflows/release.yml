@@ -60,10 +60,21 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      # aws-lc-sys (rustls crypto provider) assembles x86_64 asm with NASM
+      # aws-lc-sys (rustls crypto provider) assembles x86_64 asm with NASM.
+      # Installed via Chocolatey (preinstalled on windows runners) rather than
+      # ilammy/setup-nasm, whose latest release still runs on the deprecated
+      # Node 20 action runtime. nasm.exe location is resolved dynamically and
+      # appended to PATH so cargo/aws-lc-sys can find it.
       - name: Install NASM
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
+        shell: pwsh
+        run: |
+          choco install nasm -y --no-progress
+          $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramData, $env:LOCALAPPDATA) | Where-Object { $_ -and (Test-Path $_) }
+          $nasm = Get-ChildItem -Path $roots -Filter nasm.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $nasm) { throw "nasm.exe not found after install" }
+          Split-Path $nasm.FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $nasm.FullName -v
 
       - name: Build
         run: cargo build --release --locked -p wxctl --target ${{ matrix.target }}
