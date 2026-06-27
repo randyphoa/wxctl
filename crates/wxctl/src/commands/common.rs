@@ -350,13 +350,18 @@ mod tests {
             ("kind: business_terms\nref_name: bt\nimport_file: ./terms.csv\n", "import_file", "terms.csv"),
             ("kind: package_extension\nref_name: pe\ntype: conda_yml\nsource_path: env_e2e.yaml\nspace_id: s\n", "source_path", "env_e2e.yaml"),
         ];
+        // Use a platform-absolute base: a Unix-style "/tmp/cell" is not absolute on
+        // Windows (no drive prefix), which would break the is_absolute() check.
+        let config_dir = std::env::temp_dir().join("cell");
         for (yaml, field, tail) in cases {
             let mut config = Config::from_yaml(yaml).unwrap();
-            resolve_file_paths(&mut config, Path::new("/tmp/cell"));
+            resolve_file_paths(&mut config, &config_dir);
             let resolved = config.resources[0].data.get(*field).and_then(|v| v.as_str()).unwrap();
-            assert!(Path::new(resolved).is_absolute(), "{field} should be absolute, got {resolved}");
-            assert!(resolved.starts_with("/tmp/cell"), "{field} should be under config_dir, got {resolved}");
-            assert!(resolved.ends_with(tail), "{field} tail should be preserved, got {resolved}");
+            let resolved_path = Path::new(resolved);
+            assert!(resolved_path.is_absolute(), "{field} should be absolute, got {resolved}");
+            assert!(resolved_path.starts_with(&config_dir), "{field} should be under config_dir, got {resolved}");
+            // Component-based check is separator-agnostic (tail uses '/').
+            assert!(resolved_path.ends_with(tail), "{field} tail should be preserved, got {resolved}");
         }
     }
 
