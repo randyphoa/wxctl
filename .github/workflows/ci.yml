@@ -61,7 +61,9 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Test
-        run: cargo test --locked
+        # --no-fail-fast: run every crate's tests even if one fails, so a single
+        # run surfaces all failures (e.g. all platform-specific ones at once).
+        run: cargo test --locked --no-fail-fast
 
   msrv:
     name: MSRV (1.88)

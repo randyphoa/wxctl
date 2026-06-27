@@ -38,7 +38,9 @@ pub fn discover_existing_resources(resources_dir: Option<&str>) -> Result<Vec<St
             if entry.file_type()?.is_file() {
                 let rel = kb_dir.strip_prefix(base).unwrap_or(kb_dir);
                 let rel_path = rel.join(entry.file_name());
-                files.push(format!("- ./{}", rel_path.display()));
+                // Emit forward slashes: this string lands in portable config/prompt
+                // output, and .display() would use '\' on Windows.
+                files.push(format!("- ./{}", rel_path.to_string_lossy().replace('\\', "/")));
             }
         }
     }

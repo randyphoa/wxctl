@@ -60,6 +60,9 @@ pub fn scaffold_config_in_cwd(config: &Config, cwd: &Path, dry_run: bool) -> (Sc
 /// (cwd-relative). Mirrors the per-kind path fields `scaffold_resource` consumes.
 /// No-op for kinds with no source-path field, or resources missing the field
 /// (those become manifest `failed` entries downstream, as today).
+///
+/// Emitted values are normalized to forward slashes (`to_string_lossy().replace('\\', "/")`):
+/// these land in portable config YAML, so they must not carry Windows `\` separators.
 fn rewrite_resource_paths(kind: &str, data: &mut Value, rel_base: &Path) {
     let Some(obj) = data.as_object_mut() else { return };
     match kind {
@@ -67,18 +70,18 @@ fn rewrite_resource_paths(kind: &str, data: &mut Value, rel_base: &Path) {
             let binding = obj.get("binding").cloned();
             if binding.as_ref().and_then(|b| b.get("python")).is_some() {
                 // Python: source_path is the tool dir.
-                obj.insert("source_path".into(), Value::String(rel_base.to_string_lossy().into_owned()));
+                obj.insert("source_path".into(), Value::String(rel_base.to_string_lossy().replace('\\', "/")));
             } else if binding.as_ref().and_then(|b| b.get("openapi")).is_some() {
                 // OpenAPI: spec_path is a single file under the dir.
-                obj.insert("spec_path".into(), Value::String(rel_base.join("openapi.yaml").to_string_lossy().into_owned()));
+                obj.insert("spec_path".into(), Value::String(rel_base.join("openapi.yaml").to_string_lossy().replace('\\', "/")));
             } else if binding.as_ref().and_then(|b| b.get("flow")).is_some() {
                 // Flow: the flow file is named by source_path (validate-gated) or flow_path.
                 // Only rewrite a field that is already present, preserving the file name +
                 // extension (json vs yaml drives the stub format in scaffold_tool).
                 if let Some(name) = obj.get("source_path").and_then(|v| v.as_str()).map(file_name_or).map(str::to_owned) {
-                    obj.insert("source_path".into(), Value::String(rel_base.join(&name).to_string_lossy().into_owned()));
+                    obj.insert("source_path".into(), Value::String(rel_base.join(&name).to_string_lossy().replace('\\', "/")));
                 } else if let Some(name) = obj.get("flow_path").and_then(|v| v.as_str()).map(file_name_or).map(str::to_owned) {
-                    obj.insert("flow_path".into(), Value::String(rel_base.join(&name).to_string_lossy().into_owned()));
+                    obj.insert("flow_path".into(), Value::String(rel_base.join(&name).to_string_lossy().replace('\\', "/")));
                 }
             }
         }
@@ -88,11 +91,11 @@ fn rewrite_resource_paths(kind: &str, data: &mut Value, rel_base: &Path) {
                 for doc in docs.iter_mut() {
                     if let Some(s) = doc.as_str() {
                         let name = file_name_or(s).to_owned();
-                        *doc = Value::String(rel_base.join(&name).to_string_lossy().into_owned());
+                        *doc = Value::String(rel_base.join(&name).to_string_lossy().replace('\\', "/"));
                     } else if let Some(o) = doc.as_object_mut()
                         && let Some(name) = o.get("path").and_then(|v| v.as_str()).map(file_name_or).map(str::to_owned)
                     {
-                        o.insert("path".into(), Value::String(rel_base.join(&name).to_string_lossy().into_owned()));
+                        o.insert("path".into(), Value::String(rel_base.join(&name).to_string_lossy().replace('\\', "/")));
                     }
                 }
             }
@@ -102,12 +105,12 @@ fn rewrite_resource_paths(kind: &str, data: &mut Value, rel_base: &Path) {
             // when the incoming value has no extension, else preserve its file name.
             if let Some(cur) = obj.get("source_path").and_then(|v| v.as_str()) {
                 let name = if Path::new(cur).extension().is_none() { "score.py".to_string() } else { file_name_or(cur).to_owned() };
-                obj.insert("source_path".into(), Value::String(rel_base.join(&name).to_string_lossy().into_owned()));
+                obj.insert("source_path".into(), Value::String(rel_base.join(&name).to_string_lossy().replace('\\', "/")));
             }
         }
         "toolkit" if obj.contains_key("server_path") => {
             // server_path is the server dir.
-            obj.insert("server_path".into(), Value::String(rel_base.to_string_lossy().into_owned()));
+            obj.insert("server_path".into(), Value::String(rel_base.to_string_lossy().replace('\\', "/")));
         }
         _ => {}
     }
