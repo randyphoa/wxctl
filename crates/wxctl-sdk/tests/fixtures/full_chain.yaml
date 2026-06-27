@@ -1,0 +1,46 @@
+# Resource configs based on examples/simple/config.yaml — keep in sync.
+# Tools MUST have a binding + source_path; bare tools cause API 500.
+# Placeholders: __TEST_ID__ (uuid), __MANIFEST_DIR__ (crate root)
+kind: orchestrate_connection
+ref_name: wxctl_test_conn___TEST_ID__
+app_id: wxctl_test_conn___TEST_ID__
+connection_type: key_value_creds
+environment: draft
+preference: team
+credentials:
+    api_key: test_key___TEST_ID__
+---
+kind: tool
+ref_name: wxctl_test_tool___TEST_ID__
+name: wxctl_test_tool___TEST_ID__
+display_name: wxctl_test_tool___TEST_ID__
+description: Integration test tool
+permission: read_write
+source_path: __MANIFEST_DIR__/tests/fixtures/calculator_tool
+binding:
+    python:
+        function: calculator:main
+---
+kind: knowledge_base
+ref_name: wxctl_test_kb___TEST_ID__
+name: wxctl_test_kb___TEST_ID__
+description: Integration test knowledge base
+---
+kind: model
+ref_name: wxctl_test_model___TEST_ID__
+name: virtual-model/watsonx/wxctl_test_model___TEST_ID__
+display_name: wxctl_test_model___TEST_ID__
+model_type: chat
+connection_id: ${orchestrate_connection.wxctl_test_conn___TEST_ID__}
+provider_config:
+  provider: watsonx
+---
+kind: agent
+ref_name: wxctl_test_agent___TEST_ID__
+name: wxctl_test_agent___TEST_ID__
+description: Integration test agent with full dependency chain
+llm: ${model.wxctl_test_model___TEST_ID__}
+tools:
+  - ${tool.wxctl_test_tool___TEST_ID__}
+knowledge_base:
+  - ${knowledge_base.wxctl_test_kb___TEST_ID__}

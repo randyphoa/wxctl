@@ -1,0 +1,125 @@
+resource:
+  name: rule
+  service: common_core
+  kind: rule
+  version: v1
+  description: >
+      A Rule is an automated policy enforcement mechanism that implements data governance controls in
+      Watsonx Data. Rules define trigger conditions and corresponding actions to automate governance
+      workflows such as access control, data quality validation, metadata enrichment, notifications,
+      and compliance enforcement. Rules support event-driven governance by automatically responding to
+      data operations, metadata changes, or scheduled triggers. They enable organizations to codify
+      governance policies and ensure consistent, automated enforcement across the data platform.
+
+  api:
+    base_path: /v3/enforcement/rules
+    id_field: guid
+    list_endpoint: /v3/enforcement/rules
+    get_endpoint: /v3/enforcement/rules/{guid}
+    create_endpoint: /v3/enforcement/rules
+    create_method: POST
+    update_endpoint: /v3/enforcement/rules/{guid}
+    update_method: PUT
+    delete_endpoint: /v3/enforcement/rules/{guid}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: guid
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during rule creation. This GUID serves as the primary
+            key for the rule and is used in rule management operations including retrieval, updates,
+            execution monitoring, and deletion.
+
+      - name: rule_id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Alternative server-assigned rule identifier that serves as an alias for guid. Some APIs may
+            reference rules using rule_id instead of guid. Both identifiers point to the same rule
+            instance and are automatically assigned and synchronized by the system.
+
+      - name: name
+        type: string
+        required: true
+        description: >
+            Unique name identifier for the rule. This name must be unique across all rules and serves
+            as the primary human-readable reference for rule identification, monitoring, and management.
+            The name should clearly describe the governance policy or control that the rule implements.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_\\s-]+$"
+
+      - name: description
+        type: string
+        required: false
+        description: >
+            Human-readable description explaining the rule's purpose, business rationale, and governance
+            objectives. Should document what policy the rule enforces, why it exists, and what outcomes
+            it achieves. Helps governance teams understand and maintain the rule over time.
+
+      - name: governance_type_id
+        type: string
+        required: true
+        description: >
+            Identifier specifying the type of governance control this rule implements. The governance
+            type determines what events the rule can respond to, what actions are available, and how
+            the rule integrates with the broader governance framework. The live `/v3/enforcement/governance_types`
+            surface accepts `Access` and `ResourceControl`; query that endpoint for the full set.
+
+      - name: trigger
+        type: array
+        required: true
+        description: >
+            Trigger condition specification that defines when the rule should execute. The trigger
+            is an array representing a condition expression, typically in the form of
+            [subject, operator, value] (e.g., ["$Asset.InferredClassification", "CONTAINS", ["$term_id"]]).
+            The trigger structure varies by governance_type_id and is evaluated by the governance
+            engine to determine rule execution timing.
+
+      - name: action
+        type: object
+        required: true
+        description: >
+            Action specification that defines what operations the rule performs when triggered. Actions
+            can include access grants/denials, metadata assignments, notifications, workflow initiations,
+            data quality checks, or cascading subactions. The action structure varies by governance_type_id
+            and can contain nested subactions for complex multi-step governance workflows. Actions are
+            executed atomically when the trigger condition is met.
+
+      - name: state
+        type: string
+        required: false
+        allowed_values: [draft, active, archived]
+        default: draft
+        description: >
+            Lifecycle state controlling whether the rule is actively enforced. The live
+            `/v3/enforcement/rules` API uses lowercase states: `draft` rules are defined but not
+            executed, allowing testing and review before activation; `active` rules are enforced by
+            the governance engine and execute automatically when their trigger conditions are met;
+            `archived` rules are retired but retained for reference. Defaults to `draft`.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: rules
+      id_source: guid
+    state_fields:
+      - name
+      - description
+      - governance_type_id
+      - trigger
+      - action
+      - state
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}

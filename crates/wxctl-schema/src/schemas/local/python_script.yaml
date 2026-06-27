@@ -1,0 +1,91 @@
+resource:
+  name: python_script
+  service: local
+  kind: python_script
+  version: v1
+  description: >
+    Executes a Python script locally. Useful for custom transformations,
+    data processing, or orchestration logic within the pipeline.
+
+  api:
+    # Dummy endpoints - handler bypasses these via HookOutcome::Handled
+    base_path: /local/python_script
+    id_field: name
+    list_endpoint: /local/python_script
+    get_endpoint: /local/python_script/{name}
+    create_endpoint: /local/python_script
+    create_method: POST
+    update_endpoint: /local/python_script/{name}
+    update_method: PUT
+    delete_endpoint: /local/python_script/{name}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      # All fields use Body location so they're available to the handler
+      # HookOutcome::Handled bypasses HTTP, so nothing is actually sent
+      - name: ref_name
+        type: string
+        required: false
+        description: Unique identifier for this script instance (used for referencing)
+
+      - name: script
+        type: string
+        required: false
+        description: >
+          Inline Python script to execute. Either 'script' or 'script_path'
+          must be provided.
+
+      - name: script_path
+        type: string
+        required: false
+        description: >
+          Path to Python script file. Either 'script' or 'script_path'
+          must be provided.
+
+      - name: args
+        type: array
+        required: false
+        description: Command-line arguments to pass to the script
+
+      - name: env
+        type: object
+        required: false
+        description: Environment variables for script execution
+
+      - name: working_dir
+        type: string
+        required: false
+        description: Working directory for script execution
+
+      - name: timeout_seconds
+        type: integer
+        required: false
+        description: Maximum execution time in seconds (default 300)
+
+      - name: python_path
+        type: string
+        required: false
+        description: Path to Python interpreter (default uses system python3)
+
+      # Output fields (set by handler)
+      - name: exit_code
+        type: integer
+        location: Computed
+        description: Exit code from script execution
+
+      - name: stdout
+        type: string
+        location: Computed
+        description: Standard output from script
+
+      - name: stderr
+        type: string
+        location: Computed
+        description: Standard error from script
+
+  reconciliation:
+    discovery:
+      method: skip
+    state_fields: []
+    update_strategy: replace

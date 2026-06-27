@@ -1,0 +1,1 @@
+Enable the watsonx.data Semantic Automation Layer for a retail bank and auto-enrich a customer table against a business glossary: register IBM Knowledge Catalog, enable SAL, upload a glossary of customer-data terms, set global and per-project enrichment defaults, and run an enrichment job over the customer table.

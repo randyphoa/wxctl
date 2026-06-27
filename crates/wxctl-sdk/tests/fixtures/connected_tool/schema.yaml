@@ -1,0 +1,26 @@
+input_schema:
+    type: object
+    properties:
+        query:
+            type: string
+            description: The search query to look up
+    required: [query]
+output_schema:
+    type: object
+    description: Lookup results
+    properties:
+        status:
+            type: string
+        connected:
+            type: boolean
+        query:
+            type: string
+        results:
+            type: array
+            items:
+                type: object
+                properties:
+                    name:
+                        type: string
+                    id:
+                        type: string

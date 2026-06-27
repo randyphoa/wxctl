@@ -1,0 +1,59 @@
+resource:
+  name: sal_global_settings
+  service: watsonx_data
+  kind: sal_global_settings
+  version: v1
+  description: >
+      Global metadata-enrichment defaults for the Semantic Automation Layer (SAL)
+      on watsonx.data. A per-instance SINGLETON: get and set both hit
+      `/v3/sal_integration/enrichment/global_settings` with no `{id}`
+      (discovery.method: singleton). Set = PUT the settings (v3 uses PUT, not the
+      v2 POST). There is no DELETE endpoint — destroy is a no-op via
+      `on_destroy: retain` on the resource (the fixture sets it). No custom
+      handler: the body is two pass-through objects (`semantic_expansion`,
+      `term_assignment`). Requires SAL enabled first (`sal_integration`); the
+      endpoint 400s `SALAuthenticateFailure` otherwise. Identical on SaaS and Software.
+      ⚠ The v3 path + PUT method are LIVE-DISCOVERED (CP4D) — do NOT let a
+      spec/OpenAPI refresh revert this to the v2 `POST /sal_integrations/...` shape.
+
+  api:
+    base_path: /v3/sal_integration/enrichment/global_settings
+    id_field: id
+    get_endpoint: /v3/sal_integration/enrichment/global_settings
+    create_endpoint: /v3/sal_integration/enrichment/global_settings
+    create_method: PUT
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Unused id slot (the settings endpoint returns no id); satisfies id_field.
+
+      - name: semantic_expansion
+        type: object
+        required: false
+        description: >
+            Semantic-expansion config — description/name generation toggles and
+            assignment/suggestion thresholds. Pass-through object per the SAL spec.
+
+      - name: term_assignment
+        type: object
+        required: false
+        description: >
+            Term-assignment config — class/LLM/ML-based assignment toggles and
+            term assignment/suggestion thresholds. Pass-through object per the SAL spec.
+
+  reconciliation:
+    discovery:
+      method: singleton
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

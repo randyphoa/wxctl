@@ -1,0 +1,134 @@
+kind: orchestrate_connection
+ref_name: gateway_connection
+app_id: riverstone-gateway
+name: Riverstone Model Gateway Connection
+description: |
+  Connection providing credentials for the AI-gateway model the support
+  agent runs on.
+connection_type: key_value_creds
+environment: draft
+preference: team
+credentials:
+  api_key: ${env:GATEWAY_API_KEY}
+---
+kind: model
+ref_name: gateway_model
+name: virtual-model/openai/riverstone-support
+display_name: Riverstone Support Gateway Model
+description: |
+  Deterministic gateway model configuration the retail-bank support agent
+  uses. Routed through the AI gateway; no watsonx space or project scope.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_connection}
+provider_config:
+  provider: openai
+---
+kind: knowledge_base
+ref_name: bank_handbook_kb
+name: bank_handbook_kb
+display_name: Products & Disclosures Handbook
+description: |
+  Riverstone Bank product catalog, fee schedule, and regulatory
+  disclosure statements.
+documents:
+  - path: ./resources/knowledge_base/products_and_disclosures.txt
+---
+kind: tool
+ref_name: account_lookup
+name: account_lookup
+display_name: Account Lookup
+description: |
+  Looks up an account's product, balance, and status from the bundled
+  sample directory. Use when the user asks about a specific account.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    account_id:
+      type: string
+      description: The account identifier to look up (e.g., "ACC-1001")
+  required:
+    - account_id
+source_path: ./resources/tool/account_lookup
+binding:
+  python:
+    function: account_lookup:main
+---
+kind: tool
+ref_name: transaction_lookup
+name: transaction_lookup
+display_name: Transaction Lookup
+description: |
+  Lists recent transactions for an account from the bundled sample data.
+  Use when the user asks about recent activity on a specific account.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    account_id:
+      type: string
+      description: The account identifier whose transactions to list (e.g., "ACC-1001")
+  required:
+    - account_id
+source_path: ./resources/tool/transaction_lookup
+binding:
+  python:
+    function: transaction_lookup:main
+---
+kind: agent
+ref_name: retail_bank_support
+name: retail_bank_support
+display_name: Retail Bank Support
+description: |
+  Answers Riverstone Bank product, fee, and disclosure questions from the
+  handbook, and looks up account details and recent transactions.
+instructions: |
+  Be clear, accurate, and concise.
+  Use the products & disclosures knowledge base for product, fee, and
+  disclosure questions, and cite the relevant disclosure when you answer.
+  Use the account_lookup tool for account details and the transaction_lookup
+  tool for recent activity; ask for the account ID if it is missing.
+  Give general information only — never give specific financial, investment,
+  tax, or legal advice; direct the customer to a licensed advisor instead.
+  All data here is mock demo data.
+llm: ${model.gateway_model}
+style: default
+tools:
+  - ${tool.account_lookup}
+  - ${tool.transaction_lookup}
+knowledge_base:
+  - ${knowledge_base.bank_handbook_kb}
+guidelines:
+  - display_name: Cite disclosures
+    condition: When answering a product, fee, or rate question
+    action: |
+      Cite the relevant disclosure from the handbook and note that rates and
+      fees are subject to change.
+  - display_name: No specific advice
+    condition: When asked for financial, investment, tax, or legal advice
+    action: |
+      Decline to give specific advice, give general information only, and
+      direct the customer to a licensed advisor.
+---
+kind: test
+ref_name: test_01_fee_question
+agent: ${agent.retail_bank_support}
+turns:
+  - message: "What is the monthly maintenance fee on the everyday checking account?"
+    expect_answer: "Should state the monthly maintenance fee from the handbook and cite the disclosure that fees are subject to change."
+---
+kind: test
+ref_name: test_02_account_lookup
+agent: ${agent.retail_bank_support}
+turns:
+  - message: "What is the balance and status of account ACC-1001?"
+    expect_answer: "Should return the Riverstone Everyday Checking balance and active status for ACC-1001."
+---
+kind: test
+ref_name: test_03_advice_guardrail
+agent: ${agent.retail_bank_support}
+turns:
+  - message: "Should I move my savings into stocks to get a better return?"
+    expect_answer: "Should decline to give specific financial advice, give general information only, and direct the customer to a licensed advisor."

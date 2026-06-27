@@ -1,0 +1,165 @@
+resource:
+  name: catalog
+  service: common_core
+  kind: catalog
+  version: v1
+  description: >
+      A Catalog is a metadata repository that organizes and manages table schemas, partitions, and file
+      locations for data lake operations in Watsonx Data. Catalogs support multiple table formats including
+      Apache Iceberg, Apache Hive, and Delta Lake, providing ACID transactions and schema evolution capabilities.
+      Each catalog is backed by cloud object storage and integrates with query engines for data access and
+      processing.
+
+  api:
+    base_path: /v2/catalogs
+    id_field: guid
+    list_endpoint: /v2/catalogs
+    get_endpoint: /v2/catalogs/{guid}
+    create_endpoint: /v2/catalogs?check_bucket_existence=false
+    create_method: POST
+    update_endpoint: /v2/catalogs/{guid}
+    update_method: PATCH
+    delete_endpoint: /v2/catalogs/{guid}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: guid
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during catalog creation. This GUID is used to reference
+            the catalog in other resources such as connections, tables, and query operations, and serves
+            as the primary key for all catalog management operations.
+
+      - name: name
+        type: string
+        required: true
+        description: >
+            Unique name identifier for the catalog. This name must be unique across all catalogs in the
+            Watsonx Data instance and is used in SQL queries and data operations to specify which catalog
+            contains the target tables. The name becomes part of the three-part table naming convention:
+            catalog.schema.table.
+        validation:
+          min_length: 1
+          max_length: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+      - name: description
+        type: string
+        required: false
+        description: >
+            Human-readable description of the catalog's purpose and contents. Used for documentation and
+            helping users understand what data and schemas are organized within this catalog. This description
+            appears in catalog listings and management interfaces.
+
+      - name: generator
+        type: string
+        required: false
+        default: wxctl
+        description: >
+            Identifier for the tool or system that generated this catalog. Used for tracking catalog provenance
+            and management tooling. Defaults to 'wxctl' when created by this tool.
+
+      - name: bucket
+        type: object
+        required: true
+        description: >
+            Bucket configuration for catalog storage. Specifies the bucket name and type for storing
+            catalog metadata and table data.
+        schema:
+          fields:
+            - name: bucket_name
+              type: string
+              required: true
+              description: Name of the bucket where catalog data is stored.
+
+            - name: bucket_type
+              type: string
+              required: true
+              description: Type of the bucket storage.
+              allowed_values: [assetfiles]
+
+      - name: storage
+        type: object
+        required: false
+        description: >
+            Storage configuration that specifies where catalog metadata and table data are physically stored.
+            References a bucket resource and defines the cloud storage provider type for accessing the data.
+        schema:
+          fields:
+            - name: type
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Cloud storage provider type that must match the bucket's storage type. Determines the
+                  protocol and authentication mechanism used for accessing catalog data. This type cannot
+                  be changed after catalog creation.
+              allowed_values: [s3, cos, azure]
+
+            - name: bucket
+              type: object
+              required: true
+              description: >
+                  Bucket configuration for the catalog storage. Specifies the bucket name and type for
+                  storing catalog metadata and table data.
+              schema:
+                fields:
+                  - name: bucket_name
+                    type: string
+                    required: true
+                    description: >
+                        Name of the bucket where catalog data is stored.
+
+                  - name: bucket_type
+                    type: string
+                    required: true
+                    description: >
+                        Type of the bucket storage.
+                    allowed_values: [assetfiles]
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+            Categorization tags for organizing and discovering catalogs. Tags help users filter and find
+            catalogs based on data domain, sensitivity level, environment, or other organizational dimensions.
+            These tags are user-defined and have no impact on catalog functionality.
+
+      - name: created_at
+        type: timestamp
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            ISO 8601 timestamp indicating when the catalog was created. Automatically set by the system
+            during catalog creation and cannot be modified. Used for audit trails and lifecycle management.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: catalogs
+      id_source: guid
+    state_fields:
+      - name
+      - description
+    update_strategy: patch
+    use_json_patch: true
+    json_patch_path_prefix: "/entity"
+    immutable_fields:
+      - storage.type
+
+  hooks:
+    post_create: common_core::handlers::catalog::wait_for_ready
+
+  deployments:
+    "software-5.3":
+      # SaaS and Software 5.3.x share /v2/catalogs (confirmed in Software 5.3.0 spec).
+      # Empty overlay declares the kind is supported on this deployment without
+      # altering the base block.
+      api: {}
+  unsupported_on: []

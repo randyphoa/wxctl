@@ -1,0 +1,286 @@
+resource:
+  name: common_core_connection
+  service: common_core
+  kind: common_core_connection
+  version: v1
+  description: >
+      A Connection is a data source configuration that enables Watsonx Data to access external databases,
+      object storage systems, and other data repositories. Connections encapsulate authentication credentials,
+      endpoint information, and connection properties specific to each datasource type. They can be associated
+      with catalogs for metadata management or used directly for data access operations. Connections support
+      multiple datasource types including relational databases (PostgreSQL, MySQL, Oracle, DB2, Netezza) and
+      cloud object storage (S3, COS, Azure).
+
+  api:
+    base_path: /v2/connections
+    id_field: asset_id
+    list_endpoint: /v2/connections
+    get_endpoint: /v2/connections/{asset_id}
+    create_endpoint: /v2/connections
+    create_method: POST
+    update_endpoint: /v2/connections/{asset_id}
+    update_method: PATCH
+    delete_endpoint: /v2/connections/{asset_id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: asset_id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during connection creation. This asset_id is used to
+            reference the connection in other resources and API operations, serving as the primary key
+            for connection management including retrieval, updates, and deletion.
+
+      - name: name
+        type: string
+        required: true
+        description: >
+            Unique name identifier for the connection. This name must be unique across all connections
+            in the Watsonx Data instance and is used as the primary human-readable reference when
+            configuring catalogs, running queries, or managing data sources.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+      - name: datasource_type
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Type of external data source this connection represents. Can be either a named type
+            (postgres, mysql, oracle, db2, netezza, s3, cos, azure) or a UUID identifying a custom
+            datasource definition. Determines which connection properties are required and how the
+            system authenticates and communicates with the datasource. Database types use JDBC
+            connections with username/password authentication. Storage types use cloud-native
+            protocols with key-based authentication. This type cannot be changed after connection creation.
+
+      - name: description
+        type: string
+        required: false
+        description: >
+            Human-readable description of the connection's purpose and contents. Used for documentation
+            and helping users understand what data source this connection provides access to. Appears
+            in connection listings and management interfaces.
+
+      - name: properties
+        type: object
+        required: true
+        description: >
+            Connection properties specific to the datasource type. The required properties vary based on
+            datasource_type. Database connections typically require host, port, database, username, and
+            password. Storage connections require bucket/url, access_key, and secret_key. Properties are
+            validated based on the datasource_type to ensure all required credentials are provided.
+        schema:
+          fields:
+            - name: bucket
+              type: string
+              required: false
+              description: >
+                  Cloud storage bucket name for object storage connections (s3, cos, azure). Specifies
+                  the target bucket that this connection provides access to. Required for storage-type
+                  connections.
+
+            - name: url
+              type: string
+              required: false
+              description: >
+                  Service endpoint URL for cloud storage connections. Specifies the cloud provider's
+                  storage API endpoint (e.g., https://s3.region.amazonaws.com). Required for storage
+                  connections to determine where API requests are sent.
+
+            - name: access_key
+              type: string
+              required: false
+              description: >
+                  Access key ID for cloud storage authentication. For AWS S3, this is the IAM access
+                  key ID. For IBM COS, this is the HMAC access key. For Azure, this is the storage
+                  account name. Required for storage-type datasources.
+
+            - name: secret_key
+              type: string
+              required: false
+              description: >
+                  Secret access key for cloud storage authentication. For AWS S3, this is the IAM secret
+                  access key. For IBM COS, this is the HMAC secret key. For Azure, this is the storage
+                  account key. Stored securely and never returned in API responses.
+
+            - name: api_key
+              type: string
+              required: false
+              description: >
+                  API key for IBM Cloud services authentication. Used specifically for IBM COS connections
+                  when using IAM API key authentication instead of HMAC credentials. Alternative to
+                  access_key/secret_key for IBM Cloud resources.
+
+            - name: resource_instance_id
+              type: string
+              required: false
+              description: >
+                  IBM Cloud resource instance identifier (CRN) for COS connections. Identifies the specific
+                  COS instance to authenticate against when using IAM-based authentication. Used in
+                  conjunction with api_key for IBM Cloud authentication.
+
+            - name: auth_method
+              type: string
+              required: false
+              description: >
+                  Authentication method for the connection. Specifies whether to use HMAC credentials,
+                  IAM API keys, or other authentication mechanisms supported by the datasource. Common
+                  values include 'hmac' and 'iam'.
+
+            - name: iam_url
+              type: string
+              required: false
+              description: >
+                  IBM Cloud IAM service endpoint URL for token-based authentication. Used when auth_method
+                  is 'iam' to obtain access tokens for COS operations. Typically points to IBM Cloud's
+                  IAM service at https://iam.cloud.ibm.com.
+
+            - name: trust_all_ssl_cert
+              type: boolean
+              required: false
+              description: >
+                  Whether to trust all SSL certificates including self-signed certificates. When true,
+                  SSL certificate validation is disabled. Use with caution - should only be enabled for
+                  development environments or when connecting to systems with self-signed certificates.
+                  Defaults to false for security.
+
+            - name: host
+              type: string
+              required: false
+              description: >
+                  Database server hostname or IP address for database-type connections (postgres, mysql,
+                  oracle, db2, netezza). Specifies where the database server is located. Required for
+                  all database connections.
+
+            - name: port
+              type: string
+              required: false
+              description: >
+                  Database server port number for database connections. Each database type has a default
+                  port (PostgreSQL: 5432, MySQL: 3306, Oracle: 1521, DB2: 50000), but this can be
+                  customized if the database runs on a non-standard port.
+
+            - name: database
+              type: string
+              required: false
+              description: >
+                  Database name or instance identifier to connect to within the database server. For
+                  PostgreSQL and MySQL, this is the database name. For Oracle, this is the service name
+                  or SID. Required for database-type connections to specify the target database.
+
+            - name: username
+              type: string
+              required: false
+              description: >
+                  Database username for authentication. The user account must have appropriate privileges
+                  to read (and optionally write) data in the target database. Required for all database-type
+                  connections.
+
+            - name: password
+              type: string
+              required: false
+              description: >
+                  Database password for authentication. Used in conjunction with username for database
+                  login. Stored securely and never returned in API responses after initial creation.
+                  Required for database-type connections.
+
+            - name: ssl
+              type: string
+              required: false
+              description: >
+                  SSL/TLS mode for database connections. Controls whether the connection uses encrypted
+                  communication. Common values include 'require', 'prefer', 'allow', 'disable'. When
+                  set to 'require', the connection will fail if SSL cannot be established.
+
+            - name: command_timeout
+              type: string
+              required: false
+              description: >
+                  Maximum time in seconds to wait for database commands to complete before timing out.
+                  Helps prevent long-running queries from blocking resources indefinitely. Applies to
+                  database-type connections. If not specified, uses the database driver's default timeout.
+
+      - name: catalog_id
+        type: string
+        required: false
+        location: Query
+        description: >
+            Reference to a catalog resource that this connection is associated with. When specified, the
+            connection is scoped to the catalog for metadata management and query operations. Creates a
+            soft dependency on the catalog resource. Mutually exclusive with project_id and space_id.
+            Passed as query parameter in API requests.
+        references:
+          resource: catalog
+          field: guid
+
+      - name: project_id
+        type: string
+        required: false
+        immutable: true
+        location: Query
+        description: >
+            IBM Cloud project identifier for scoping the connection within a specific project context.
+            When specified, the connection is accessible only within the designated project. Mutually
+            exclusive with catalog_id and space_id. Cannot be changed after connection creation.
+            Passed as query parameter in API requests.
+        references:
+          resource: project
+          field: guid
+          optional: true
+
+      - name: space_id
+        type: string
+        required: false
+        immutable: true
+        location: Query
+        description: >
+            IBM Cloud space identifier for scoping the connection within a specific deployment space.
+            When specified, the connection is accessible only within the designated space. Mutually
+            exclusive with catalog_id and project_id. Cannot be changed after connection creation.
+            Passed as query parameter in API requests.
+        references:
+          resource: space
+          field: id
+          optional: true
+
+      - name: test
+        type: string
+        required: false
+        location: Query
+        description: >
+            When set to "false", the IBM Cloud /v2/connections endpoint skips its synchronous
+            connectivity check against the datasource during create. Useful for declarative
+            configs whose credentials reference hosts not reachable from the control plane
+            (development, staging fixtures, etc.) and for tests. Defaults to true server-side.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: resources
+      id_source: asset_id
+    state_fields:
+      - name
+      - description
+      - properties
+    update_strategy: patch
+    use_json_patch: true
+    json_patch_path_prefix: ""
+    immutable_fields:
+      - datasource_type
+      - project_id
+      - space_id
+
+  deployments:
+    "software-5.3":
+      # SaaS and Software 5.3.x share /v2/connections; the Software gateway
+      # routing is handled by `path_prefix` on the profile (or
+      # build-time-derived from servers[0].url). Empty overlay declares the
+      # kind is supported on this deployment without altering the base block.
+      api: {}
+  unsupported_on: []

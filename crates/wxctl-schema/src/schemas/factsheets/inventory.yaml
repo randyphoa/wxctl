@@ -1,0 +1,97 @@
+resource:
+  name: inventory
+  service: factsheets
+  kind: inventory
+  version: v1
+  api:
+    base_path: /v1/aigov/inventories
+    # The inventory IS a /v2/catalogs catalog under the hood, so its identity comes back at
+    # metadata.guid (NOT a top-level inventory_id). The engine extracts id_field from
+    # top-level/entity/metadata, so id_field must be `guid` (mirrors the catalog kind) — the
+    # {inventory_id} path param in the OpenAPI is just that same guid value.
+    id_field: guid
+    list_endpoint: /v1/aigov/inventories
+    get_endpoint: /v1/aigov/inventories/{guid}
+    create_endpoint: /v1/aigov/inventories
+    create_method: POST
+    update_endpoint: /v1/aigov/inventories/{guid}
+    update_method: PATCH
+    # delete_bucket is a REQUIRED query param on the inventory DELETE (OpenAPI); =true also
+    # tears down the backing assetfiles bucket so destroy leaves no residue.
+    delete_endpoint: /v1/aigov/inventories/{guid}?delete_bucket=true
+    delete_method: DELETE
+  schema:
+    fields:
+    - name: metadata
+      type: object
+      immutable: true
+      location: Computed
+    - name: entity
+      type: object
+      immutable: true
+      location: Computed
+    - name: guid
+      type: string
+      immutable: true
+      location: Computed
+      description: Catalog GUID assigned by the API on inventory creation (returned at metadata.guid); referenced by model_entry.catalog_id.
+    - name: name
+      type: string
+      required: true
+      description: Inventory (catalog) display name.
+    - name: description
+      type: string
+      description: Inventory description.
+    - name: generator
+      type: string
+      default: wxctl
+      description: >
+          Identifier of the component that generated the inventory. The factsheets create forwards this to the
+          underlying /v2/catalogs API, which REQUIRES it ("Catalog Generator") even though the inventories
+          OpenAPI marks it optional — so it defaults to 'wxctl' (mirrors the catalog kind's generator field).
+    - name: bss_account_id
+      type: string
+      location: LocalOnly
+      description: Account scoping — sent on create, not part of drift state.
+    - name: is_governed
+      type: boolean
+      description: Whether the inventory enforces governance.
+    - name: bucket
+      type: object
+      required: true
+      description: >
+          COS bucket backing the inventory catalog. The factsheets create forwards this to the underlying
+          /v2/catalogs API, which REQUIRES it ("BUCSV3009E: Bucket must be Provided") even though the
+          inventories OpenAPI marks it optional. 'assetfiles' is the platform-managed internal store, needing
+          only a bucket_name and no external credentials (mirrors the catalog kind's bucket). Create-time
+          input — excluded from state_fields, so it is not part of drift comparison.
+      schema:
+        fields:
+          - name: bucket_name
+            type: string
+            required: true
+            description: Name of the bucket backing the inventory.
+          - name: bucket_type
+            type: string
+            required: true
+            default: assetfiles
+            description: Bucket storage type. 'assetfiles' uses the platform-managed internal store.
+  reconciliation:
+    # Software-only kind (inventory is absent from the SaaS spec). PATCH uses
+    # application/json-patch+json (RFC 6902) with an empty path prefix (flat paths).
+    # List GET returns a bare JSON array -> list_field omitted (ListEnvelope::Direct).
+    # Response id is at inventory_id (DELETE path param name confirmed from OpenAPI).
+    discovery:
+      method: list_and_get
+      id_source: guid
+    update_strategy: patch
+    use_json_patch: true
+    json_patch_path_prefix: ""
+    state_fields:
+      - name
+      - description
+      - is_governed
+
+  deployments: {}
+  unsupported_on:
+    - "saas"

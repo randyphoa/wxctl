@@ -1,0 +1,52 @@
+[package]
+name = "wxctl"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Declarative CLI for managing IBM product resources"
+
+[[bin]]
+name = "wxctl"
+path = "src/main.rs"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-engine = { path = "../wxctl-engine", version = "0.1" }
+wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+wxctl-compose = { path = "../wxctl-compose", version = "0.1" }
+wxctl-sdk = { path = "../wxctl-sdk", version = "0.1" }
+wxctl-mcp = { path = "../wxctl-mcp", version = "0.1" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+parking_lot = "0.12"
+dirs = "6.0"
+reqwest = { workspace = true }
+url = "2.5"
+indicatif = "0.18"
+console = "0.16"
+terminal-colorsaurus = "1.0.3"
+
+[features]
+otel = ["wxctl-core/otel"]
+
+[dev-dependencies]
+tempfile = "3.27"
+insta = "1"
+wxctl-compose = { path = "../wxctl-compose", version = "0.1" }
+wxctl-compose-core = { path = "../wxctl-compose-core", version = "0.1" }
+rmcp = { workspace = true, features = ["client", "transport-child-process"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-util", "process"] }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

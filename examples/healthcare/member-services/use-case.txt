@@ -1,0 +1,1 @@
+Health-plan member-services agent that answers benefits and coverage questions from the plan handbook and looks up the status of a member's claim

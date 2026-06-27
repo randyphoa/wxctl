@@ -1,0 +1,228 @@
+resource:
+    name: space
+    service: common_core
+    kind: space
+    version: v1
+    description: >
+        A Space is a deployment environment for promoting and managing machine learning models, functions, and other AI assets.
+        Spaces provide isolation between development and production workloads, with configurable access restrictions, member
+        roles, and storage settings. Spaces can be tagged as production or non-production stages (development, test, pre-production)
+        to support promotion workflows across the AI lifecycle.
+    api:
+        base_path: /v2/spaces
+        id_field: id
+        list_endpoint: /v2/spaces
+        get_endpoint: /v2/spaces/{id}
+        create_method: POST
+        update_method: PATCH
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Name of the space. Used as the primary human-readable identifier for the space in listings and management
+                  interfaces.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description of the space's purpose and contents. Displayed in space listings and management
+                  interfaces.
+            - name: storage
+              type: object
+              required: false
+              description: >
+                  Cloud Object Storage instance is required for spaces created on Public Cloud. On private CPD installations
+                  default storage is used instead. This flag is not supported on CPD.
+              schema:
+                  fields:
+                      - name: resource_crn
+                        type: string
+                        required: false
+                        description: A cloud resource name of the Cloud Object Storage instance.
+                      - name: delegated
+                        type: boolean
+                        required: false
+                        description: Set to true of the COS instance is delegated by the account admin
+                        default: false
+                      - name: plan_id
+                        type: string
+                        required: false
+                        description: >
+                            The unique ID of the plan associated with the COS instance. The value is 1e4e33e4-cfa6-4f12-9016-be594a6d5f87
+                            for the One Rate plan.
+                      - name: properties
+                        type: object
+                        required: false
+                        description: Storage properties.
+                        schema:
+                            fields:
+                                - name: shared
+                                  type: boolean
+                                  required: false
+                                  description: If true, space will use a shared S3 bucket within the BSS account.
+                                  default: true
+                                - name: use_delegated_KMS_key
+                                  type: boolean
+                                  required: false
+                                  description: >
+                                      Use sse_algorithm and master_key_id from account settings to encrypt space S3 bucket.
+                                  default: false
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  User-defined tags for organizing and filtering spaces. Tags help categorize spaces by purpose, team, environment,
+                  or other dimensions.
+            - name: generator
+              type: string
+              required: false
+              description: >
+                  Identifier for the tool or system that created this space. Defaults to 'wxctl' when created by this tool.
+                  Used for tracking space provenance.
+              validation:
+                  min_length: 8
+                  max_length: 50
+              default: wxctl-cli
+            - name: stage
+              type: object
+              required: false
+              description: >
+                  Production stage configuration. Defines whether the space is a production or non-production environment
+                  and its stage name (e.g., development, test, pre-production, production).
+              schema:
+                  fields:
+                      - name: production
+                        type: boolean
+                        required: false
+                        description: >
+                            A boolean flag which specifies if a space is production or not. It cannot be modified.
+                        default: false
+                      - name: name
+                        type: string
+                        required: false
+                        description: Stage name. E.g. development, test, pre-production, production.
+            - name: compute
+              type: array
+              required: false
+              item_type: object
+              description: >
+                  List of compute resources associated with the space. Required for deployments.
+                  Each entry specifies a service instance (e.g., Watson Machine Learning) by CRN, GUID, name, and type.
+              properties:
+                  crn:
+                      type: string
+                      description: Cloud Resource Name of the compute instance.
+                  guid:
+                      type: string
+                      description: GUID of the compute instance.
+                  name:
+                      type: string
+                      description: Display name of the compute instance.
+                  type:
+                      type: string
+                      description: Compute type (e.g., machine_learning).
+            - name: type
+              type: string
+              required: false
+              description: Space type.
+              default: wx
+              allowed_values: [cpd, wx, wca]
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Unique identifier assigned by the API during space creation. Used to reference the space in all management
+                  operations and as a scoping parameter for child resources.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp indicating when the space was created. Automatically set by the system during creation.
+            - name: updated_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp of the most recent update to the space. Automatically maintained by the system.
+            - name: status
+              type: object
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Current status of the space including state and any failure information. Automatically managed by the system.
+              schema:
+                  fields:
+                      - name: state
+                        type: string
+                        required: true
+                        allowed_values: [preparing, active, deleting, deleted, error]
+                      - name: failure
+                        type: object
+                        required: false
+                        description: The data returned when an error is encountered.
+                        schema:
+                            fields:
+                                - name: trace
+                                  type: string
+                                  required: true
+                                  description: An identifier that can be used to trace the request.
+                                - name: errors
+                                  type: array
+                                  required: true
+                                  item_type: object
+                                  description: The list of errors.
+                                  schema:
+                                      fields:
+                                          - name: code
+                                            type: string
+                                            required: true
+                                            description: A simple code that should convey the general sense of the error.
+                                          - name: message
+                                            type: string
+                                            required: true
+                                            description: The message that describes the error.
+                                          - name: parameters
+                                            type: array
+                                            required: false
+                                            item_type: string
+                                          - name: more_info
+                                            type: string
+                                            required: false
+                                            description: A reference to a more detailed explanation when available.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+        state_fields:
+            - name
+            - description
+            - tags
+            - generator
+            - stage
+            - type
+        update_strategy: patch
+        immutable_fields:
+            - stage.production
+        use_json_patch: true
+        json_patch_path_prefix: /entity
+
+    deployments:
+        "software-5.3":
+            # SaaS and Software 5.3.x share /v2/spaces (confirmed in Software 5.3.0 spec).
+            # Empty overlay declares the kind is supported on this deployment without
+            # altering the base block.
+            api: {}
+    unsupported_on: []

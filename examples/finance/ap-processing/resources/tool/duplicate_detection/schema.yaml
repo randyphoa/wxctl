@@ -1,0 +1,22 @@
+input_schema:
+  properties:
+    invoice_number:
+      description: The invoice number to check for duplicates (e.g., "INV-5501")
+      type: string
+    vendor_id:
+      description: The vendor identifier on the invoice (e.g., "V100")
+      type: string
+    amount:
+      description: The invoice amount in dollars
+      type: number
+    invoice_date:
+      description: The invoice date in YYYY-MM-DD form (e.g., "2024-05-02")
+      type: string
+  required:
+  - invoice_number
+  - vendor_id
+  - amount
+  - invoice_date
+  type: object
+output_schema:
+  type: object

@@ -1,0 +1,10 @@
+input_schema:
+  properties:
+    company:
+      description: The company whose market signals to look up (e.g., "Northwind")
+      type: string
+  required:
+  - company
+  type: object
+output_schema:
+  type: object

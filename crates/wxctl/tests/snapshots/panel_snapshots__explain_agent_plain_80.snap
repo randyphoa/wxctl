@@ -1,0 +1,69 @@
+---
+source: crates/wxctl/tests/panel_snapshots.rs
+expression: "run(&[\"explain\", \"agent\"], \"80\", \"never\", \"\")"
+---
+
+  agent   watsonx Orchestrate - saas, software
+  id field - id
+
+  | Endpoints
+    create   POST     /v1/orchestrate/agents
+    get      GET      /v1/orchestrate/agents/{id}
+    list     GET      /v1/orchestrate/agents
+    update   PATCH    /v1/orchestrate/agents/{id}
+    delete   DELETE   /v1/orchestrate/agents/{id}
+
+  | Fields   (required first)
+    name                          string          required            Body
+    description                   string          required            Body
+    style                         string          required            Body
+    llm                           string          required            Body
+    display_name                  string          optional            Body
+    instructions                  string          optional            Body
+    llm_config                    object          optional            Body
+    structured_output             object          optional            Body
+    hidden                        boolean         optional            Body
+    hide_reasoning                boolean         optional            Body
+    sync_tool_flow_interactions   boolean         optional            Body
+    context_access_enabled        boolean         optional            Body
+    tools                         array<string>   optional            Body
+    toolkits                      array<string>   optional            Body
+    collaborators                 array<string>   optional            Body
+    knowledge_base                array<string>   optional            Body
+    glossary                      array<string>   optional            Body
+    guidelines                    array<object>   optional            Body
+    connection_ids                array<string>   optional            Body
+    context_variables             array<string>   optional            Body
+    additional_properties         object          optional            Body
+    chat_with_docs                object          optional            Body
+    tags                          array<string>   optional            Body
+    id                            string          computed   locked   Computed
+    agent_mapping                 object          computed            Computed
+    environments                  array           computed            Computed
+    tenant_id                     string          computed   locked   Computed
+    created_by                    string          computed   locked   Computed
+    created_on                    timestamp       computed   locked   Computed
+    updated_by                    string          computed            Computed
+    updated_at                    timestamp       computed            Computed
+    deleted_by                    string          computed            Computed
+    deleted_at                    timestamp       computed            Computed
+
+  | Dependencies
+    llm             -->  ${model.<ref_name>}   optional
+    tools           -->  ${tool.<ref_name>}   optional
+    toolkits        -->  ${toolkit.<ref_name>}   optional
+    collaborators   -->  ${agent.<ref_name>}   optional
+    knowledge_base  -->  ${knowledge_base.<ref_name>}   optional
+
+  | Notes
+    * Agent `style` controls reasoning: `default` is standard conversational, `react` enables ReAct (Reasoning + Acting) for step-by-step problem solving, `planner` enables advanced multi-step task decomposition.
+    * Tools are referenced using `${tool.<ref_name>}` syntax, collaborators using `${agent.<ref_name>}`, and knowledge bases using `${knowledge_base.<ref_name>}`.
+    * The `llm` field accepts either a `${model.<ref_name>}` reference or a plain string value (e.g., `groq/openai/gpt-oss-120b`). Plain values create no dependency.
+    * The `description` field serves as the agent's system prompt and defines its core purpose, behavior, and capabilities.
+    * Guidelines provide behavioral rules with `condition` (when the guideline applies) and `action` (what the agent should do).
+    * `additional_properties` supports `icon` (SVG string), `starter_prompts` (suggested conversation starters), and `welcome_content` (initial greeting).
+
+  | Authoring
+    envelope   A config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).
+    ref_name   Unique handle for this resource within the config. Used to reference it from other resources; stripped before the API call (not a schema field).
+    reference  Reference another resource by its ref_name: `${<kind>.<ref_name>}` resolves to its id, `${<kind>.<ref_name>.<field>}` to a specific field. Values resolve late, at plan/apply time.

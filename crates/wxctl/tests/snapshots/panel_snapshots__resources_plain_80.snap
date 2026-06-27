@@ -1,0 +1,223 @@
+---
+source: crates/wxctl/tests/panel_snapshots.rs
+expression: out
+---
+
+  watsonx resource catalog   57 kinds - 8 products
+
+  | AI Factsheets   (factsheets - 2 kinds)
+    inventory                 software         .
+    model_entry               saas, software   .
+
+  | Cloud Object Storage   (cloud_object_storage - 5 kinds)
+    adls_container            saas             Azure Data Lake Storage container
+                                               (Gen1 or Gen2).
+    gcs_bucket                saas             Google Cloud Storage bucket.
+    s3_bucket                 saas, software   S3-compatible bucket (IBM COS,
+                                               AWS S3, MinIO, Ceph).
+    s3_object                 saas, software   An object inside an `s3_bucket`.
+    storage_connection        saas, software   Credential-holding kind for
+                                               object-store / file-system
+                                               backends.
+
+  | Data & AI Common Core   (common_core - 12 kinds)
+    business_term             saas, software   A Business Term is a glossary
+                                               entry that defines standardized
+                                               business vocabulary and semantics
+                                               for data governance in Watsonx
+                                               Data.
+    business_terms            saas, software   Business Terms provides bulk
+                                               creation functionality for
+                                               multiple business terms in a
+                                               single API call.
+    catalog                   saas, software   A Catalog is a metadata
+                                               repository that organizes and
+                                               manages table schemas,
+                                               partitions, and file locations
+                                               for data lake operations in
+                                               Watsonx Data.
+    category                  saas, software   A Category is a hierarchical
+                                               classification structure used to
+                                               organize and group data assets,
+                                               business terms, and other
+                                               governance artifacts in Watsonx
+                                               Data.
+    common_core_connection    saas, software   A Connection is a data source
+                                               configuration that enables
+                                               Watsonx Data to access external
+                                               databases, object storage
+                                               systems, and other data
+                                               repositories.
+    data_asset                saas, software   A Data Asset uploads a local file
+                                               (e.g.
+    package_extension         saas, software   A Package Extension defines
+                                               additional Python packages to
+                                               include in a software
+                                               specification.
+    project                   saas, software   A Project is a collaborative
+                                               workspace that organizes assets,
+                                               tools, notebooks, jobs, and data
+                                               connections for data science and
+                                               AI workflows.
+    rule                      saas, software   A Rule is an automated policy
+                                               enforcement mechanism that
+                                               implements data governance
+                                               controls in Watsonx Data.
+    rules                     saas, software   Rules provides bulk creation
+                                               functionality for multiple
+                                               governance rules in a single API
+                                               call.
+    software_specification    saas, software   A Software Specification defines
+                                               a runtime environment for
+                                               deploying AI services and
+                                               functions.
+    space                     saas, software   A Space is a deployment
+                                               environment for promoting and
+                                               managing machine learning models,
+                                               functions, and other AI assets.
+
+  | Local   (local - 1 kind)
+    python_script             saas, software   Executes a Python script locally.
+
+  | OpenScale   (openscale - 8 kinds)
+    data_mart                 saas, software   .
+    data_set                  saas, software   .
+    guardrails_policy         saas, software   .
+    integrated_system         saas, software   .
+    monitor_definition        saas, software   .
+    monitor_instance          saas, software   .
+    service_provider          saas, software   .
+    subscription              saas, software   .
+
+  | watsonx Orchestrate   (watsonx_orchestrate - 6 kinds)
+    agent                     saas, software   An Agent is a configurable AI
+                                               assistant within Watsonx
+                                               Orchestrate that can perform
+                                               tasks using tools, collaborate
+                                               with other agents, and leverage
+                                               knowledge bases.
+    knowledge_base            saas, software   A Knowledge Base provides
+                                               document-based context and
+                                               information retrieval
+                                               capabilities for agents.
+    model                     saas, software   A Model Configuration defines
+                                               custom language model settings
+                                               and parameters for use within
+                                               Watsonx Orchestrate.
+    orchestrate_connection    saas, software   A Connection represents
+                                               authentication credentials and
+                                               configuration for integrating
+                                               external applications with
+                                               Watsonx Orchestrate.
+    tool                      saas, software   A Tool is a specification for a
+                                               callable function or service that
+                                               agents can invoke to perform
+                                               actions and retrieve information.
+    toolkit                   saas, software   An MCP (Model Context Protocol)
+                                               toolkit backed by a local or
+                                               remote MCP server.
+
+  | watsonx.ai   (watsonx_ai - 6 kinds)
+    ai_service                saas, software   An AI Service is a deployable
+                                               code artifact for Watson Machine
+                                               Learning.
+    autoai_experiment         saas, software   An AutoAI Experiment runs a
+                                               watsonx.ai AutoAI training to
+                                               completion and surfaces the
+                                               ranked pipeline leaderboard.
+    wml_deployment            saas, software   A WML Deployment creates a live
+                                               online endpoint from an AI
+                                               service or model.
+    wml_function              saas, software   A Python function asset stored in
+                                               Watson Machine Learning.
+    wml_model                 saas, software   A WML Model materializes the
+                                               winning pipeline of a completed
+                                               AutoAI experiment as a deployable
+                                               wml-hybrid_0.1 model.
+    wml_script                saas, software   A Python script asset stored in
+                                               Watson Machine Learning.
+
+  | watsonx.data   (watsonx_data - 17 kinds)
+    database_connection       saas, software   Credential-holding kind for
+                                               external database connections
+                                               consumed by
+                                               `database_registration`.
+    database_registration     saas, software   Registers an external database
+                                               (Db2, PostgreSQL, MySQL, Kafka,
+                                               etc.) with watsonx.data and
+                                               atomically creates its associated
+                                               catalog.
+    db2_engine                saas, software   A Db2 Engine registers an
+                                               external IBM Db2 instance as a
+                                               federated query engine in
+                                               watsonx.data.
+    ingestion_job             saas, software   An Ingestion Job loads data from
+                                               object storage (CSV, Parquet,
+                                               JSON, ORC, Avro, or txt) into a
+                                               watsonx.data lakehouse table.
+    integration               saas, software   Registers an external governance
+                                               / lineage service with
+                                               watsonx.data — IBM Knowledge
+                                               Catalog (`ikc`), Apache Ranger
+                                               (`ranger`), Manta lineage
+                                               (`manta`), or Databand
+                                               (`databand`).
+    milvus_service            saas, software   A Milvus Service is the managed
+                                               Milvus vector store in
+                                               watsonx.data — the vector backend
+                                               for embeddings / similarity
+                                               search (e.g.
+    other_engine              saas, software   An Other Engine registers a
+                                               generic external query engine
+                                               (anything not covered by the
+                                               typed presto/spark/db2 kinds)
+                                               with watsonx.data, identified by
+                                               a display name plus a
+                                               `connection_string` and an engine
+                                               `type`.
+    prestissimo_engine        saas, software   A Prestissimo Engine is the C++
+                                               (Velox-backed) distributed SQL
+                                               query engine in watsonx.data —
+                                               the high-performance twin of the
+                                               Java Presto engine.
+    presto_engine             saas, software   A Presto Engine is a distributed
+                                               SQL query engine in watsonx.data
+                                               that runs analytical queries
+                                               across lakehouse catalogs and
+                                               object storage.
+    sal_enrichment_job        saas, software   Runs a Semantic Automation Layer
+                                               (SAL) metadata-enrichment job
+                                               over a catalog/schema's tables.
+    sal_enrichment_settings   saas, software   Per-project metadata-enrichment
+                                               settings for the Semantic
+                                               Automation Layer (SAL) on
+                                               watsonx.data.
+    sal_global_settings       saas, software   Global metadata-enrichment
+                                               defaults for the Semantic
+                                               Automation Layer (SAL) on
+                                               watsonx.data.
+    sal_glossary              software         Uploads a business-glossary CSV
+                                               into the watsonx.data Semantic
+                                               Automation Layer (SAL) and polls
+                                               the upload process to a terminal
+                                               state, so a glossary can be
+                                               uploaded before/around enrichment
+                                               (richer term assignment).
+    sal_integration           saas, software   Enables the Semantic Automation
+                                               Layer (SAL) on watsonx.data — the
+                                               metadata-enrichment /
+                                               auto-cataloging integration that
+                                               backs IKC governance.
+    schema                    saas, software   A Schema is a logical grouping of
+                                               tables within a watsonx.data
+                                               catalog.
+    spark_engine              saas, software   A Spark Engine is a serverless
+                                               Apache Spark execution
+                                               environment in watsonx.data used
+                                               for data ingestion jobs, Spark
+                                               SQL, and general Spark
+                                               applications.
+    storage_registration      saas, software   Registers an object-store bucket
+                                               with watsonx.data and atomically
+                                               creates its associated lakehouse
+                                               catalog (iceberg or hive).

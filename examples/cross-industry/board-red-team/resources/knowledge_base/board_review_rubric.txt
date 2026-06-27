@@ -1,0 +1,116 @@
+BOARD STRATEGY REVIEW RUBRIC
+=============================
+
+This rubric governs how a board red-team panel evaluates strategic proposals
+submitted for board approval. Analysts and AI personas cite this document when
+forming an opinion, assigning a tier recommendation, and identifying material
+risks. The final board memo must state one overall tier recommendation (chosen
+from Section 1) and list the top risks (per Section 3).
+
+Section 1: Recommendation Scale
+---------------------------------
+Four tiers are defined. A strategy is assigned to exactly one tier based on
+how it scores across the evaluation dimensions in Section 2.
+
+  Tier A — PROCEED
+    All five evaluation dimensions score satisfactory or above. No individual
+    dimension is a disqualifying factor. The board endorses the strategy for
+    immediate execution with standard governance oversight.
+
+  Tier B — PROCEED WITH CONDITIONS
+    The strategy is fundamentally sound but has one or two addressable gaps.
+    Approval is granted subject to named conditions (e.g., a specific
+    risk-mitigation plan, a capital commitment cap, or a regulatory clearance
+    obtained before a milestone gate). Progress against conditions must be
+    reported at the next scheduled board meeting. A strategy may not remain
+    in this tier for more than two consecutive reporting periods without being
+    escalated to Tier C or resolved to Tier A.
+
+  Tier C — PAUSE
+    The strategy presents material uncertainty in at least one dimension that
+    cannot be resolved by a simple condition. The board suspends execution
+    while management addresses the identified uncertainty. A revised proposal
+    must be resubmitted with supporting evidence before work may resume.
+    Pausing does not imply rejection; it is a structured hold pending more
+    information.
+
+  Tier D — REJECT
+    The strategy fails on one or more disqualifying criteria: negative
+    expected value under base-case assumptions, an unacceptable regulatory or
+    legal exposure, a fundamental misalignment with shareholder interests, or
+    an execution risk that exceeds the organisation's stated risk appetite.
+    The board declines to proceed. Management may resubmit only after a
+    material change in the underlying conditions.
+
+Section 2: Evaluation Dimensions
+----------------------------------
+Each dimension is assessed independently before the overall tier is assigned.
+
+  2.1 Financial Soundness
+      - Does the proposal show a credible base-case IRR or NPV above the
+        corporate hurdle rate?
+      - Are revenue assumptions grounded in comparable transactions or
+        observable market data?
+      - Is the downside scenario (P10) survivable without breaching debt
+        covenants or requiring emergency financing?
+      - Disqualifying flag: negative NPV in the base case or P10 that
+        triggers covenant breach.
+
+  2.2 Regulatory and Compliance Exposure
+      - Have all relevant jurisdictions been identified and mapped to the
+        timeline?
+      - Is antitrust, data-privacy, or sector-specific regulatory review
+        required, and has the timeline accounted for it?
+      - Are there pending regulatory changes that materially alter the
+        risk profile within the investment horizon?
+      - Disqualifying flag: active enforcement action or pending ruling
+        whose adverse outcome would render the strategy non-viable.
+
+  2.3 Competitive Positioning
+      - Does the strategy reinforce or expand a durable competitive advantage?
+      - How does it respond to identified market entrants or substitutes?
+      - Is the addressable market large enough to justify the resource
+        commitment given realistic market-share capture assumptions?
+      - Disqualifying flag: competitive analysis absent or strategy is
+        predicated on market conditions already materially changed.
+
+  2.4 Governance and Shareholder Impact
+      - Does the proposal align with the board's stated strategic priorities
+        and risk appetite as documented in the most recent policy statement?
+      - Are conflicts of interest among the proposing management team
+        disclosed and managed?
+      - What is the expected impact on earnings per share, return on equity,
+        or other metrics the shareholder base has been guided to?
+      - Disqualifying flag: material undisclosed conflict of interest or
+        expected shareholder value dilution exceeding board-approved thresholds.
+
+  2.5 Execution Risk
+      - Does the organisation have the operational capacity and talent to
+        execute within the proposed timeline?
+      - Are dependencies on third parties, technology, or supply chains
+        clearly identified with contingency plans?
+      - Is the integration or implementation plan phased in a way that
+        allows go/no-go decision points?
+      - Disqualifying flag: single-point-of-failure dependency with no
+        contingency, or a timeline that leaves no buffer against a
+        precedent-setting comparable deal.
+
+Section 3: Risk Identification and Memo Requirements
+------------------------------------------------------
+Every board memo produced under this rubric must include:
+
+  - ONE overall tier recommendation (Tier A / B / C / D) with a one-sentence
+    rationale citing the dimension(s) that drove the tier assignment.
+  - TOP RISKS: a numbered list of the three to five most material risks, each
+    stated as "<Risk label>: <one-sentence description of potential impact>".
+    Risks should be drawn from the dimensions where scores were weakest.
+  - DISSENTING VIEWS: if any panel member assigns a different tier, the memo
+    must note the alternative tier and the dimension driving the dissent.
+
+Section 4: Glossary
+---------------------
+  IRR         Internal Rate of Return
+  NPV         Net Present Value
+  P10         10th-percentile outcome (downside scenario)
+  EPS         Earnings Per Share
+  ROE         Return on Equity

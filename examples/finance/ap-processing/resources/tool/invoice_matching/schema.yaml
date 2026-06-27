@@ -1,0 +1,22 @@
+input_schema:
+  properties:
+    invoice_number:
+      description: The invoice number being matched (e.g., "INV-5567")
+      type: string
+    vendor_id:
+      description: The vendor identifier on the invoice (e.g., "V100")
+      type: string
+    amount:
+      description: The invoice amount in dollars
+      type: number
+    po_number:
+      description: The purchase-order number referenced by the invoice (e.g., "PO-2024-1001")
+      type: string
+  required:
+  - invoice_number
+  - vendor_id
+  - amount
+  - po_number
+  type: object
+output_schema:
+  type: object

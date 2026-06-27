@@ -1,0 +1,133 @@
+resource:
+  name: storage_registration
+  service: watsonx_data
+  kind: storage_registration
+  version: v1
+  description: >
+      Registers an object-store bucket with watsonx.data and atomically
+      creates its associated lakehouse catalog (iceberg or hive). The
+      `bucket:` reference points at an `s3_bucket`, `adls_container`, or
+      `gcs_bucket`; the handler walks the DAG edge at apply time and
+      assembles the v3 `StorageRegistrationPrototype` wire body from the
+      linked bucket and its `storage_connection`. Users never restate
+      connection credentials, bucket name, or endpoint here — each piece
+      of information lives in exactly one resource.
+
+  api:
+    base_path: /v3/storage_registrations
+    id_field: id
+    list_endpoint: /v3/storage_registrations
+    get_endpoint: /v3/storage_registrations/{id}
+    create_endpoint: /v3/storage_registrations
+    create_method: POST
+    update_endpoint: /v3/storage_registrations/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/storage_registrations/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+      - name: catalog_name
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Top-level catalog name surfaced by the create response and
+            GET. Populated server-side from
+            `associated_catalog.catalog_name`. Referenced by engine
+            `associated_catalogs`.
+
+      - name: display_name
+        type: string
+        required: true
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: description
+        type: string
+        required: false
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: bucket
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Reference to an `s3_bucket` (primary), `adls_container`, or
+            `gcs_bucket`. The handler derives `type:`, bucket name, region,
+            endpoint, and credentials from this edge + the bucket's linked
+            `storage_connection`. Never a user-set `type` or inline
+            `connection` block anymore.
+        references:
+          resource: s3_bucket
+          field: ref_name
+          also_allows:
+            - adls_container
+            - gcs_bucket
+
+      - name: managed_by
+        type: string
+        required: false
+        default: customer
+        allowed_values: [customer, system]
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+
+      - name: associated_catalog
+        type: object
+        required: true
+        description: Catalog created atomically with the registration.
+        schema:
+          fields:
+            - name: catalog_name
+              type: string
+              required: true
+              immutable: true
+              validation:
+                pattern: "^[a-zA-Z0-9_-]+$"
+                min_length: 1
+                max_length: 64
+            - name: catalog_type
+              type: string
+              required: true
+              immutable: true
+              allowed_values: [iceberg, hive]
+            - name: catalog_tags
+              type: array
+              required: false
+              item_type: string
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: storage_registrations
+      id_source: id
+      identity_match:
+        local_path: associated_catalog.catalog_name
+        remote_path: associated_catalogs.0.catalog_name
+    state_fields:
+      - display_name
+      - description
+      - tags
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - bucket
+      - associated_catalog.catalog_name
+      - associated_catalog.catalog_type
+    reject_on_immutable_drift: true
+
+  deployments: {}

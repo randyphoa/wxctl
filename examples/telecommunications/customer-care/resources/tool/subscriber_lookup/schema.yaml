@@ -1,0 +1,10 @@
+input_schema:
+  properties:
+    msisdn:
+      description: The subscriber's mobile number to look up (e.g., "+1-555-0142")
+      type: string
+  required:
+  - msisdn
+  type: object
+output_schema:
+  type: object

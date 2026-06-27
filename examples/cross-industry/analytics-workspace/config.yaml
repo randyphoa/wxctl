@@ -1,0 +1,65 @@
+# Analytics workspace — Data & AI Common Core platform primitives, one DAG.
+#
+# Deployment-portable: the same config applies on a watsonx SaaS-WKC profile and
+# on a CP4D / Software profile — the deployment axis is the profile, not the config.
+#
+# Resources (5): project, common_core_connection, space, package_extension,
+#                software_specification.
+#
+# Cross-kind edges:
+#   project -> common_core_connection.project_id
+#   space   -> {package_extension, software_specification}.space_id
+#   package_extension -> software_specification.package_extensions
+#
+# Required env: CC_CONN_PASSWORD (placeholder ok — connection has test: "false",
+#   so the value is never used for a live datasource validation).
+#
+# Run: wxctl {plan|apply|destroy} -f config.yaml   (see README.md)
+
+kind: project
+ref_name: analytics_proj
+name: analytics-workspace-project
+description: Analytics project hosting the data connection.
+type: wx
+
+---
+kind: space
+ref_name: analytics_space
+name: analytics-workspace-space
+description: Deployment space — anchors the package extension and software specification.
+type: wx
+
+---
+kind: common_core_connection
+ref_name: analytics_db
+name: analytics-workspace-db
+project_id: ${project.analytics_proj}
+datasource_type: postgresql
+description: PostgreSQL data connection scoped to the analytics project.
+properties:
+  host: postgres.example.internal
+  port: "5432"
+  database: analytics
+  username: analytics
+  password: ${env:CC_CONN_PASSWORD}
+  ssl: "false"
+test: "false"
+
+---
+kind: package_extension
+ref_name: analytics_pkg_ext
+name: analytics-workspace-pkg-ext
+description: Custom conda environment for the analytics runtime.
+type: conda_yml
+source_path: resources/runtime/env.yaml
+space_id: ${space.analytics_space}
+
+---
+kind: software_specification
+ref_name: analytics_swspec
+name: analytics-workspace-swspec
+description: Custom runtime spec built from the conda package extension.
+base_software_specification: runtime-25.1-py3.12
+package_extensions:
+  - ${package_extension.analytics_pkg_ext}
+space_id: ${space.analytics_space}

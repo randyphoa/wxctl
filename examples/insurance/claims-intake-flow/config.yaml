@@ -1,0 +1,132 @@
+# Claims-intake assistant: three tool bindings (python + OpenAPI + flow) on a
+# custom AI-gateway model. The python tool validates claim eligibility from
+# bundled mock data; the OpenAPI tool does a public reference-data lookup
+# (each operation expands to its own tool at plan time); the decisions flow
+# computes a required insurance rate the model cannot infer. The gateway model
+# is gpt-oss-120b served by watsonx.ai (custom_host: ${env:WATSONX_URL}), scoped
+# by a deployment space; creds are a ${env:GATEWAY_API_KEY} reference. Set both
+# env vars (placeholders suffice for plan). Runs live on a SaaS watsonx
+# Orchestrate profile (see README).
+kind: orchestrate_connection
+ref_name: gateway_connection
+app_id: claims-gateway
+name: Claims Model Gateway Connection
+connection_type: key_value_creds
+environment: draft
+preference: team
+credentials:
+  api_key: ${env:GATEWAY_API_KEY}
+---
+# Deployment space (created dynamically) that scopes the gateway model's
+# watsonx.ai inference.
+kind: space
+ref_name: gw_space
+name: claims-intake-flow-space
+description: Deployment space that scopes the claims assistant's gateway-model inference
+type: wx
+---
+kind: model
+ref_name: gateway_model
+name: virtual-model/watsonx/openai/gpt-oss-120b
+display_name: Claims Assistant Gateway Model (gpt-oss-120b via watsonx.ai)
+description: |
+  Chat gateway model the claims assistant and its flow runtime use: gpt-oss-120b
+  served by watsonx.ai through the AI gateway, scoped by a deployment space.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_connection}
+provider_config:
+  custom_host: ${env:WATSONX_URL}
+  watsonx_space_id: ${space.gw_space}
+---
+# Python tool: validates a claim ID + member eligibility from bundled mock data.
+kind: tool
+ref_name: claim_eligibility
+name: claim_eligibility
+display_name: Claim Eligibility
+description: |
+  Validates a claim ID (format CLM-NNNN) and returns the member's eligibility
+  status from the bundled sample directory. Use when a claim needs an
+  eligibility check before processing.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/claim_eligibility
+binding:
+  python:
+    function: claim_eligibility:main
+---
+# OpenAPI tool: public no-auth reference-data lookup. Each operation in the spec
+# becomes its own tool at plan time (claims_lookup_echoGet, claims_lookup_echoPost).
+# Public endpoint → no connection_id.
+kind: tool
+ref_name: claims_lookup
+spec_path: ./resources/openapi/reference-data.yaml
+binding:
+  openapi:
+    permission: read_only
+    tools: ["*"]
+---
+# Flow tool: a real ADK decisions flow that computes the required insurance rate
+# from loan amount + grade — a rate table the model cannot know, so a flow-mode
+# test forces a real flow invocation. flow_llm_model pins the flow-runtime LLM
+# to the gateway model.
+kind: tool
+ref_name: claim_rate_flow
+name: get_insurance_rate
+permission: read_only
+flow_path: ./resources/flow/claim_rate.flow.json
+flow_llm_model: ${model.gateway_model}
+binding:
+  flow:
+    version: TIP
+---
+kind: agent
+ref_name: claims_intake
+name: claims_intake
+display_name: Claims Intake Assistant
+description: |
+  Validates claims and member eligibility, looks up reference data via a public
+  HTTP API, and computes the required insurance rate from a decisions flow.
+instructions: |
+  Use the claim_eligibility tool to validate a claim ID and check the member's
+  eligibility before anything else. Use the reference-data lookup tool when you
+  need to echo or look up an external reference value. Use the insurance-rate
+  flow to compute the required insurance rate from loan amount and grade — never
+  guess the rate. All data here is mock demo data.
+llm: ${model.gateway_model}
+style: default
+tools:
+  - ${tool.claim_eligibility}
+  - ${tool.claims_lookup_echoGet}
+  - ${tool.claims_lookup_echoPost}
+  - ${tool.claim_rate_flow}
+collaborators: []
+knowledge_base: []
+---
+kind: test
+ref_name: test_01_eligibility
+agent: ${agent.claims_intake}
+turns:
+  - message: "Check eligibility for claim CLM-1001."
+    expect_tools:
+      - claim_eligibility
+    expect_answer: "Should report that CLM-1001 is eligible for member M-204 on plan PPO-Gold."
+---
+kind: test
+ref_name: test_02_reference_lookup
+agent: ${agent.claims_intake}
+turns:
+  - message: "Use the reference-data GET lookup to send query_param=claims, then tell me the value that came back."
+    expect_tools:
+      - echo_get
+    expect_answer: "The echoed query_param value should be claims."
+---
+kind: test
+ref_name: test_03_rate_flow
+flow: ${tool.claim_rate_flow}
+turns:
+  - payload:
+      loan_amount: 200000
+      grade: A
+    expect_response:
+      insurance_required: true
+      insurance_rate: 0.001

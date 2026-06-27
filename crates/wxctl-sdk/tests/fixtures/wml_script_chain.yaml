@@ -1,0 +1,24 @@
+kind: space
+ref_name: wxctl_test_space___TEST_ID__
+name: wxctl-test-space-__TEST_ID__
+type: wx
+---
+kind: software_specification
+ref_name: wxctl_test_swspec___TEST_ID__
+name: wxctl-test-swspec-__TEST_ID__
+base_software_specification: runtime-25.1-py3.12
+space_id: ${space.wxctl_test_space___TEST_ID__}
+---
+kind: wml_script
+ref_name: wxctl_test_script___TEST_ID__
+name: wxctl-test-script-__TEST_ID__
+software_spec: ${software_specification.wxctl_test_swspec___TEST_ID__}
+space_id: ${space.wxctl_test_space___TEST_ID__}
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/script.py
+---
+kind: wml_deployment
+ref_name: wxctl_test_deploy___TEST_ID__
+name: wxctl-test-deploy-__TEST_ID__
+asset: ${wml_script.wxctl_test_script___TEST_ID__}
+space_id: ${space.wxctl_test_space___TEST_ID__}
+online: {}

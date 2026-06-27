@@ -1,0 +1,1 @@
+Build a customer-data governance taxonomy for a retail bank: a "Customer Data" category hierarchy, a "Customer Identifier" business term organized under it, a bulk CSV import of further customer-data glossary terms, a data-protection rule that restricts access to assets classified with the Customer Identifier, and a bulk set of further access-enforcement rules.

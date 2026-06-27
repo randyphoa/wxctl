@@ -1,0 +1,91 @@
+# Generated from OpenAPI — review before use.
+# Live behavior may diverge from the OpenAPI source: verify `required` flags and
+# server-enforced params (e.g. monitor `parameters`) at first live apply.
+resource:
+  name: integrated_system
+  service: openscale
+  kind: integrated_system
+  version: v1
+  api:
+    base_path: /v2/integrated_systems
+    id_field: id
+    list_endpoint: /v2/integrated_systems
+    get_endpoint: /v2/integrated_systems/{id}
+    create_endpoint: /v2/integrated_systems
+    create_method: POST
+    update_endpoint: /v2/integrated_systems/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/integrated_systems/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref blocks below are UNVERIFIED heuristic seams (P3). Promote to `references:` only after a P4 probe confirms.
+    # candidate-ref (tier2x:group_ids score=2.0704): field `group_ids` may reference `group` (instana/group)
+    # candidate-ref (tier2x:user_ids score=2.0704): field `user_ids` may reference `user` (instana/user)
+    # candidate-ref (tier2x:user_ids score=2.0704): field `user_ids` may reference `user` (watsonx_orchestrate/user)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: connection
+      type: object
+      description: The additional connection information for the Integrated System
+    - name: credentials
+      type: object
+      required: true
+      description: The credentials for the Integrated System
+    - name: description
+      type: string
+      required: true
+      description: The description of the Integrated System.
+    - name: group_ids
+      type: array
+      item_type: string
+      description: Access control list of group id of Cloud Pak for Data (Only available for open_pages type and OpenScale on Cloud Pak for Data >= 4.0.6 with ENABLE_GROUP_AUTH being true)
+    - name: name
+      type: string
+      required: true
+      description: The name of the Integrated System.
+    - name: parameters
+      type: object
+      description: Additional parameters
+    - name: type
+      type: string
+      required: true
+      allowed_values:
+      - open_pages
+      - slack
+      - webhook
+      - hive
+      - spark
+      - jdbc
+      - custom_metrics_provider
+      - watson_knowledge_catalog
+      - generative_ai_evaluator
+      - embeddings_provider
+    - name: user_ids
+      type: array
+      item_type: string
+      description: Access control list of user id of Cloud Pak for Data (Only available for open_pages type and OpenScale on Cloud Pak for Data >= 4.0.6 with ENABLE_GROUP_AUTH being true)
+  reconciliation:
+    # TODO(verify): identity_match — set local_path/remote_path if list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: integrated_systems
+      id_source: id
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    # credentials is write-only (auth blob, never echoed by GET) — excluded so it can't phantom-drift into a patch.
+    state_fields:
+      - name
+      - type
+      - description
+      - connection
+      - parameters
+      - group_ids
+      - user_ids

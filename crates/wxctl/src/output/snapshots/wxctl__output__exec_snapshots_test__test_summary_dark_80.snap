@@ -1,0 +1,10 @@
+---
+source: crates/wxctl/src/output/exec_snapshots_test.rs
+expression: "test_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mExecution[0m
+[38;2;125;133;144m          Type  Name            Action   Time[0m
+    [38;2;125;133;144m├─[0m [38;2;63;185;80m+[0m  test  test_echo_get   [38;2;63;185;80mcreated[0m  [38;2;125;133;144m0.0s[0m
+    [38;2;125;133;144m└─[0m [38;2;248;81;73m✗[0m  test  test_echo_post  [38;2;248;81;73mfailed[0m   [38;2;125;133;144m0.0s[0m
+
+[38;2;248;81;73m✗[0m [1mtest failed[0m [38;2;125;133;144m·[0m run 20260612-000000-test-aaa111 [38;2;125;133;144m—[0m wxctl debug

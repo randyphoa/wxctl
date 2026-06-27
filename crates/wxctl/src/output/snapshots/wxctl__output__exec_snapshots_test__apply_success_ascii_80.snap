@@ -1,0 +1,14 @@
+---
+source: crates/wxctl/src/output/exec_snapshots_test.rs
+expression: "apply_success_screen(&panel(80, ColorMode::Plain, GlyphSet::Ascii))"
+---
+  | Execution
+          Type                    Name                                                       Action   Time
+    +- +  orchestrate_connection  httpbin_bearer  [id=dd33a261-f041-43e3-be43-f41be3418c21]  created  0.6s
+    +- +  tool                    httpbin_tools  [id=805591f1-148f-4f79-8c95-be4785cd0733]   created  1.8s
+    `- +  agent                   httpbin_agent  [id=5d59f99e-95ae-4b54-8719-3cb993fa0072]   created  2.3s
+
+ok apply: +3 created - 4.8s
+
+  created resources:
+    agent.httpbin_agent  https://api.watson-orchestrate.ibm.com/agents/abc123

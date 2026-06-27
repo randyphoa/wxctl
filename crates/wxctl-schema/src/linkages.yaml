@@ -1,0 +1,44 @@
+# Each bridge entry may optionally declare:
+#   when:
+#     deployment: <constraint or list>   # default: always active
+# A bridge is also auto-suppressed when its source or target kind matches
+# the active deployment in the schema's `unsupported_on`.
+
+bridges:
+  - name: database_access
+    source: orchestrate_connection
+    target: common_core_connection
+    constraints:
+      common_core_connection:
+        datasource_type: [postgres, mysql, oracle, db2, netezza]
+      orchestrate_connection:
+        connection_type: key_value_creds
+    field_mapping:
+      - source: credentials.host
+        target: properties.host
+      - source: credentials.port
+        target: properties.port
+      - source: credentials.database
+        target: properties.database
+      - source: credentials.username
+        target: properties.username
+      - source: credentials.password
+        target: properties.password
+
+  - name: object_storage_access
+    source: orchestrate_connection
+    target: common_core_connection
+    constraints:
+      common_core_connection:
+        datasource_type: [s3, cos, azure]
+      orchestrate_connection:
+        connection_type: key_value_creds
+    field_mapping:
+      - source: credentials.access_key
+        target: properties.access_key
+      - source: credentials.secret_key
+        target: properties.secret_key
+      - source: credentials.bucket
+        target: properties.bucket
+      - source: credentials.url
+        target: properties.url

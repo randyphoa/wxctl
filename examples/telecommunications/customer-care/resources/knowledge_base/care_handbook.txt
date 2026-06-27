@@ -1,0 +1,61 @@
+NORTHWIND MOBILE — CUSTOMER CARE HANDBOOK
+=========================================
+
+Section 1: Plans Overview
+-------------------------
+Northwind Mobile offers three postpaid plans. Essential includes 10 GB of
+high-speed data per month. Plus includes 50 GB. Unlimited includes unlimited
+high-speed data with mobile-hotspot allowances. All plans include unlimited
+talk and text within the home country.
+
+Section 2: Data Usage and Overage
+---------------------------------
+On the Essential and Plus plans, once the monthly high-speed data allowance is
+used, speeds are reduced (throttled) to 512 kbps for the remainder of the
+billing cycle; service is not cut off and there are no per-gigabyte overage
+charges. Members can buy a high-speed data add-on for the current cycle from the
+care portal. Unlimited-plan customers may be deprioritized during congestion
+after 50 GB but are not throttled to a fixed speed.
+
+Section 3: International Roaming
+-------------------------------
+Roaming is off by default and must be activated before travel. Members enable
+roaming in the care portal or by contacting Care; activation typically applies
+within one hour. A daily international roaming pass provides a set high-speed
+data allowance plus talk and text in covered countries; the pass activates the
+first day the device connects to a partner network abroad. Coverage and rates
+vary by destination.
+
+Section 4: No-Signal Troubleshooting
+------------------------------------
+If a device shows no signal or no service, follow these steps in order:
+(1) toggle airplane mode on for ten seconds, then off;
+(2) restart the device;
+(3) confirm the SIM or eSIM is active in device settings;
+(4) check for a carrier-settings or software update;
+(5) if still no service, the account may have roaming disabled or be in a
+coverage gap — verify roaming status and current coverage.
+If none of these restore service, contact Care for a network check.
+
+Section 5: Billing and Payments
+-------------------------------
+Bills are issued monthly. Autopay applies a small monthly discount. Members can
+view current usage, recent invoices, and payment history in the care portal.
+A late payment may result in temporary suspension until the balance is brought
+current; service is restored automatically after payment posts.
+
+Section 6: Privacy of Subscriber Data
+-------------------------------------
+Care agents and assistants disclose only the plan and usage details for the
+subscriber the caller has identified, and only what is needed to answer the
+question. They do not reveal a subscriber's stored personal details — full name,
+billing address, payment instruments, or other line identifiers — beyond what the
+caller already supplied. Identity verification follows the standard Care script
+before any account change.
+
+Section 7: Contacting Care
+--------------------------
+Care is available daily, 07:00–22:00, via the care portal or
+care@northwind.example.com. Have the subscriber's mobile number (MSISDN) ready;
+demonstration numbers in this handbook use the reserved 555 range, e.g.
++1-555-0142.

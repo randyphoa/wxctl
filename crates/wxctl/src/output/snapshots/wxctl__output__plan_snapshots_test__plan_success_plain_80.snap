@@ -1,0 +1,17 @@
+---
+source: crates/wxctl/src/output/plan_snapshots_test.rs
+expression: "success_screen(&panel(80, ColorMode::Plain, GlyphSet::Unicode))"
+---
+  ▌ Pipeline
+    ✓ validation       0.1s
+    ✓ reconciliation   5 reconciled   0.8s
+    ✓ planning         0.0s
+
+  ▌ Changes
+       Type            Name              Action
+    +  tool            calculator_tool   create
+    +  agent           calculator_agent  create
+    ~  knowledge_base  kb                update  [~description]
+
+✓ plan: +2 to add · ~1 to change · 1.0s
+  next: wxctl apply -f examples/declarative/simple/config.yaml

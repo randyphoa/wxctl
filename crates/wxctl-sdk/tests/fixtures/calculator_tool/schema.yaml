@@ -1,0 +1,21 @@
+input_schema:
+    type: object
+    properties:
+        operation:
+            type: string
+            description: The operation to perform (add or multiply).
+            enum: [add, multiply]
+        a:
+            type: number
+            description: First operand.
+        b:
+            type: number
+            description: Second operand.
+    required: [operation, a, b]
+output_schema:
+    type: object
+    description: Calculation result
+    properties:
+        result:
+            type: number
+            description: The calculated result.

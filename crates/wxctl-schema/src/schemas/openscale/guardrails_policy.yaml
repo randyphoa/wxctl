@@ -1,0 +1,94 @@
+# Generated from OpenAPI — reviewed and tuned.
+# Live behavior may diverge from the OpenAPI source: verify `required` flags and
+# server-enforced params at first live apply.
+resource:
+  name: guardrails_policy
+  service: openscale
+  kind: guardrails_policy
+  version: v1
+  api:
+    base_path: /guardrails_manager/v2/policies
+    id_field: id
+    list_endpoint: /guardrails_manager/v2/policies
+    get_endpoint: /guardrails_manager/v2/policies/{id}
+    create_endpoint: /guardrails_manager/v2/policies
+    create_method: POST
+    update_endpoint: /guardrails_manager/v2/policies/{id}
+    update_method: PUT
+    delete_endpoint: /guardrails_manager/v2/policies/{id}
+    delete_method: DELETE
+  schema:
+    # No active references: the guardrails policy create body carries no subscription_id /
+    # deployment_id field — a policy is a global detector/threshold config, not targeted at a
+    # subscription or deployment. (PolicyEntity exposes inventory_id on GET only; `inventory`
+    # is a Phase 4 factsheets kind. Promote to references: only after a live probe confirms a
+    # targeting field exists on the wire.)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: name
+      type: string
+      required: true
+      validation:
+        pattern: ^[a-zA-Z0-9 _.-]+$
+    - name: description
+      type: string
+      validation:
+        pattern: ^.*$
+      description: Description of the policy
+    - name: block_message
+      type: string
+      validation:
+        pattern: ^.*$
+      description: Message to display when content is blocked
+    - name: mask_character
+      type: string
+      validation:
+        pattern: ^.$
+      description: Character to use for masking (e.g. "*")
+    - name: input
+      type: array
+      required: true
+      item_type: string
+      description: Detector configurations for the input direction (array of {detector, action, detector_properties}).
+    - name: output
+      type: array
+      required: true
+      item_type: string
+      description: Detector configurations for the output direction (array of {detector, action, detector_properties}).
+    - name: policy_status
+      type: string
+      required: true
+      allowed_values:
+      - publish
+      - draft
+      description: Status of the policy (publish for active, draft for inactive).
+    - name: tags
+      type: array
+      item_type: string
+  reconciliation:
+    # TODO(verify): response schema echoes the create request (entity/metadata self-echo) —
+    # state_fields below are the writable scalar subset; widen only if live GET proves a field
+    # is server-authoritative and stable.
+    # TODO(verify): identity_match — guardrails policies have a `name`; set local_path/remote_path
+    # only if the list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: policies
+      id_source: id
+    update_strategy: replace
+    json_patch_path_prefix: ""
+    state_fields:
+      - name
+      - description
+      - block_message
+      - mask_character
+      - policy_status
+      - tags

@@ -1,0 +1,198 @@
+resource:
+  name: ingestion_job
+  service: watsonx_data
+  kind: ingestion_job
+  version: v1
+  description: >
+      An Ingestion Job loads data from object storage (CSV, Parquet, JSON, ORC, Avro, or
+      txt) into a watsonx.data lakehouse table. Each job specifies a source (file paths,
+      format, bucket details) and a target (catalog, schema, table, write mode). Create
+      is asynchronous — the handler polls the job until it reaches a terminal state
+      (`completed` or `failed`). The watsonx.data API does not expose a DELETE for
+      ingestion jobs, so destroy is a client-side no-op: the `pre_delete` hook returns
+      `HookOutcome::Handled` and the delete operation is skipped. All fields are immutable;
+      any change triggers recreate.
+
+  api:
+    base_path: /v3/lhingestion/api/v1/ingestion/jobs
+    id_field: id
+    list_endpoint: /v3/lhingestion/api/v1/ingestion/jobs?limit=100
+    get_endpoint: /v3/lhingestion/api/v1/ingestion/jobs/{id}
+    create_endpoint: /v3/lhingestion/api/v1/ingestion/jobs
+    create_method: POST
+    delete_endpoint: /v3/lhingestion/api/v1/ingestion/jobs/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: true
+        immutable: true
+        # POST body expects `id`; GET/LIST responses echo it as `job_id`. The
+        # denormalizer uses `api_field` to lift the server's key back into the
+        # user-facing field so discovery + delete can find it.
+        api_field: job_id
+        description: >
+            User-supplied job identifier (unique per instance). Also used as the resource
+            id in get and delete paths.
+        validation:
+          min_length: 1
+          max_length: 128
+          pattern: "^[a-zA-Z0-9\\-_.]+$"
+
+      - name: engine_id
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Id of the Spark engine to run this ingestion on. Optional — when omitted the
+            instance default engine is used. References a `spark_engine` resource.
+        references:
+          resource: spark_engine
+          field: id
+
+      - name: source
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Source descriptor — file paths, format, and bucket details. See the OpenAPI
+            SourceDetails schema for the full shape.
+        schema:
+          fields:
+            - name: file_paths
+              type: string
+              required: false
+              description: >
+                  Comma-separated source file or directory path (e.g.,
+                  `s3://bucket/path/data.csv`). May interpolate both an
+                  `s3_bucket` (for the bucket name) and an `s3_object` (for
+                  the object key) via `${...}` templates.
+              references:
+                resource: s3_bucket
+                field: name
+                also_allows:
+                  - s3_object
+            - name: file_type
+              type: string
+              required: false
+              allowed_values: [csv, parquet, json, orc, avro, txt]
+              description: Source file format.
+            - name: source_type
+              type: string
+              required: true
+              default: storage
+              allowed_values: [iceberg, db, local, storage]
+              description: Ingestion source type.
+            - name: bucket_details
+              type: object
+              required: false
+              description: Bucket connection details (name, type, endpoint).
+            - name: file_format_properties
+              type: object
+              required: false
+              description: Format-specific options (delimiter, encoding, header).
+
+      - name: target
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Target table descriptor — catalog, schema, table, and write mode.
+        schema:
+          fields:
+            - name: catalog
+              type: string
+              required: true
+              description: Target catalog name.
+              references:
+                resource: storage_registration
+                field: catalog_name
+                also_allows:
+                  - database_registration
+            - name: schema
+              type: string
+              required: true
+              description: Target schema name.
+              references:
+                resource: schema
+                field: name
+            - name: table
+              type: string
+              required: true
+              description: Target table name.
+            - name: write_mode
+              type: string
+              required: false
+              allowed_values: [append, overwrite]
+              description: How to handle existing data in the target table.
+            - name: schema_mode
+              type: string
+              required: false
+              allowed_values: [strict, sloppy]
+              description: Schema validation mode.
+            - name: schema_infer
+              type: boolean
+              required: false
+              default: true
+              description: Whether to infer column types from source data.
+            - name: merge_on_read
+              type: boolean
+              required: false
+              default: false
+              description: Enable merge-on-read for the target Iceberg table.
+
+      - name: partition_by
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Comma-delimited list of target table columns to partition by (e.g.,
+            `date,region`).
+
+      - name: execute_config
+        type: object
+        required: false
+        immutable: true
+        description: >
+            Driver/executor resource configuration (cores, memory, instances). Defaults
+            are instance-wide; provide only to override.
+
+      - name: status
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Runtime job status reported by the API (`starting`, `running`, `completed`,
+            `failed`). Observed by the `post_create` poller.
+
+  reconciliation:
+    # Discovery uses get_by_id because the LIST endpoint drops completed /
+    # aged-out jobs while GET-by-id still returns them — and destroy is a
+    # client-side no-op (no DELETE endpoint), so the id persists on the
+    # server and a re-apply would collide with a 500 "already exists" if
+    # we relied on LIST seeing nothing and emitted Create.
+    discovery:
+      method: get_by_id
+      id_source: id
+    state_fields:
+      - id
+      - engine_id
+      - source
+      - target
+      - partition_by
+      - execute_config
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields:
+      - id
+      - engine_id
+      - source
+      - target
+      - partition_by
+      - execute_config
+
+  deployments: {}
+  unsupported_on: []

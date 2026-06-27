@@ -1,0 +1,114 @@
+kind: knowledge_base
+ref_name: employee_handbook_kb
+name: employee_handbook_kb
+display_name: Employee Handbook Knowledge Base
+description: |
+  Official employee handbook covering company policies, benefits,
+  leave, and workplace procedures.
+documents:
+  - path: ./resources/knowledge_base/employee_handbook.txt
+---
+kind: tool
+ref_name: employee_records_lookup
+name: employee_records_lookup
+display_name: Employee Records Lookup
+description: |
+  Looks up an employee's record (name, department, role, manager,
+  leave balance) from the employee records directory.
+  Use when the user asks about a specific employee's details.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    employee_id:
+      type: string
+      description: The employee identifier to look up (e.g., "E001")
+  required:
+    - employee_id
+source_path: ./resources/tool/employee_records_lookup
+binding:
+  python:
+    function: employee_records_lookup:main
+---
+kind: agent
+ref_name: hr_chatbot
+name: hr_chatbot
+display_name: HR Chatbot
+description: |
+  Answers employee questions about company policies using the official
+  employee handbook, and looks up individual employee records.
+instructions: |
+  Be friendly but professional.
+  Keep answers concise — 2-3 sentences when possible.
+  Use the employee handbook knowledge base for policy questions and
+  cite the handbook when you do.
+  Use the employee records lookup tool when asked about a specific
+  employee's details, and ask for the employee ID if it is missing.
+  For questions outside your scope, direct the employee to HR.
+  Never give legal or medical advice.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.employee_records_lookup}
+knowledge_base:
+  - ${knowledge_base.employee_handbook_kb}
+guidelines:
+  - display_name: Employee Record Privacy
+    condition: When asked about another employee's personal record
+    action: |
+      Only share role, department, and manager information; never share
+      compensation or personal contact details.
+additional_properties:
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#8A3FFC" width="64" height="64" rx="8"/><g transform="translate(32,32)"><circle cx="0" cy="-6" r="8" fill="#fff"/><ellipse cx="0" cy="12" rx="13" ry="8" fill="#fff"/></g></svg>'
+  welcome_content:
+    welcome_message: Hello, I'm your HR Chatbot
+    description: I answer policy questions from the employee handbook and look up employee records.
+  starter_prompts:
+    customize:
+      - title: PTO Policy
+        subtitle: Benefits question
+        prompt: How much PTO do I get per year?
+        state: "active"
+      - title: Remote Work
+        subtitle: Workplace policy
+        prompt: What is the policy on remote work?
+        state: "active"
+      - title: Employee Lookup
+        subtitle: Records question
+        prompt: Look up the record for employee E001
+        state: "active"
+---
+kind: test
+ref_name: test_01_pto_policy
+agent: ${agent.hr_chatbot}
+turns:
+  - message: "How much PTO do I get per year?"
+    expect_answer: "Should state 20 days of PTO per year (25 after five years of service) and cite the employee handbook"
+---
+kind: test
+ref_name: test_02_remote_work
+agent: ${agent.hr_chatbot}
+turns:
+  - message: "What is the policy on remote work?"
+    expect_answer: "Should describe the hybrid model: up to three remote days per week with Tuesday/Thursday anchor days, citing the employee handbook"
+---
+kind: test
+ref_name: test_03_employee_lookup
+agent: ${agent.hr_chatbot}
+turns:
+  - message: "Look up the record for employee E001"
+    expect_tools:
+      - employee_records_lookup
+    expect_answer: "Should return Alice Johnson's record: Engineering department, Senior Software Engineer, manager Priya Raman"
+---
+kind: test
+ref_name: test_04_lookup_followup
+agent: ${agent.hr_chatbot}
+turns:
+  - message: "Can you pull up the record for employee E003?"
+    expect_tools:
+      - employee_records_lookup
+    expect_answer: "Should return Chen Wei's record: Finance department, Financial Analyst"
+  - message: "How many leave days do they have left?"
+    expect_answer: "Should state 21 leave days remaining for Chen Wei"

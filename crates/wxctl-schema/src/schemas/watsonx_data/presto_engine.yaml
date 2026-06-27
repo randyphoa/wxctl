@@ -1,0 +1,150 @@
+resource:
+  name: presto_engine
+  service: watsonx_data
+  kind: presto_engine
+  version: v1
+  description: >
+      A Presto Engine is a distributed SQL query engine in watsonx.data that runs analytical
+      queries across lakehouse catalogs and object storage. Each engine has a display name,
+      origin (native only), and a configuration object that defines node topology and size.
+      Pause and resume are modeled here as desired-state transitions on the top-level
+      `status` field — the `pre_update` handler translates a `status` change into the
+      corresponding `/pause` or `/resume` action endpoint rather than a PATCH. The
+      `configuration` object is treated as immutable after create because the API enriches
+      it with runtime fields that would otherwise trigger spurious drift.
+
+  api:
+    base_path: /v3/presto_engines
+    id_field: id
+    list_endpoint: /v3/presto_engines?limit=100
+    get_endpoint: /v3/presto_engines/{id}
+    create_endpoint: /v3/presto_engines
+    create_method: POST
+    update_endpoint: /v3/presto_engines/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/presto_engines/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during engine creation (e.g.,
+            `presto-123`). Used by schemas and ingestion jobs to target this engine.
+
+      - name: display_name
+        type: string
+        required: true
+        description: >
+            Human-readable engine name shown in the watsonx.data UI. Must be unique within
+            the instance.
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: origin
+        type: string
+        required: true
+        default: native
+        allowed_values: [native]
+        description: >
+            Engine origin. `native` is a Presto engine provisioned inside watsonx.data.
+            The only supported value at creation time.
+
+      - name: description
+        type: string
+        required: false
+        description: >
+            Optional free-text description of the engine's purpose (max 50 chars).
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: associated_catalogs
+        type: array
+        required: false
+        item_type: string
+        description: >
+            Catalogs attached to this engine. Accepts either wxctl-managed
+            registrations via ${storage_registration.name} /
+            ${database_registration.name} refs (resolved to their
+            associated_catalog.catalog_name via the `catalog_name` computed
+            field) or plain catalog-name strings for catalogs that already
+            exist on the instance and are not managed by wxctl.
+        references:
+          resource: storage_registration
+          field: catalog_name
+          also_allows:
+            - database_registration
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+            Free-form tags for organizing and filtering engines.
+
+      - name: configuration
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Engine node topology and sizing. Sent on create only; the API enriches this
+            object with runtime fields on subsequent reads, so it is excluded from drift
+            detection.
+        schema:
+          fields:
+            - name: size_config
+              type: string
+              required: false
+              description: >
+                  Named size profile (`starter`, `small`, `medium`, `large`, `xlarge`,
+                  `xxlarge`, `cache_optimized`, `compute_optimized`, `lite`, or `custom`).
+            - name: coordinator
+              type: object
+              required: false
+              description: Coordinator node specification (node_type + quantity).
+            - name: worker
+              type: object
+              required: false
+              description: Worker node specification (node_type + quantity).
+
+      - name: status
+        type: string
+        required: false
+        default: running
+        allowed_values: [running, paused]
+        description: >
+            Desired lifecycle state. Setting `paused` triggers
+            `POST /v3/presto_engines/{id}/pause`; setting `running` triggers `/resume`.
+            Handled in `pre_update` via `HookOutcome::Handled` so the transition does not
+            flow through the normal PATCH path. The `pre_create` handler strips this field
+            from the create payload — the Presto create API does not accept a `status`
+            input.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: presto_engines
+      id_source: id
+      name_field: display_name
+    state_fields:
+      - display_name
+      - description
+      - associated_catalogs
+      - tags
+      - status
+    update_strategy: patch
+    use_json_patch: false
+    # `configuration` and `origin` are intentionally excluded from immutable_fields:
+    # the list/get API flattens `configuration` sub-fields to the top level and
+    # omits `origin` entirely, so literal equality checks always fail and trigger
+    # spurious Recreate. Both are create-only inputs; changes post-create are
+    # ignored — users must recreate the engine explicitly.
+    immutable_fields: []
+
+  unsupported_on: []

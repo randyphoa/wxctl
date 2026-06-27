@@ -1,0 +1,4 @@
+Name,Artifact Type,Description
+PII,glossary_term,Personally identifiable information that must be protected and access-controlled.
+KYC Status,glossary_term,The know-your-customer verification state of a customer relationship.
+Account Holder,glossary_term,The legal owner of a bank account associated with a customer identifier.

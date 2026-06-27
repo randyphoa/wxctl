@@ -1,0 +1,59 @@
+resource:
+  name: data_mart
+  service: openscale
+  kind: data_mart
+  version: v1
+  api:
+    base_path: /v2/data_marts
+    id_field: id
+    list_endpoint: /v2/data_marts
+    get_endpoint: /v2/data_marts/{id}
+    create_endpoint: /v2/data_marts
+    create_method: POST
+    update_endpoint: /v2/data_marts/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/data_marts/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref blocks below are UNVERIFIED heuristic seams (P3). Promote to `references:` only after a P4 probe confirms.
+    # candidate-ref (tier2x:service_instance_crn score=75): field `service_instance_crn` may reference `instance` (openpages/instance)
+    # candidate-ref (tier2x:service_instance_crn score=75): field `service_instance_crn` may reference `instance` (watsonx_orchestrate/instance)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: database_configuration
+      type: object
+      description: Database configuration ignored if internal database is requested (`internal_database` is `true`)
+    - name: database_discovery
+      type: string
+      allowed_values:
+      - automatic
+      - manual
+      description: Indicates if the database was discovered automatically or manually added by user through UI
+    - name: description
+      type: string
+      description: Description of the data mart
+    - name: internal_database
+      type: boolean
+      description: If `true` the internal database managed by AI OpenScale is provided for the user
+    - name: name
+      type: string
+      description: Name of the data mart
+    - name: service_instance_crn
+      type: string
+      description: Can be omitted if user token is used for authorization
+  reconciliation:
+    # TODO(verify): identity_match — set local_path/remote_path if list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: data_marts
+      id_source: id
+    update_strategy: patch
+    json_patch_path_prefix: ""

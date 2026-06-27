@@ -1,0 +1,265 @@
+resource:
+    name: model
+    service: watsonx_orchestrate
+    kind: model
+    version: v1
+    description: >
+        A Model Configuration defines custom language model settings and parameters for use within Watsonx Orchestrate. Model
+        configs specify the underlying LLM, connection credentials, display information, and provider-specific settings that
+        control how language models behave when invoked by agents and tools. Model configs support advanced features including
+        load balancing across multiple model targets, automatic fallback strategies, caching for improved performance, and
+        retry policies for resilience. Supported providers include watsonx, openai, anthropic, and other compatible LLM providers.
+    api:
+        base_path: /v1/orchestrate/models
+        id_field: id
+        list_endpoint: /v1/orchestrate/models
+        get_endpoint: /v1/orchestrate/models/{id}
+        create_method: POST
+        update_method: PUT
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Unique name identifier for the model configuration. Typically follows the format virtual-model/provider/model-name
+                  (e.g., watsonx/meta-llama/llama-3-2-90b-vision-instruct). This is the identifier that agents use when specifying
+                  which LLM to use.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: display_name
+              type: string
+              required: true
+              description: >
+                  Human-readable display name shown in the UI when selecting or managing models. Provides a friendly name
+                  that users can easily recognize.
+            - name: provider_config
+              type: object
+              required: true
+              description: >
+                  Provider-specific configuration object that identifies which LLM provider this model uses (e.g., watsonx,
+                  openai, anthropic). Contains provider name and any provider-specific settings. Additional provider keys not
+                  declared below pass through unchanged — only the fields needing cross-resource references are declared here.
+              schema:
+                  fields:
+                      - name: provider
+                        type: string
+                        required: false
+                        description: >
+                            Name of the LLM provider (e.g., watsonx, openai, anthropic). Determines which API interface and
+                            protocol is used to invoke the model.
+                      - name: custom_host
+                        type: string
+                        required: false
+                        description: >
+                            Non-default provider endpoint — e.g. the SaaS watsonx.ai host the AI Gateway should call when
+                            registering a watsonx virtual-model from a CP4D-hosted Orchestrate instance.
+                      - name: watsonx_space_id
+                        type: string
+                        required: false
+                        description: >
+                            watsonx.ai deployment space that scopes inference. Accepts a literal space GUID or a
+                            `${space.<ref>}` reference to a space created in the same config (e.g. a SaaS space consumed by a
+                            CP4D-hosted gateway model). Mutually exclusive with watsonx_project_id / watsonx_deployment_id.
+                        references:
+                            resource: space
+                            field: id
+                            optional: true
+                      - name: watsonx_project_id
+                        type: string
+                        required: false
+                        description: >
+                            watsonx.ai project that scopes inference. Accepts a literal project GUID or a `${project.<ref>}`
+                            reference. Mutually exclusive with watsonx_space_id / watsonx_deployment_id.
+                        references:
+                            resource: project
+                            field: id
+                            optional: true
+                      - name: watsonx_deployment_id
+                        type: string
+                        required: false
+                        description: >
+                            watsonx.ai deployment that scopes inference. Accepts a literal deployment GUID or a
+                            `${wml_deployment.<ref>}` reference. Mutually exclusive with watsonx_space_id / watsonx_project_id.
+                        references:
+                            resource: wml_deployment
+                            field: id
+                            optional: true
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Textual description of the model configuration, explaining what the model is for, its capabilities, use
+                  cases, or any special configuration notes.
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  Categorization tags for organizing and filtering model configurations. Useful for grouping models by capability,
+                  use case, cost tier, or other organizational criteria.
+            - name: model_type
+              type: string
+              required: true
+              description: >
+                  Specifies the category and usage pattern of the model. 'chat' models are for conversational interactions,
+                  'completion' models generate text continuations, and 'embedding' models convert text into vector representations
+                  for semantic search.
+              allowed_values: [chat, completion, embedding]
+            - name: connection_id
+              type: string
+              required: true
+              description: >
+                  Reference to the orchestrate connection that provides authentication credentials for accessing the model's
+                  API. Links this model config to the appropriate connection resource that handles authentication and API
+                  access.
+              references:
+                  resource: orchestrate_connection
+                  field: connection_id
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+              description: >
+                  Unique UUID identifier for the model configuration, automatically assigned by the API during creation. Used
+                  for referencing this model config from agents and other resources.
+            - name: tenant_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: tenant_name
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: title
+              type: string
+              required: false
+              description: >
+                  Optional title for the model configuration. Can be used for additional labeling or categorization beyond
+                  the display_name.
+            - name: created_on
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: created_by
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: created_by_username
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: updated_at
+              type: timestamp
+              required: false
+              location: Computed
+            - name: model_name
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: api_base
+              type: string
+              required: false
+              description: >
+                  Custom base URL for the model's API endpoint. Overrides the default API endpoint when connecting to custom
+                  deployments or alternative hosting environments.
+            - name: api_version
+              type: string
+              required: false
+              description: >
+                  Specific API version to use when invoking the model. Allows pinning to particular API versions for stability
+                  or accessing version-specific features.
+            - name: deployment_id
+              type: string
+              required: false
+              description: >
+                  Identifier for a specific model deployment or instance. Used when the provider supports multiple deployments
+                  of the same model with different configurations or scaling.
+            - name: provider
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+              allowed_values: [openai, anthropic, azure-openai, azure-ai, anyscale, cohere, cerebras, palm, google, together-ai,
+                  mistral-ai, perplexity-ai, stability-ai, nomic, ollama, bedrock, ai21, groq, segmind, vertex-ai, deepinfra,
+                  novita-ai, fireworks-ai, deepseek, voyage, vllm, jina, reka-ai, moonshot, openrouter, lingyi, zhipu, monsterapi,
+                  predibase, huggingface, github, deepbricks, siliconflow, workers-ai, ibm_bam, watsonx, mistralai, specialized_routing_model,
+                  product_rag, x-ai]
+    reconciliation:
+        discovery:
+            method: list_and_get
+            list_field: models
+            id_source: id
+        state_fields:
+            - name
+            - display_name
+            - provider_config
+            - description
+            - tags
+            - model_type
+            - connection_id
+            - title
+            - api_base
+            - api_version
+            - deployment_id
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "The `name` field typically follows the format `virtual-model/provider/model-name` (e.g., `virtual-model/watsonx/my-llm`)."
+            - "The `connection_id` must reference an `orchestrate_connection` resource using `${orchestrate_connection.<ref_name>}` syntax. This ensures the connection is created before the model during deployment."
+            - "The `model_type` determines the model's usage pattern: `chat` for conversational, `completion` for text generation, `embedding` for vector representations."
+            - "The `provider_config.provider` field identifies which LLM provider API to use (e.g., `watsonx`, `openai`, `anthropic`). Use `provider_config.custom_host` for non-default endpoints (the API returns it as `customHost`, but author it snake_case to match the declared subfield)."
+            - "Agents reference models via the `llm` field using `${model.<ref_name>}` syntax or a plain string model name."
+        examples:
+            minimal: |
+                kind: model
+                ref_name: my_model
+                name: virtual-model/watsonx/my-llm
+                display_name: My LLM
+                model_type: chat
+                connection_id: ${orchestrate_connection.my_connection}
+                provider_config:
+                  provider: watsonx
+            full: |
+                kind: orchestrate_connection
+                ref_name: my_proxy
+                app_id: my-proxy
+                connection_type: key_value_creds
+                environment: draft
+                preference: team
+                credentials:
+                  api_key: your-api-key
+                ---
+                kind: model
+                ref_name: my_premium_model
+                name: virtual-model/openai/my-premium-model
+                display_name: My Premium Model
+                description: A premium chat model routed through a custom proxy endpoint
+                model_type: chat
+                connection_id: ${orchestrate_connection.my_proxy}
+                provider_config:
+                  provider: openai
+                  custom_host: https://proxy.example.com
+                tags:
+                  - production
+                  - premium
+                title: Premium Chat Model
+                api_base: https://api.example.com/v1
+                api_version: "2024-02-01"
+                deployment_id: dep-abc123
+
+  # TODO: Add hooks if needed
+  # hooks:
+  #   post_create: service::handlers::kind::function_name

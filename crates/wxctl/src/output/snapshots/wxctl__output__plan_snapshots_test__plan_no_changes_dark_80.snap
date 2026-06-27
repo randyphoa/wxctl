@@ -1,0 +1,13 @@
+---
+source: crates/wxctl/src/output/plan_snapshots_test.rs
+expression: "no_changes_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mPipeline[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mvalidation[0m       [38;2;125;133;144m0.1s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mreconciliation[0m   [38;2;125;133;144m3 reconciled[0m   [38;2;125;133;144m0.6s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mplanning[0m         [38;2;125;133;144m0.0s[0m
+
+  [38;2;120;169;255m▌[0m [1mChanges[0m
+    [38;2;125;133;144mNo changes. All resources match desired state.[0m
+
+[38;2;63;185;80m✓[0m [1mplan: no changes[0m [38;2;125;133;144m·[0m [38;2;125;133;144m0.7s[0m

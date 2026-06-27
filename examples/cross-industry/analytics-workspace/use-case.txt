@@ -1,0 +1,1 @@
+Stand up an analytics workspace: a project with a PostgreSQL data connection, plus a deployment space with a custom conda runtime.

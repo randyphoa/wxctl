@@ -1,0 +1,77 @@
+resource:
+  name: sal_glossary
+  service: watsonx_data
+  kind: sal_glossary
+  version: v1
+  description: >
+      Uploads a business-glossary CSV into the watsonx.data Semantic Automation Layer
+      (SAL) and polls the upload process to a terminal state, so a glossary can be
+      uploaded before/around enrichment (richer term assignment). Live-discovered
+      v3-singular surface `/v3/sal_integration/glossary/*` (multipart confirmed on 2.3.x
+      Software, CP4D). An ACTION-create resource: `SalGlossaryHandler::pre_create`
+      multipart-`POST`s the CSV (`glossary_csv` + optional `replace_option`) →
+      `201 {id}`, then polls `…/upload_processes/{id}/status` until a terminal marker
+      appears in the opaque `response` string (best-effort on poll exhaustion; a failed
+      marker bails). Discovery is `skip` (every apply re-runs the upload — idempotency is
+      governed by `replace_option`). No DELETE endpoint — destroy is a no-op via
+      `on_destroy: retain` (the fixture sets it). SAL must be enabled first
+      (`sal_integration` with `status: active`) or the glossary endpoints 400.
+      Field shapes (`replace_option` values, status strings) are LIVE-DISCOVERED on
+      CP4D — do not let a spec refresh "correct" them to a stale OpenAPI shape.
+
+  api:
+    # NOTE: create is multipart and is performed in the handler (pre_create). These
+    # fields are documentary / used only by the status poll + verification.
+    base_path: /v3/sal_integration/glossary/upload_processes
+    id_field: id
+    get_endpoint: /v3/sal_integration/glossary/upload_processes
+    create_endpoint: /v3/sal_integration/glossary/upload_processes
+    create_method: POST
+    delete_method: DELETE
+
+  schema:
+    fields:
+      # No `name` field — the config's `ref_name` is the framework-level ref handle
+      # (same as sal_enrichment_job); a schema `name` field would be a second, separate
+      # required field the fixture does not supply.
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Upload-process id returned by the multipart POST; used for the status poll.
+
+      - name: glossary_csv
+        type: string
+        required: true
+        location: LocalOnly
+        is_path: true
+        description: >
+            Path to the business-glossary CSV (relative to the config file or absolute).
+            `is_path: true` ⇒ build.rs adds it to PATH_FIELDS ⇒ resolved against the config
+            dir by `resolve_file_paths`; LocalOnly so the path is never sent to the API.
+
+      - name: replace_option
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            Field-merge strategy for the uploaded terms, sent as an extra multipart text field.
+            Live-confirmed (CP4D) ∈ [all, specified, empty]: `all` replaces all fields of
+            matching terms, `specified` only non-empty imported fields, `empty` only currently-empty
+            fields. NOT a glossary wipe — terms absent from the CSV are retained (no DELETE surface).
+            Omit when unset (do not guess a default into the form).
+        validation:
+          enum: ["all", "specified", "empty"]
+
+  reconciliation:
+    discovery:
+      method: skip
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on:
+    - "saas"

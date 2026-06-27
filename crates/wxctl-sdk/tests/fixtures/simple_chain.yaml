@@ -1,0 +1,34 @@
+# Mirrors examples/simple/config.yaml — keep in sync.
+# knowledge_base + tool → agent (agent references both).
+# Placeholders: __TEST_ID__ (uuid), __MANIFEST_DIR__ (crate root)
+kind: knowledge_base
+ref_name: wxctl_test_kb___TEST_ID__
+name: wxctl_test_kb___TEST_ID__
+description: Integration test knowledge base
+documents:
+  - path: __MANIFEST_DIR__/tests/fixtures/kb_docs/doc1.txt
+  - path: __MANIFEST_DIR__/tests/fixtures/kb_docs/doc2.txt
+---
+kind: tool
+ref_name: wxctl_test_tool___TEST_ID__
+name: wxctl_test_tool___TEST_ID__
+display_name: wxctl_test_tool___TEST_ID__
+description: Integration test tool
+permission: read_write
+is_async: false
+source_path: __MANIFEST_DIR__/tests/fixtures/calculator_tool
+binding:
+    python:
+        function: calculator:main
+---
+kind: agent
+ref_name: wxctl_test_agent___TEST_ID__
+name: wxctl_test_agent___TEST_ID__
+display_name: wxctl_test_agent___TEST_ID__
+description: Integration test agent with tool and knowledge base
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+    - ${tool.wxctl_test_tool___TEST_ID__}
+knowledge_base:
+    - ${knowledge_base.wxctl_test_kb___TEST_ID__}

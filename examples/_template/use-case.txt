@@ -1,0 +1,2 @@
+Describe the use case in one or two plain-English sentences — the business goal, the
+products involved, and what the user should be able to do once it is deployed.

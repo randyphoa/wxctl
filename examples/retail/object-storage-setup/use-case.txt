@@ -1,0 +1,1 @@
+Stand up a retail sales object-storage landing zone: an IBM Cloud Object Storage bucket holding a daily sales CSV, registered as a governed Watson Knowledge Catalog so analysts can find and query it.

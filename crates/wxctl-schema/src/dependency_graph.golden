@@ -1,0 +1,223 @@
+# wxctl-schema dependency graph snapshot (structural drift guard).
+# Regenerate after an intentional change, then review the diff:
+#   WXCTL_REGEN_GRAPH_GOLDEN=1 cargo test -p wxctl-schema -- graph_snapshot
+
+## resources (57)
+adls_container
+  dep storage_connection
+  edge connection -> storage_connection (required)
+agent
+  dep agent
+  dep knowledge_base
+  dep model
+  dep tool
+  dep toolkit
+  edge collaborators -> agent (optional)
+  edge knowledge_base -> knowledge_base (optional)
+  edge llm -> model (optional)
+  edge toolkits -> toolkit (optional)
+  edge tools -> tool (optional)
+ai_service
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+autoai_experiment
+  dep data_asset
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+  edge training_data -> data_asset (required)
+business_term
+business_terms
+catalog
+category
+  dep category
+  edge parent_category -> category (optional)
+common_core_connection
+  dep catalog
+  dep project
+  dep space
+  edge catalog_id -> catalog (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+data_asset
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+data_mart
+data_set
+  dep data_mart
+  edge data_mart_id -> data_mart (required)
+database_connection
+database_registration
+  dep database_connection
+  edge connection -> database_connection (required)
+db2_engine
+gcs_bucket
+  dep storage_connection
+  edge connection -> storage_connection (required)
+guardrails_policy
+ingestion_job
+  dep spark_engine
+  edge engine_id -> spark_engine (optional)
+integrated_system
+integration
+inventory
+knowledge_base
+milvus_service
+  dep storage_registration
+  edge storage_name -> storage_registration (optional)
+model
+  dep orchestrate_connection
+  edge connection_id -> orchestrate_connection (required)
+model_entry
+  dep inventory
+  edge catalog_id -> inventory (required)
+monitor_definition
+monitor_instance
+  dep data_mart
+  dep monitor_definition
+  dep subscription
+  edge data_mart_id -> data_mart (required)
+  edge monitor_definition_id -> monitor_definition (optional)
+  edge target.target_id -> subscription (optional)
+orchestrate_connection
+other_engine
+package_extension
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+prestissimo_engine
+  dep database_registration
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> storage_registration (optional)
+presto_engine
+  dep database_registration
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> storage_registration (optional)
+project
+python_script
+rule
+rules
+s3_bucket
+  dep storage_connection
+  edge connection -> storage_connection (required)
+s3_object
+  dep s3_bucket
+  edge bucket -> s3_bucket (required)
+  edge region -> s3_bucket (required)
+sal_enrichment_job
+sal_enrichment_settings
+sal_global_settings
+sal_glossary
+sal_integration
+  dep prestissimo_engine
+  dep presto_engine
+  dep spark_engine
+  edge engine_id -> prestissimo_engine (optional)
+  edge engine_id -> presto_engine (required)
+  edge engine_id -> spark_engine (optional)
+schema
+  dep catalog
+  dep presto_engine
+  dep storage_registration
+  edge catalog_id -> catalog (required)
+  edge catalog_id -> storage_registration (optional)
+  edge engine_id -> presto_engine (required)
+service_provider
+  dep space
+  edge deployment_space_id -> space (optional)
+software_specification
+  dep package_extension
+  dep project
+  dep space
+  edge package_extensions -> package_extension (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+space
+spark_engine
+  dep database_registration
+  dep s3_bucket
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> s3_bucket (optional)
+  edge associated_catalogs -> storage_registration (optional)
+storage_connection
+storage_registration
+  dep adls_container
+  dep gcs_bucket
+  dep s3_bucket
+  edge bucket -> adls_container (optional)
+  edge bucket -> gcs_bucket (optional)
+  edge bucket -> s3_bucket (required)
+subscription
+  dep data_mart
+  dep service_provider
+  edge data_mart_id -> data_mart (required)
+  edge service_provider_id -> service_provider (required)
+tool
+  dep orchestrate_connection
+  edge binding.openapi.connection_id -> orchestrate_connection (optional)
+  edge binding.python.connections -> orchestrate_connection (optional)
+toolkit
+  dep orchestrate_connection
+  edge mcp.connections -> orchestrate_connection (optional)
+wml_deployment
+  dep ai_service
+  dep project
+  dep space
+  dep wml_function
+  dep wml_model
+  dep wml_script
+  edge asset -> ai_service (required)
+  edge asset -> wml_function (optional)
+  edge asset -> wml_model (optional)
+  edge asset -> wml_script (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+wml_function
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+wml_model
+  dep autoai_experiment
+  dep project
+  dep space
+  edge experiment -> autoai_experiment (required)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+wml_script
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+
+## bridges (2)
+database_access: orchestrate_connection -> common_core_connection when=always
+  constraint common_core_connection.datasource_type in [postgres, mysql, oracle, db2, netezza]
+  constraint orchestrate_connection.connection_type in [key_value_creds]
+  map credentials.database -> properties.database
+  map credentials.host -> properties.host
+  map credentials.password -> properties.password
+  map credentials.port -> properties.port
+  map credentials.username -> properties.username
+object_storage_access: orchestrate_connection -> common_core_connection when=always
+  constraint common_core_connection.datasource_type in [s3, cos, azure]
+  constraint orchestrate_connection.connection_type in [key_value_creds]
+  map credentials.access_key -> properties.access_key
+  map credentials.bucket -> properties.bucket
+  map credentials.secret_key -> properties.secret_key
+  map credentials.url -> properties.url

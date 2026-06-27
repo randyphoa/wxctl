@@ -1,0 +1,118 @@
+kind: knowledge_base
+ref_name: plan_handbook_kb
+name: plan_handbook_kb
+display_name: Health Plan Member Handbook
+description: |
+  Meridian Health Plan member handbook covering benefits, cost shares,
+  preventive care, claims, and how to check claim status.
+documents:
+  - path: ./resources/knowledge_base/plan_handbook.txt
+---
+kind: tool
+ref_name: claim_status_lookup
+name: claim_status_lookup
+display_name: Claim Status Lookup
+description: |
+  Looks up the status of a submitted claim (Received, In Review, Approved,
+  Denied, or Paid) and the billed/allowed/paid amounts and member
+  responsibility, by claim ID. Reports status only; it does not make
+  coverage or eligibility determinations. Use when a member asks about a
+  specific claim.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    claim_id:
+      type: string
+      description: The claim identifier to look up (e.g., "CLM1001")
+  required:
+    - claim_id
+source_path: ./resources/tool/claim_status_lookup
+binding:
+  python:
+    function: claim_status_lookup:main
+---
+kind: agent
+ref_name: member_services
+name: member_services
+display_name: Member Services Agent
+description: |
+  Answers health-plan benefits and coverage questions from the Meridian
+  member handbook, and looks up the status of a member's claim. Informs
+  members; it does not make coverage or eligibility determinations.
+instructions: |
+  Be clear, calm, and professional.
+  Answer benefits, cost-share, and coverage questions from the member
+  handbook knowledge base, and cite the handbook when you do.
+  Use the claim status lookup tool when a member asks about a specific
+  claim, and ask for the claim ID if it is missing.
+  You inform, you do not adjudicate: never state whether a specific service
+  is medically necessary, covered, or eligible — those are determinations
+  made by the plan's clinical and benefits reviewers. Direct the member to
+  request a coverage determination or appeal through the member portal.
+  Never give clinical or medical advice.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.claim_status_lookup}
+knowledge_base:
+  - ${knowledge_base.plan_handbook_kb}
+guidelines:
+  - display_name: Defer Determinations to a Human
+    condition: When asked whether a specific service is covered, medically necessary, or eligible
+    action: |
+      Do not adjudicate. Explain that coverage and eligibility determinations
+      are made by the plan's clinical and benefits reviewers, summarize the
+      relevant handbook benefit if one applies, and direct the member to
+      request a coverage determination or file an appeal through the member
+      portal.
+additional_properties:
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#198038" width="64" height="64" rx="8"/><g transform="translate(32,32)" fill="#fff"><rect x="-4" y="-14" width="8" height="28" rx="2"/><rect x="-14" y="-4" width="28" height="8" rx="2"/></g></svg>'
+  welcome_content:
+    welcome_message: Hello, I'm your Member Services Assistant
+    description: I answer benefits and coverage questions from the member handbook and look up claim status.
+  starter_prompts:
+    customize:
+      - title: Preventive Care
+        subtitle: Benefits question
+        prompt: Is my annual wellness visit covered?
+        state: "active"
+      - title: Out-of-Pocket Max
+        subtitle: Cost-share question
+        prompt: What is my out-of-pocket maximum?
+        state: "active"
+      - title: Claim Status
+        subtitle: Claims question
+        prompt: What is the status of claim CLM1001?
+        state: "active"
+---
+kind: test
+ref_name: test_01_preventive_care
+agent: ${agent.member_services}
+turns:
+  - message: "Is my annual wellness visit covered?"
+    expect_answer: "Should state in-network preventive care (annual wellness visits) is covered at 100% with no copay or coinsurance and is not subject to the deductible, citing the member handbook"
+---
+kind: test
+ref_name: test_02_out_of_pocket_max
+agent: ${agent.member_services}
+turns:
+  - message: "What is my out-of-pocket maximum?"
+    expect_answer: "Should state the in-network out-of-pocket maximum is $6,000 per individual and $12,000 per family, after which the plan pays 100% of covered in-network services, citing the member handbook"
+---
+kind: test
+ref_name: test_03_claim_status
+agent: ${agent.member_services}
+turns:
+  - message: "What is the status of claim CLM1001?"
+    expect_tools:
+      - claim_status_lookup
+    expect_answer: "Should report claim CLM1001 status as Paid, with the plan paying $135 and member responsibility $25"
+---
+kind: test
+ref_name: test_04_determination_deferral
+agent: ${agent.member_services}
+turns:
+  - message: "Will my plan cover an MRI my doctor wants to order?"
+    expect_answer: "Should NOT adjudicate; should explain that coverage and medical-necessity determinations are made by the plan's reviewers and direct the member to request a coverage determination through the member portal"

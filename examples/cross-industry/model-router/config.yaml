@@ -1,0 +1,116 @@
+# Multi-model AI-gateway routing: two watsonx.ai-served gateway models — gpt-oss-120b
+# for fast triage and llama-3-3-70b for the deep specialist — back a fast triage agent
+# and a deep specialist agent; a supervisor agent routes by complexity, listing both
+# in collaborators. Both models route through watsonx.ai (custom_host:
+# ${env:WATSONX_URL}) scoped by a shared deployment space. Creds are a
+# ${env:GATEWAY_API_KEY} reference. Set both env vars (placeholders suffice for plan).
+# Runs live on a SaaS watsonx Orchestrate profile (README).
+kind: orchestrate_connection
+ref_name: gateway_connection
+app_id: router-gateway
+name: Router Model Gateway Connection
+connection_type: key_value_creds
+environment: draft
+preference: team
+credentials:
+  api_key: ${env:GATEWAY_API_KEY}
+---
+# Deployment space (created dynamically) that scopes both gateway models' watsonx.ai inference.
+kind: space
+ref_name: gw_space
+name: model-router-space
+description: Deployment space that scopes the router's gateway-model inference
+type: wx
+---
+# Fast / low-latency tier — gpt-oss-120b served by watsonx.ai through the AI gateway.
+kind: model
+ref_name: fast_model
+name: virtual-model/watsonx/openai/gpt-oss-120b
+display_name: Fast Triage Gateway Model (gpt-oss-120b via watsonx.ai)
+description: |
+  Low-latency chat gateway model for quick triage answers: gpt-oss-120b served by
+  watsonx.ai, scoped by a deployment space.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_connection}
+provider_config:
+  custom_host: ${env:WATSONX_URL}
+  watsonx_space_id: ${space.gw_space}
+---
+# Deep / specialist tier — llama-3-3-70b served by watsonx.ai through the AI gateway.
+kind: model
+ref_name: deep_model
+name: virtual-model/watsonx/meta-llama/llama-3-3-70b-instruct
+display_name: Deep Specialist Gateway Model (llama-3-3-70b via watsonx.ai)
+description: |
+  Higher-capability chat gateway model for complex, multi-step questions:
+  llama-3-3-70b served by watsonx.ai, scoped by a deployment space.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_connection}
+provider_config:
+  custom_host: ${env:WATSONX_URL}
+  watsonx_space_id: ${space.gw_space}
+---
+kind: agent
+ref_name: triage_agent
+name: triage_agent
+display_name: Triage Agent
+description: |
+  Fast first responder that answers simple, single-step questions directly on
+  the low-latency model.
+instructions: |
+  Answer simple, single-step questions briefly and directly. If a question is
+  complex or multi-step, say it should be routed to the specialist.
+llm: ${model.fast_model}
+style: default
+tools: []
+collaborators: []
+knowledge_base: []
+---
+kind: agent
+ref_name: specialist_agent
+name: specialist_agent
+display_name: Specialist Agent
+description: |
+  Deep specialist that handles complex, multi-step reasoning on the
+  higher-capability model.
+instructions: |
+  Handle complex, multi-step questions with careful step-by-step reasoning.
+  Give a thorough, well-structured answer.
+llm: ${model.deep_model}
+style: default
+tools: []
+collaborators: []
+knowledge_base: []
+---
+kind: agent
+ref_name: router_agent
+name: router_agent
+display_name: Router Agent
+description: |
+  Supervisor that routes a question to the triage agent for simple queries and
+  the specialist agent for complex ones.
+instructions: |
+  Decide whether a question is simple (single-step) or complex (multi-step).
+  Delegate simple questions to the triage agent and complex questions to the
+  specialist agent, then return their answer.
+llm: ${model.fast_model}
+style: default
+tools: []
+collaborators:
+  - ${agent.triage_agent}
+  - ${agent.specialist_agent}
+knowledge_base: []
+---
+kind: test
+ref_name: test_01_simple_route
+agent: ${agent.router_agent}
+turns:
+  - message: "What is 2 + 2?"
+    expect_answer: "Should answer 4, routed to the fast triage agent."
+---
+kind: test
+ref_name: test_02_complex_route
+agent: ${agent.router_agent}
+turns:
+  - message: "Walk me step by step through how to plan a three-phase product launch across marketing, engineering, and support, and what to do if engineering slips a week."
+    expect_answer: "Should give a thorough multi-step plan, routed to the specialist agent."

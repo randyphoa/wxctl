@@ -1,0 +1,29 @@
+kind: toolkit
+ref_name: wxctl_test_mcp_streamable___TEST_ID__
+name: wxctl-test-mcp-streamable-__TEST_ID__
+description: remote description
+mcp:
+    transport: streamable_http
+    server_url: https://api.githubcopilot.com/mcp/
+    tools: ["list-issues"]
+    connections:
+        mcpgithub: mcpgithub
+---
+kind: agent
+ref_name: wxctl_test_mcp_streamable_agent___TEST_ID__
+name: wxctl_test_mcp_streamable_agent___TEST_ID__
+display_name: GitHub Agent
+description: An AI assistant that can interact with GitHub issues
+style: default
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${toolkit.wxctl_test_mcp_streamable___TEST_ID__.tools.list-issues}
+---
+kind: test
+ref_name: test_github
+agent: ${agent.wxctl_test_mcp_streamable_agent___TEST_ID__}
+turns:
+    - message: "List the open issues in the repository"
+      expect_tools:
+          - list-issues
+      expect_answer: "The response should contain a list of issues"

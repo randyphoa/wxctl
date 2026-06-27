@@ -1,0 +1,180 @@
+# retail/lakehouse-analytics — a full retail sales lakehouse on SaaS watsonx.data.
+#
+# Lands daily sales CSVs in a Cloud Object Storage bucket, registers the bucket
+# as an Iceberg catalog alongside a Db2 federated catalog, queries both with
+# Presto and Spark, and runs a Spark ingestion_job that loads the CSV into an
+# Iceberg table. Reuses the retail/object-storage-setup COS chain for storage.
+#
+# Kinds: storage_connection, s3_bucket, s3_object, catalog (storage + governance);
+#        storage_registration, database_connection, database_registration,
+#        presto_engine, spark_engine, schema, ingestion_job (watsonx.data).
+#
+# Cross-service ref edges:
+#   storage_connection -> s3_bucket -> s3_object
+#   s3_bucket -> catalog.bucket.bucket_name
+#   s3_bucket -> storage_registration -> presto_engine.associated_catalogs
+#   s3_bucket -> spark_engine.engine_home.storage_name
+#   database_connection -> database_registration -> presto_engine.associated_catalogs
+#   storage_registration -> {schema.catalog_id, ingestion_job.target.catalog}
+#   presto_engine -> schema.engine_id
+#   spark_engine -> ingestion_job.engine_id
+#   schema -> ingestion_job.target.schema
+#
+# Secrets are ${env:VAR} placeholders — never literals. Required env (set to any
+# value for offline `plan`; real creds + sizing needed for live apply):
+#   WXCTL_COS_CRN, WXCTL_COS_ACCESS_KEY, WXCTL_COS_SECRET_KEY   (COS HMAC)
+#   WXCTL_DB2_HOST, WXCTL_DB2_USERNAME, WXCTL_DB2_PASSWORD       (db2 federation)
+#   WXCTL_PRESTO_SIZE_CONFIG, WXCTL_PRESTO_NODE_TYPE             (presto sizing)
+# Target profile for the live run: a SaaS watsonx.data profile whose COS instance
+# is in the bucket's region (see README). This is a data example — no kind: test;
+# the assertion is a clean live apply (incl. ingestion completion) + destroy.
+
+# ── cloud_object_storage chain (reused from object-storage-setup) ──────────
+kind: storage_connection
+ref_name: sales_cos
+type: ibm_cos
+access_key: ${env:WXCTL_COS_ACCESS_KEY}
+secret_key: ${env:WXCTL_COS_SECRET_KEY}
+instance_crn: ${env:WXCTL_COS_CRN}
+
+---
+kind: s3_bucket
+ref_name: sales_bucket
+connection: ${storage_connection.sales_cos}
+name: wxctl-retail-lakehouse-landing
+region: eu-gb
+storage_class: smart
+force_destroy: true
+on_destroy: delete
+
+---
+kind: s3_object
+ref_name: sales_csv
+bucket: ${s3_bucket.sales_bucket.name}
+region: ${s3_bucket.sales_bucket.region}
+key: sales/daily_sales.csv
+content: |
+  order_id,store,product,quantity,unit_price
+  1001,london,widget,3,9.99
+  1002,tokyo,gadget,1,24.50
+  1003,new-york,widget,5,9.99
+content_type: text/csv
+
+# ── common_core catalog backed by the bucket (WKC × COS) ───────────────────
+---
+kind: catalog
+ref_name: sales_catalog
+name: retail-lakehouse-catalog
+description: Governed catalog over the retail sales lakehouse landing-zone bucket.
+generator: wxctl-example
+bucket:
+  bucket_name: ${s3_bucket.sales_bucket.name}
+  bucket_type: bmcos_object_storage
+
+# ── watsonx_data lakehouse ─────────────────────────────────────────────────
+---
+kind: storage_registration
+ref_name: sales_iceberg
+display_name: retail-sales-iceberg
+description: Iceberg catalog on the retail sales COS bucket.
+bucket: ${s3_bucket.sales_bucket.name}
+associated_catalog:
+  catalog_name: retail_sales_iceberg
+  catalog_type: iceberg
+
+---
+kind: database_connection
+ref_name: sales_db2
+type: db2
+hostname: ${env:WXCTL_DB2_HOST}
+port: 31030
+name: bludb
+username: ${env:WXCTL_DB2_USERNAME}
+password: ${env:WXCTL_DB2_PASSWORD}
+ssl: true
+
+---
+kind: database_registration
+ref_name: sales_db2_catalog
+display_name: retail-sales-db2-catalog
+description: Db2 federated catalog for retail sales.
+connection: ${database_connection.sales_db2}
+associated_catalog:
+  catalog_name: retail_sales_db2_cat
+  catalog_type: db2
+
+---
+kind: presto_engine
+ref_name: sales_presto
+display_name: retail-sales-presto
+description: Presto over Iceberg and Db2 catalogs.
+origin: native
+# size_config + node_type are paired per-tenant (env-driven) — NOT portable: SaaS
+# (MCSP) needs `custom` + tier name, classic/Software needs `starter` + VPC
+# profile; a mismatch 400s "invalid <size_config> coordinator node type".
+configuration:
+  size_config: ${env:WXCTL_PRESTO_SIZE_CONFIG}
+  coordinator:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+  worker:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+associated_catalogs:
+  - ${storage_registration.sales_iceberg.catalog_name}
+  - ${database_registration.sales_db2_catalog.catalog_name}
+status: running
+
+---
+kind: spark_engine
+ref_name: sales_spark
+display_name: retail-sales-spark
+description: Spark engine for the retail sales ingestion job.
+origin: native
+type: spark
+configuration:
+  default_version: "4.0"
+  engine_home:
+    storage_name: ${s3_bucket.sales_bucket.name}
+  scale_config:
+    node_type: starter
+    number_of_nodes: 1
+associated_catalogs:
+  - ${storage_registration.sales_iceberg.catalog_name}
+status: running
+
+---
+kind: schema
+ref_name: sales_schema
+name: retail_sales
+custom_path: retail_sales
+catalog_id: ${storage_registration.sales_iceberg.catalog_name}
+engine_id: ${presto_engine.sales_presto}
+
+---
+kind: ingestion_job
+ref_name: sales_ingest
+id: wxctl-retail-lakehouse-ingest
+engine_id: ${spark_engine.sales_spark}
+execute_config:
+  driver_memory: "2g"
+  driver_cores: 1
+  executor_memory: "2g"
+  executor_cores: 1
+  num_executors: 1
+source:
+  source_type: storage
+  file_type: csv
+  file_paths: s3://${s3_bucket.sales_bucket.name}/${s3_object.sales_csv.key}
+  bucket_details:
+    bucket_name: ${s3_bucket.sales_bucket.name}
+    bucket_type: ibm_cos
+    endpoint: https://s3.eu-gb.cloud-object-storage.appdomain.cloud
+  file_format_properties:
+    header: "true"
+target:
+  catalog: ${storage_registration.sales_iceberg.catalog_name}
+  schema: ${schema.sales_schema.name}
+  table: daily_sales
+  write_mode: overwrite
+  schema_infer: true

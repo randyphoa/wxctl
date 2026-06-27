@@ -1,0 +1,61 @@
+MERIDIAN HEALTH PLAN — MEMBER HANDBOOK
+======================================
+
+Section 1: Plan Overview
+------------------------
+The Meridian Choice PPO plan gives members access to a nationwide network of
+in-network providers. Members may also see out-of-network providers at a higher
+cost share. This handbook summarizes benefits, cost shares, and how to check the
+status of a submitted claim. It is informational and is not a determination of
+coverage or eligibility for any specific service.
+
+Section 2: Cost Shares
+----------------------
+In-network primary care office visits have a $25 copay. In-network specialist
+visits have a $50 copay. The annual in-network deductible is $1,500 per
+individual and $3,000 per family. After the deductible is met, the plan pays 80%
+of the allowed amount for most covered services and the member pays 20%
+coinsurance until the out-of-pocket maximum is reached.
+
+Section 3: Out-of-Pocket Maximum
+--------------------------------
+The annual in-network out-of-pocket maximum is $6,000 per individual and $12,000
+per family. Once a member reaches the out-of-pocket maximum, the plan pays 100%
+of the allowed amount for covered in-network services for the rest of the plan
+year. Copays, deductible, and coinsurance count toward the out-of-pocket maximum.
+
+Section 4: Preventive Care
+--------------------------
+In-network preventive care — annual wellness visits, routine immunizations, and
+recommended screenings — is covered at 100% with no copay, no coinsurance, and is
+not subject to the deductible. Services that are diagnostic rather than preventive
+may be subject to normal cost shares.
+
+Section 5: Prescription Drugs
+-----------------------------
+The plan uses a four-tier formulary. Tier 1 (generic) drugs have a $10 copay,
+Tier 2 (preferred brand) a $35 copay, Tier 3 (non-preferred brand) a $70 copay,
+and Tier 4 (specialty) 25% coinsurance up to $250 per fill. Mail-order supplies
+of up to 90 days are available for maintenance medications.
+
+Section 6: Claims and Reimbursement
+-----------------------------------
+In-network providers submit claims directly to the plan. For out-of-network or
+paper claims, members submit an itemized claim form within 365 days of the date
+of service. Processed claims show an allowed amount, the plan's payment, and the
+member's responsibility on the Explanation of Benefits (EOB). To check the status
+of a submitted claim, members provide the claim ID; status values are Received,
+In Review, Approved, Denied, or Paid.
+
+Section 7: Eligibility and Determinations
+-----------------------------------------
+Whether a specific service is medically necessary, covered, or eligible under the
+plan is a determination made by the plan's clinical and benefits reviewers, not by
+this handbook or by an automated assistant. Members and providers may request a
+coverage determination or appeal a denial through the member portal.
+
+Section 8: Contacting Member Services
+-------------------------------------
+Member Services is available Monday through Friday, 08:00–20:00, via the member
+portal or members@meridian.example.com. For claim questions, have the claim ID
+and date of service ready.

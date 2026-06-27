@@ -1,0 +1,80 @@
+# Build a customer-data governance taxonomy on the IBM Knowledge Catalog /
+# watsonx.data common-core governance surface: categories, business terms, and
+# data-protection (access-enforcement) rules. These are platform-root governance
+# artifacts (common_core) — no deployment pin. `wxctl plan` validates offline,
+# then reconciliation issues read-only discovery GETs (category/business_term/rule
+# are `list_and_get`, so plan reads /v3/categories, /v3/glossary_terms,
+# /v3/enforcement/rules) — so plan needs a CP4D / Software profile's credentials.
+# No secrets live in this example; they come from your profile. Live apply/destroy
+# additionally needs the `glossary_admin` role on the runtime user. See README.
+#
+# Cross-kind refs resolve LATE via ${kind.ref.artifact_id} (the create response
+# carries the id at resources[0].artifact_id; the handlers hoist it to top level):
+#   category.customer_data ──parent_category──▶ category.customer_pii   (the one real DAG edge)
+#   business_term.customer_id ─{id}─▶ category.customer_data            (nested value, not an edge)
+#   rule / rules ─trigger──▶ business_term.customer_id.artifact_id      (nested value, not an edge)
+#
+# Bulk imports:
+#   business_terms.glossary_bulk -> resources/glossary/terms.csv  (is_path CSV bulk import)
+#   rules.rules_bulk             -> inline `rules:` array          (per-rule reconciliation; the
+#                                   import_file path consumes the /v3/enforcement/rules EXPORT
+#                                   document — a cross-system migration envelope, not a
+#                                   hand-authored rule list — so the example uses the inline form)
+
+kind: category
+ref_name: customer_data
+name: Customer Data
+long_description: Root taxonomy node for all customer-data governance artifacts at the bank.
+
+---
+kind: category
+ref_name: customer_pii
+name: Customer PII
+long_description: Personally identifiable customer attributes governed under Customer Data.
+parent_category: ${category.customer_data.artifact_id}
+
+---
+kind: business_term
+ref_name: customer_id
+name: Customer Identifier
+short_description: The bank-wide unique identifier for a customer.
+long_description: A single, stable identifier that uniquely references a customer across all systems of record, used to join, deduplicate, and govern customer data.
+parent_category:
+  id: ${category.customer_data.artifact_id}
+
+---
+kind: business_terms
+ref_name: glossary_bulk
+name: customer-data-glossary
+import_file: resources/glossary/terms.csv
+merge_option: all
+
+---
+kind: rule
+ref_name: restrict_customer_id_access
+name: Restrict Customer Identifier Access
+description: Deny access to assets classified with the Customer Identifier term.
+governance_type_id: Access   # live /v3/enforcement/rules governance types are [Access, ResourceControl]
+trigger:
+  - "$Asset.InferredClassification"
+  - "CONTAINS"
+  - ["${business_term.customer_id.artifact_id}"]
+action:
+  name: Deny
+state: draft   # live /v3/enforcement/rules states are lowercase [draft, active, archived]
+
+---
+kind: rules
+ref_name: rules_bulk
+name: customer-data-rules
+rules:
+  - name: Restrict Customer Identifier Access Bulk
+    description: Deny access to assets classified with the Customer Identifier term (bulk path).
+    governance_type_id: Access
+    trigger:
+      - "$Asset.InferredClassification"
+      - "CONTAINS"
+      - ["${business_term.customer_id.artifact_id}"]
+    action:
+      name: Deny
+    state: draft

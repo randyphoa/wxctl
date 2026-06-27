@@ -1,0 +1,75 @@
+# Enable the watsonx.data Semantic Automation Layer (SAL) and auto-enrich a
+# customer table against a business glossary: IKC registration + SAL integration,
+# then glossary + enrichment settings + an enrichment job. FSI-framed. SAL + IKC
+# governance are Software-only (CP4D) — SaaS exposes no SAL
+# (`WXCTL-R006` under a SaaS profile). `wxctl plan` validates offline, then
+# reconciliation issues read-only discovery GET/list calls (integration is
+# `list_and_get`; sal_integration/sal_global_settings/sal_enrichment_settings are
+# `singleton`) — so plan needs a non-SaaS CP4D/Software profile's credentials
+# (placeholder `${env:WXCTL_SAL_*}` ok; no secrets stored here). Live apply needs
+# the SAL prerequisites — see README.
+#
+# All SAL kinds set `on_destroy: retain` (no DELETE endpoint) → destroy is a
+# structural no-op for them. No `${...}` edges between these kinds; the SAL
+# prerequisites (enabled SAL, real IKC project, existing table) are out-of-band,
+# documented in the README.
+#
+# Required env (placeholders ok for plan):
+#   WXCTL_IKC_URL, WXCTL_IKC_APIKEY, WXCTL_IKC_USERNAME   (in-cluster IKC target)
+#   WXCTL_SAL_APIKEY                                       (IAM apikey SAL drives with)
+#   WXCTL_SAL_ENGINE_ID                                    (existing presto engine id)
+#   WXCTL_SAL_GLOSSARY_CSV is NOT used here — the CSV is shipped in-repo (is_path)
+#   WXCTL_SAL_PROJECT_ID                                   (real IKC governance project)
+#   WXCTL_SAL_ENRICH_CATALOG / _SCHEMA / _TABLE            (existing populated table to enrich)
+
+kind: integration
+ref_name: ikc
+type: ikc
+url: ${env:WXCTL_IKC_URL}
+apikey: ${env:WXCTL_IKC_APIKEY}
+username: ${env:WXCTL_IKC_USERNAME}
+# NB: no `ssl: true`. On wx.data 2.3.x Software, ssl:true makes the IKC
+# integration unreadable (every GET/list 500s -> breaks discovery). Omit it.
+
+---
+kind: sal_integration
+ref_name: sal
+on_destroy: retain
+apikey: ${env:WXCTL_SAL_APIKEY}
+engine_id: ${env:WXCTL_SAL_ENGINE_ID}
+storage_type: bmcos_object_storage
+
+---
+kind: sal_glossary
+ref_name: glossary
+on_destroy: retain
+glossary_csv: resources/glossary/sal_terms.csv
+replace_option: all   # field-merge strategy, in [all, specified, empty]; not a glossary wipe
+
+---
+kind: sal_global_settings
+ref_name: sal_defaults
+on_destroy: retain
+term_assignment:
+  llm_based_assignments: true
+  term_assignment_threshold: 0.5
+
+---
+kind: sal_enrichment_settings
+ref_name: sal_proj
+on_destroy: retain
+project_id: ${env:WXCTL_SAL_PROJECT_ID}
+term_assignment:
+  name_matching: true
+
+---
+kind: sal_enrichment_job
+ref_name: enrich
+on_destroy: retain
+project_id: ${env:WXCTL_SAL_PROJECT_ID}
+changes:
+  - catalog: ${env:WXCTL_SAL_ENRICH_CATALOG}
+    operation: create
+    schema: ${env:WXCTL_SAL_ENRICH_SCHEMA}
+    tables:
+      - ${env:WXCTL_SAL_ENRICH_TABLE}

@@ -1,0 +1,127 @@
+---
+source: crates/wxctl/tests/panel_snapshots.rs
+expression: "run(&[\"resources\"], \"120\", \"dark\", \"unicode\")"
+---
+
+  [1mwatsonx resource catalog[0m   [38;2;125;133;144m57 kinds · 8 products[0m
+
+  [38;2;120;169;255m▌[0m [1mAI Factsheets[0m   [38;2;125;133;144m(factsheets · 2 kinds)[0m
+    [38;2;120;169;255minventory              [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144m.[0m
+    [38;2;120;169;255mmodel_entry            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+
+  [38;2;120;169;255m▌[0m [1mCloud Object Storage[0m   [38;2;125;133;144m(cloud_object_storage · 5 kinds)[0m
+    [38;2;120;169;255madls_container         [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mAzure Data Lake Storage container (Gen1 or Gen2).[0m
+    [38;2;120;169;255mgcs_bucket             [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mGoogle Cloud Storage bucket.[0m
+    [38;2;120;169;255ms3_bucket              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mS3-compatible bucket (IBM COS, AWS S3, MinIO, Ceph).[0m
+    [38;2;120;169;255ms3_object              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn object inside an `s3_bucket`.[0m
+    [38;2;120;169;255mstorage_connection     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding kind for object-store / file-system backends.[0m
+
+  [38;2;120;169;255m▌[0m [1mData & AI Common Core[0m   [38;2;125;133;144m(common_core · 12 kinds)[0m
+    [38;2;120;169;255mbusiness_term          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Business Term is a glossary entry that defines standardized business[0m
+[38;2;125;133;144m                                               vocabulary and semantics for data governance in Watsonx Data.[0m
+    [38;2;120;169;255mbusiness_terms         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mBusiness Terms provides bulk creation functionality for multiple business[0m
+[38;2;125;133;144m                                               terms in a single API call.[0m
+    [38;2;120;169;255mcatalog                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Catalog is a metadata repository that organizes and manages table[0m
+[38;2;125;133;144m                                               schemas, partitions, and file locations for data lake operations in[0m
+[38;2;125;133;144m                                               Watsonx Data.[0m
+    [38;2;120;169;255mcategory               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Category is a hierarchical classification structure used to organize[0m
+[38;2;125;133;144m                                               and group data assets, business terms, and other governance artifacts in[0m
+[38;2;125;133;144m                                               Watsonx Data.[0m
+    [38;2;120;169;255mcommon_core_connection [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection is a data source configuration that enables Watsonx Data to[0m
+[38;2;125;133;144m                                               access external databases, object storage systems, and other data[0m
+[38;2;125;133;144m                                               repositories.[0m
+    [38;2;120;169;255mdata_asset             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Data Asset uploads a local file (e.g.[0m
+    [38;2;120;169;255mpackage_extension      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Package Extension defines additional Python packages to include in a[0m
+[38;2;125;133;144m                                               software specification.[0m
+    [38;2;120;169;255mproject                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Project is a collaborative workspace that organizes assets, tools,[0m
+[38;2;125;133;144m                                               notebooks, jobs, and data connections for data science and AI workflows.[0m
+    [38;2;120;169;255mrule                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Rule is an automated policy enforcement mechanism that implements data[0m
+[38;2;125;133;144m                                               governance controls in Watsonx Data.[0m
+    [38;2;120;169;255mrules                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRules provides bulk creation functionality for multiple governance rules[0m
+[38;2;125;133;144m                                               in a single API call.[0m
+    [38;2;120;169;255msoftware_specification [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Software Specification defines a runtime environment for deploying AI[0m
+[38;2;125;133;144m                                               services and functions.[0m
+    [38;2;120;169;255mspace                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Space is a deployment environment for promoting and managing machine[0m
+[38;2;125;133;144m                                               learning models, functions, and other AI assets.[0m
+
+  [38;2;120;169;255m▌[0m [1mLocal[0m   [38;2;125;133;144m(local · 1 kind)[0m
+    [38;2;120;169;255mpython_script          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mExecutes a Python script locally.[0m
+
+  [38;2;120;169;255m▌[0m [1mOpenScale[0m   [38;2;125;133;144m(openscale · 8 kinds)[0m
+    [38;2;120;169;255mdata_mart              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mdata_set               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mguardrails_policy      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mintegrated_system      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mmonitor_definition     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mmonitor_instance       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255mservice_provider       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+    [38;2;120;169;255msubscription           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144m.[0m
+
+  [38;2;120;169;255m▌[0m [1mwatsonx Orchestrate[0m   [38;2;125;133;144m(watsonx_orchestrate · 6 kinds)[0m
+    [38;2;120;169;255magent                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Agent is a configurable AI assistant within Watsonx Orchestrate that[0m
+[38;2;125;133;144m                                               can perform tasks using tools, collaborate with other agents, and[0m
+[38;2;125;133;144m                                               leverage knowledge bases.[0m
+    [38;2;120;169;255mknowledge_base         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Knowledge Base provides document-based context and information[0m
+[38;2;125;133;144m                                               retrieval capabilities for agents.[0m
+    [38;2;120;169;255mmodel                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Model Configuration defines custom language model settings and[0m
+[38;2;125;133;144m                                               parameters for use within Watsonx Orchestrate.[0m
+    [38;2;120;169;255morchestrate_connection [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection represents authentication credentials and configuration for[0m
+[38;2;125;133;144m                                               integrating external applications with Watsonx Orchestrate.[0m
+    [38;2;120;169;255mtool                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Tool is a specification for a callable function or service that agents[0m
+[38;2;125;133;144m                                               can invoke to perform actions and retrieve information.[0m
+    [38;2;120;169;255mtoolkit                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn MCP (Model Context Protocol) toolkit backed by a local or remote MCP[0m
+[38;2;125;133;144m                                               server.[0m
+
+  [38;2;120;169;255m▌[0m [1mwatsonx.ai[0m   [38;2;125;133;144m(watsonx_ai · 6 kinds)[0m
+    [38;2;120;169;255mai_service             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AI Service is a deployable code artifact for Watson Machine Learning.[0m
+    [38;2;120;169;255mautoai_experiment      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AutoAI Experiment runs a watsonx.ai AutoAI training to completion and[0m
+[38;2;125;133;144m                                               surfaces the ranked pipeline leaderboard.[0m
+    [38;2;120;169;255mwml_deployment         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Deployment creates a live online endpoint from an AI service or[0m
+[38;2;125;133;144m                                               model.[0m
+    [38;2;120;169;255mwml_function           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python function asset stored in Watson Machine Learning.[0m
+    [38;2;120;169;255mwml_model              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Model materializes the winning pipeline of a completed AutoAI[0m
+[38;2;125;133;144m                                               experiment as a deployable wml-hybrid_0.1 model.[0m
+    [38;2;120;169;255mwml_script             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python script asset stored in Watson Machine Learning.[0m
+
+  [38;2;120;169;255m▌[0m [1mwatsonx.data[0m   [38;2;125;133;144m(watsonx_data · 17 kinds)[0m
+    [38;2;120;169;255mdatabase_connection    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding kind for external database connections consumed by[0m
+[38;2;125;133;144m                                               `database_registration`.[0m
+    [38;2;120;169;255mdatabase_registration  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an external database (Db2, PostgreSQL, MySQL, Kafka, etc.) with[0m
+[38;2;125;133;144m                                               watsonx.data and atomically creates its associated catalog.[0m
+    [38;2;120;169;255mdb2_engine             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Db2 Engine registers an external IBM Db2 instance as a federated query[0m
+[38;2;125;133;144m                                               engine in watsonx.data.[0m
+    [38;2;120;169;255mingestion_job          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Ingestion Job loads data from object storage (CSV, Parquet, JSON, ORC,[0m
+[38;2;125;133;144m                                               Avro, or txt) into a watsonx.data lakehouse table.[0m
+    [38;2;120;169;255mintegration            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an external governance / lineage service with watsonx.data —[0m
+[38;2;125;133;144m                                               IBM Knowledge Catalog (`ikc`), Apache Ranger (`ranger`), Manta lineage[0m
+[38;2;125;133;144m                                               (`manta`), or Databand (`databand`).[0m
+    [38;2;120;169;255mmilvus_service         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Milvus Service is the managed Milvus vector store in watsonx.data — the[0m
+[38;2;125;133;144m                                               vector backend for embeddings / similarity search (e.g.[0m
+    [38;2;120;169;255mother_engine           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Other Engine registers a generic external query engine (anything not[0m
+[38;2;125;133;144m                                               covered by the typed presto/spark/db2 kinds) with watsonx.data,[0m
+[38;2;125;133;144m                                               identified by a display name plus a `connection_string` and an engine[0m
+[38;2;125;133;144m                                               `type`.[0m
+    [38;2;120;169;255mprestissimo_engine     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Prestissimo Engine is the C++ (Velox-backed) distributed SQL query[0m
+[38;2;125;133;144m                                               engine in watsonx.data — the high-performance twin of the Java Presto[0m
+[38;2;125;133;144m                                               engine.[0m
+    [38;2;120;169;255mpresto_engine          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Presto Engine is a distributed SQL query engine in watsonx.data that[0m
+[38;2;125;133;144m                                               runs analytical queries across lakehouse catalogs and object storage.[0m
+    [38;2;120;169;255msal_enrichment_job     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRuns a Semantic Automation Layer (SAL) metadata-enrichment job over a[0m
+[38;2;125;133;144m                                               catalog/schema's tables.[0m
+    [38;2;120;169;255msal_enrichment_settings[0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mPer-project metadata-enrichment settings for the Semantic Automation[0m
+[38;2;125;133;144m                                               Layer (SAL) on watsonx.data.[0m
+    [38;2;120;169;255msal_global_settings    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mGlobal metadata-enrichment defaults for the Semantic Automation Layer[0m
+[38;2;125;133;144m                                               (SAL) on watsonx.data.[0m
+    [38;2;120;169;255msal_glossary           [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mUploads a business-glossary CSV into the watsonx.data Semantic Automation[0m
+[38;2;125;133;144m                                               Layer (SAL) and polls the upload process to a terminal state, so a[0m
+[38;2;125;133;144m                                               glossary can be uploaded before/around enrichment (richer term[0m
+[38;2;125;133;144m                                               assignment).[0m
+    [38;2;120;169;255msal_integration        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mEnables the Semantic Automation Layer (SAL) on watsonx.data — the[0m
+[38;2;125;133;144m                                               metadata-enrichment / auto-cataloging integration that backs IKC[0m
+[38;2;125;133;144m                                               governance.[0m
+    [38;2;120;169;255mschema                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Schema is a logical grouping of tables within a watsonx.data catalog.[0m
+    [38;2;120;169;255mspark_engine           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Spark Engine is a serverless Apache Spark execution environment in[0m
+[38;2;125;133;144m                                               watsonx.data used for data ingestion jobs, Spark SQL, and general Spark[0m
+[38;2;125;133;144m                                               applications.[0m
+    [38;2;120;169;255mstorage_registration   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an object-store bucket with watsonx.data and atomically creates[0m
+[38;2;125;133;144m                                               its associated lakehouse catalog (iceberg or hive).[0m

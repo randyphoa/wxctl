@@ -1,0 +1,19 @@
+kind: toolkit
+ref_name: wxctl_test_mcp_toolkit___TEST_ID__
+name: wxctl_test_mcp_toolkit___TEST_ID__
+description: Integration test MCP toolkit
+server_path: __MANIFEST_DIR__/tests/fixtures/mcp_hello_server
+mcp:
+    source: files
+    command: python
+    args: ["server.py"]
+    tools: ["*"]
+---
+kind: agent
+ref_name: wxctl_test_mcp_agent___TEST_ID__
+name: wxctl_test_mcp_agent___TEST_ID__
+description: Integration test agent with MCP toolkit tool
+style: default
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${toolkit.wxctl_test_mcp_toolkit___TEST_ID__.tools.hello}

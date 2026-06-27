@@ -1,0 +1,90 @@
+resource:
+  name: service_provider
+  service: openscale
+  kind: service_provider
+  version: v1
+  api:
+    base_path: /v2/service_providers
+    id_field: id
+    list_endpoint: /v2/service_providers
+    get_endpoint: /v2/service_providers/{id}
+    create_endpoint: /v2/service_providers
+    create_method: POST
+    update_endpoint: /v2/service_providers/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/service_providers/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref (tier2x:integrated_project_id score=60): field `integrated_project_id` may reference `project` (common_core/project)
+    # candidate-ref (tier2x:instance_id score=60): field `instance_id` may reference `instance` (openpages/instance)
+    # candidate-ref (tier2x:instance_id score=60): field `instance_id` may reference `instance` (watsonx_orchestrate/instance)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: credentials
+      type: object
+      required: true
+    - name: deployment_space_id
+      type: string
+      description: Reference to V2 Space ID
+      references:
+        resource: space
+        field: id
+        optional: true
+    - name: description
+      type: string
+    - name: group_ids
+      type: array
+      item_type: string
+      description: Access control list of group id of Cloud Pak for Data (Only available for OpenScale on Cloud Pak for Data >= 4.0.6 with ENABLE_GROUP_AUTH being true)
+    - name: integrated_project_id
+      type: string
+      description: Project ID
+    - name: name
+      type: string
+      required: true
+      description: Name of the ML service instance
+    - name: operational_space_id
+      type: string
+      description: Reference to Operational Space
+    - name: request_headers
+      type: object
+      description: map header name to header value
+    - name: service_type
+      type: string
+      required: true
+      allowed_values:
+      - watson_machine_learning
+      - amazon_sagemaker
+      - azure_machine_learning
+      - custom_machine_learning
+      - spss_collaboration_and_deployment_services
+      - azure_machine_learning_studio
+      - azure_machine_learning_service
+      description: machine learning service type (azure_machine_learning_studio is a preferred alias for azure_machine_learning and should be used in new service bindings)
+    - name: user_ids
+      type: array
+      item_type: string
+      description: Access control list of user id of Cloud Pak for Data (Only available for OpenScale on Cloud Pak for Data >= 4.0.6 with ENABLE_GROUP_AUTH being true)
+  reconciliation:
+    # TODO(verify): identity_match — set local_path/remote_path if list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: service_providers
+      id_source: id
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    # credentials is write-only (never echoed by GET) — excluded so it can't phantom-drift into a patch.
+    state_fields:
+      - name
+      - description
+      - service_type
+      - deployment_space_id
+      - operational_space_id

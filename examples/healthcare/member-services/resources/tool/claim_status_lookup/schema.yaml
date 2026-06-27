@@ -1,0 +1,10 @@
+input_schema:
+  properties:
+    claim_id:
+      description: The claim identifier to look up (e.g., "CLM1001")
+      type: string
+  required:
+  - claim_id
+  type: object
+output_schema:
+  type: object

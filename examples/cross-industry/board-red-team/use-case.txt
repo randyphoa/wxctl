@@ -1,0 +1,1 @@
+Multi-agent board "red team" where five persona critics (CFO, activist investor, regulator, competitor, and an independent board member) critique a pasted strategy and a synthesis-lead coordinator combines their critiques into a single board memo with an overall recommendation (Proceed / Proceed with conditions / Pause / Reject) and the top risks

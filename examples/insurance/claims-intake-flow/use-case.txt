@@ -1,0 +1,1 @@
+Claims-intake assistant that validates a claim ID and member eligibility with a python tool, looks up reference data via a public OpenAPI tool, and computes the required insurance rate from a decisions flow, all on a custom gateway model

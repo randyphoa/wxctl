@@ -1,0 +1,116 @@
+kind: knowledge_base
+ref_name: care_handbook_kb
+name: care_handbook_kb
+display_name: Customer Care Handbook
+description: |
+  Northwind Mobile customer-care handbook covering plans, data usage and
+  overage, international roaming, no-signal troubleshooting, and billing.
+documents:
+  - path: ./resources/knowledge_base/care_handbook.txt
+---
+kind: tool
+ref_name: subscriber_lookup
+name: subscriber_lookup
+display_name: Subscriber Lookup
+description: |
+  Looks up a subscriber's plan and data usage by mobile number (MSISDN):
+  plan name, data allowance and usage, throttle status, and roaming status.
+  Returns plan and usage only — never stored personal details beyond the
+  supplied MSISDN. Use when a member asks about their own plan or usage.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    msisdn:
+      type: string
+      description: The subscriber's mobile number to look up (e.g., "+1-555-0142")
+  required:
+    - msisdn
+source_path: ./resources/tool/subscriber_lookup
+binding:
+  python:
+    function: subscriber_lookup:main
+---
+kind: agent
+ref_name: customer_care
+name: customer_care
+display_name: Customer Care Agent
+description: |
+  Answers plan, roaming, and troubleshooting questions from the Northwind
+  care handbook, and looks up a subscriber's plan and data usage. Discloses
+  only plan and usage for the identified subscriber.
+instructions: |
+  Be friendly, patient, and clear.
+  Answer plan, roaming, usage, and troubleshooting questions from the care
+  handbook knowledge base, and cite the handbook when you do.
+  Use the subscriber lookup tool when a member asks about their own plan or
+  data usage, and ask for the mobile number (MSISDN) if it is missing.
+  Protect subscriber privacy: disclose only the plan and usage details for
+  the subscriber the caller has identified, and only what is needed to
+  answer. Never reveal stored personal details — name, billing address,
+  payment instruments, or other line identifiers — beyond what the caller
+  already supplied.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.subscriber_lookup}
+knowledge_base:
+  - ${knowledge_base.care_handbook_kb}
+guidelines:
+  - display_name: Subscriber Data Privacy
+    condition: When responding with or about a subscriber's account
+    action: |
+      Disclose only plan and usage details for the subscriber the caller has
+      identified, and only what is needed to answer the question. Never reveal
+      stored personal details (name, billing address, payment instruments, or
+      other line identifiers) beyond what the caller already supplied.
+additional_properties:
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#0072c3" width="64" height="64" rx="8"/><g transform="translate(32,32)" fill="none" stroke="#fff" stroke-width="3"><path d="M-12 8 A 17 17 0 0 1 12 8"/><path d="M-7 4 A 10 10 0 0 1 7 4"/><circle cx="0" cy="2" r="2.5" fill="#fff" stroke="none"/></g></svg>'
+  welcome_content:
+    welcome_message: Hi, I'm your Customer Care Assistant
+    description: I answer plan, roaming, and troubleshooting questions and look up your plan and data usage.
+  starter_prompts:
+    customize:
+      - title: Data Overage
+        subtitle: Usage question
+        prompt: What happens when I use up my high-speed data?
+        state: "active"
+      - title: Roaming
+        subtitle: Travel question
+        prompt: How do I turn on international roaming?
+        state: "active"
+      - title: My Usage
+        subtitle: Account question
+        prompt: How much data has +1-555-0142 used this month?
+        state: "active"
+---
+kind: test
+ref_name: test_01_data_overage
+agent: ${agent.customer_care}
+turns:
+  - message: "What happens when I use up my high-speed data on the Essential plan?"
+    expect_answer: "Should explain that on Essential, speeds are throttled to 512 kbps for the rest of the billing cycle with no per-gigabyte overage charges, and an add-on can be purchased, citing the care handbook"
+---
+kind: test
+ref_name: test_02_roaming
+agent: ${agent.customer_care}
+turns:
+  - message: "How do I turn on international roaming before a trip?"
+    expect_answer: "Should explain that roaming is off by default and must be activated in the care portal or via Care before travel, typically applying within an hour, citing the care handbook"
+---
+kind: test
+ref_name: test_03_usage_lookup
+agent: ${agent.customer_care}
+turns:
+  - message: "How much data has +1-555-0142 used this month?"
+    expect_tools:
+      - subscriber_lookup
+    expect_answer: "Should return the Essential plan with 9.6 GB used of a 10 GB allowance and note the line is throttled"
+---
+kind: test
+ref_name: test_04_no_signal
+agent: ${agent.customer_care}
+turns:
+  - message: "My phone shows no service. What should I try?"
+    expect_answer: "Should walk through the no-signal steps in order (toggle airplane mode, restart, check SIM/eSIM, check for carrier-settings update, verify roaming/coverage), citing the care handbook"

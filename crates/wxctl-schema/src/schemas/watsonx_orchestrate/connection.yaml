@@ -1,0 +1,246 @@
+resource:
+    name: orchestrate_connection
+    service: watsonx_orchestrate
+    kind: orchestrate_connection
+    version: v1
+    description: >
+        A Connection represents authentication credentials and configuration for integrating external applications with Watsonx
+        Orchestrate. Connections define how tools can securely access external APIs and services using various authentication
+        methods. Supported authentication types include: basic_auth (username/password), bearer_token (JWT or API tokens),
+        api_key_auth (API key header/query), oauth2_auth_code (authorization code flow), oauth2_implicit (implicit grant),
+        oauth2_password (resource owner password), oauth2_client_creds (client credentials), and key_value_creds (custom key-value
+        pairs). Connections can be configured at team or personal preference levels.
+    api:
+        base_path: /v1/orchestrate/connections/applications
+        id_field: app_id
+        list_endpoint: /v1/orchestrate/connections/applications
+        get_endpoint: /v1/orchestrate/connections/applications/{app_id}
+        create_endpoint: /v1/orchestrate/connections/applications
+        create_method: POST
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: connection_type
+              type: string
+              required: true
+              description: >
+                  Type of connection being created. Used during CREATE operations to specify which authentication mechanism
+                  to configure. Each type requires different credential fields.
+              allowed_values: [basic_auth, bearer_token, api_key_auth, oauth2_auth_code, oauth2_implicit, oauth2_password,
+                  oauth2_client_creds, key_value_creds]
+            - name: credentials
+              type: object
+              required: true
+              description: >
+                  JSON object containing the authentication credentials specific to the connection_type. Structure varies
+                  based on authentication method (e.g., username/password for basic_auth, tokens for OAuth2). Used during
+                  CREATE operations only.
+            - name: tenant_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+              description: >
+                  UUID of the tenant that owns this connection. Automatically assigned by the system for multi-tenancy isolation
+                  and access control.
+            - name: is_connected
+              type: boolean
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+            - name: connection_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true  # TODO: review
+              description: >
+                  Unique system-generated identifier for the connection. Automatically assigned during connection creation
+                  and used for internal tracking and references.
+            - name: app_id
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Application identifier or name that uniquely identifies the external application being connected. This serves
+                  as the primary reference for the connection and must be unique within the tenant.
+              validation:
+                  min_length: 1
+            - name: name
+              type: string
+              required: false
+              description: >
+                  Human-readable display name for the connection. If not provided, defaults to the app_id. This is the friendly
+                  name shown in UI when selecting or managing connections.
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Textual description of what this connection is for and what external service it connects to. Helps users
+                  understand the purpose and scope of the connection.
+            - name: icon
+              type: string
+              required: false
+              description: >
+                  SVG icon data or icon reference for visual representation of the connected application. Used in UI to provide
+                  visual identification of the connection type or service.
+            - name: created_on
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp indicating when the connection was created. Automatically set by the system during connection
+                  creation.
+            - name: security_scheme
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  The security scheme employed by this connection (e.g., key_value_creds). Defines the authentication framework
+                  used to secure API access.
+            - name: auth_type
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Specific authentication type used by the connection, such as oauth2_auth_code, bearer_token, api_key_auth,
+                  or basic_auth. Determines the credential format and authentication flow.
+            - name: sso
+              type: object
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Single sign-on (SSO) configuration object if SSO authentication is enabled for this connection. Contains
+                  SSO provider details and settings.
+            - name: server_url
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Base server URL or API endpoint for the external service. Defines where API requests for this connection
+                  should be directed.
+            - name: credentials_entered
+              type: boolean
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Boolean flag indicating whether credentials have been provided for this connection. Used to track connection
+                  setup completion status.
+            - name: environment
+              type: string
+              required: false
+              location: LocalOnly
+              allowed_values: [draft, live]
+              description: >
+                  Target environment for the connection configuration. Allowed values: draft (pre-production) or live
+                  (production). Used when configuring connection settings specific to different deployment stages.
+            - name: preference
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Preference scope for the connection configuration (e.g., team, personal). Determines whether credentials
+                  are shared across a team or kept personal to individual users.
+            - name: config_security_scheme
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Security scheme to use for post-creation configuration (e.g., key_value_creds). Applied when setting up
+                  connection authentication after initial creation.
+            - name: config_auth_type
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Authentication type for post-creation configuration. Specifies the auth mechanism when configuring connection
+                  settings via the post_create hook.
+            - name: config_sso
+              type: boolean
+              required: false
+              location: LocalOnly
+              description: >
+                  Flag indicating whether Single Sign-On should be enabled during post-creation configuration. Used when setting
+                  up SSO authentication for the connection.
+            - name: config_server_url
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Server URL to configure during post-creation setup. Allows specifying the API endpoint when configuring
+                  connection after creation.
+            - name: idp_config_data
+              type: object
+              required: false
+              location: LocalOnly
+              description: >
+                  Identity Provider (IDP) configuration data object for SSO and OAuth flows. Contains provider-specific settings
+                  needed for third-party authentication integration.
+            - name: app_config_data
+              type: object
+              required: false
+              location: LocalOnly
+              description: >
+                  Application-specific configuration data for the connection. Contains settings and parameters specific to
+                  the connected application's API requirements.
+            - name: runtime_credentials
+              type: object
+              required: false
+              location: LocalOnly
+              description: >
+                  Runtime credentials object to be applied after the connection configuration is complete. Used to set actual
+                  credential values during the post-creation configuration phase.
+    reconciliation:
+        discovery:
+            method: get_by_id
+            id_source: app_id
+        state_fields:
+            - name
+            - description
+            - icon
+        update_strategy: recreate
+        immutable_fields: [app_id]
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "The `app_id` is immutable after creation. Changing it requires deleting and recreating the connection."
+            - "The `credentials` structure must match the chosen `connection_type`. For `key_value_creds` use arbitrary key-value pairs, for `basic_auth` use `username`/`password`, for `bearer_token` use `token`."
+            - "The update strategy is **recreate** -- any modification to a deployed connection triggers a delete followed by a create."
+            - "Use `environment` (e.g., `draft`) and `preference` (e.g., `team` or `personal`) to control deployment scope. These are local-only fields not sent to the API."
+            - "Models reference connections via `${orchestrate_connection.<ref_name>}` in their `connection_id` field, creating a deployment dependency."
+        examples:
+            minimal: |
+                kind: orchestrate_connection
+                ref_name: my_api_conn
+                app_id: my-api-connection
+                connection_type: key_value_creds
+                credentials:
+                  api_key: your-api-key
+            full: |
+                kind: orchestrate_connection
+                ref_name: bob_proxy
+                app_id: bob-proxy
+                connection_type: key_value_creds
+                environment: draft
+                preference: team
+                credentials:
+                  api_key: your-api-key
+                ---
+                kind: model
+                ref_name: bob_premium
+                name: virtual-model/openai/bob-premium
+                display_name: Bob Premium
+                model_type: chat
+                connection_id: ${orchestrate_connection.bob_proxy}
+                provider_config:
+                  custom_host: https://bob.example.com
+
+  # TODO: Add hooks if needed
+  # hooks:
+  #   post_create: service::handlers::kind::function_name

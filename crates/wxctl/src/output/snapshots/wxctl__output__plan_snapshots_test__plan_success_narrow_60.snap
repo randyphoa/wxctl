@@ -1,0 +1,17 @@
+---
+source: crates/wxctl/src/output/plan_snapshots_test.rs
+expression: "success_screen(&panel(60, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mPipeline[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mvalidation[0m       [38;2;125;133;144m0.1s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mreconciliation[0m   [38;2;125;133;144m5 reconciled[0m   [38;2;125;133;144m0.8s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mplanning[0m         [38;2;125;133;144m0.0s[0m
+
+  [38;2;120;169;255m▌[0m [1mChanges[0m
+[38;2;125;133;144m       Type            Name              Action[0m
+    [38;2;63;185;80m+[0m  tool            calculator_tool   [38;2;63;185;80mcreate[0m
+    [38;2;63;185;80m+[0m  agent           calculator_agent  [38;2;63;185;80mcreate[0m
+    [38;2;210;153;34m~[0m  knowledge_base  kb                [38;2;210;153;34mupdate[0m  [38;2;125;133;144m[~description][0m
+
+[38;2;63;185;80m✓[0m [1mplan:[0m [38;2;63;185;80m+2 to add[0m [38;2;125;133;144m·[0m [38;2;210;153;34m~1 to change[0m [38;2;125;133;144m·[0m [38;2;125;133;144m1.0s[0m
+  [38;2;125;133;144mnext: wxctl apply -f examples/declarative/simple/config.yaml[0m

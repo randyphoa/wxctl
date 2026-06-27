@@ -1,0 +1,70 @@
+resource:
+  name: adls_container
+  service: cloud_object_storage
+  kind: adls_container
+  version: v1
+  description: >
+      Azure Data Lake Storage container (Gen1 or Gen2). Register-only:
+      validates the linked `storage_connection` family and exposes
+      passthrough location state for `storage_registration`; never calls
+      Azure. SaaS-only (`unsupported_on: software`).
+
+  api:
+    base_path: /adls/{filesystem}
+    id_field: filesystem
+    get_endpoint: /adls/{filesystem}
+    create_endpoint: /adls/{filesystem}
+    create_method: PUT
+    delete_endpoint: /adls/{filesystem}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: connection
+        type: string
+        required: true
+        immutable: true
+        description: |
+            Reference to a `storage_connection` of `type: adls_gen1` or
+            `adls_gen2`. Carries auth credentials.
+        references:
+          resource: storage_connection
+          field: ref_name
+
+      - name: filesystem
+        type: string
+        required: false
+        immutable: true
+        description: >
+            ADLS Gen2 filesystem (container) name. Required when the
+            linked connection's `type: adls_gen2`; ignored for Gen1.
+
+      - name: data_lake_store_name
+        type: string
+        required: false
+        immutable: true
+        description: >
+            ADLS Gen1 store name. Required when the linked connection's
+            `type: adls_gen1`; ignored for Gen2.
+
+      - name: path
+        type: string
+        required: false
+        description: >
+            Optional sub-path inside the filesystem / store. Mutable.
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: filesystem
+    state_fields:
+      - path
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - connection
+      - filesystem
+      - data_lake_store_name
+
+  unsupported_on:
+    - "software"

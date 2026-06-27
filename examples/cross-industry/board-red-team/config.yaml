@@ -1,0 +1,205 @@
+kind: knowledge_base
+ref_name: board_rubric_kb
+name: board_rubric_kb
+display_name: Board Review Rubric
+description: |
+  Board-review rubric and evaluation criteria: the four-tier recommendation
+  scale (Proceed / Proceed with conditions / Pause / Reject) and the
+  financial, regulatory, competitive, governance, and execution-risk
+  dimensions each persona weighs.
+documents:
+  - path: ./resources/knowledge_base/board_review_rubric.txt
+---
+kind: tool
+ref_name: market_signals
+name: market_signals
+display_name: Market Signals Lookup
+description: |
+  Returns canned market context (sentiment, momentum, headlines, regulatory
+  watch) for a named company from a bundled sample directory. Use when a
+  critique needs external market context for the company under review.
+permission: read_only
+is_async: false
+input_schema:
+  type: object
+  properties:
+    company:
+      type: string
+      description: The company whose market signals to look up (e.g., "Northwind")
+  required:
+    - company
+source_path: ./resources/tool/market_signals
+binding:
+  python:
+    function: market_signals:main
+---
+kind: toolkit
+ref_name: clock_toolkit
+name: board_clock_toolkit
+description: |
+  Public-registry MCP toolkit (uvx mcp-server-time, pinned) giving the
+  coordinator the current date/time so the memo can be timestamped. No
+  credentials and no server source directory — fetched from the public
+  registry at apply time only.
+mcp:
+  source: public-registry
+  command: uvx
+  args:
+    - mcp-server-time@2026.1.26
+  tools:
+    - get_current_time
+---
+kind: agent
+ref_name: cfo
+name: cfo
+display_name: CFO Critic
+description: |
+  The Chief Financial Officer on the board red team. Critiques a proposed
+  strategy on financial soundness: capital requirements, payback period,
+  margin impact, balance-sheet risk, and downside scenarios. Cites the board
+  review rubric.
+instructions: |
+  Evaluate the strategy strictly on financial merit using the board review
+  rubric. Name concrete financial risks and the rubric dimension each maps to.
+  All companies and figures here are illustrative demo data.
+llm: groq/openai/gpt-oss-120b
+style: default
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+---
+kind: agent
+ref_name: activist_investor
+name: activist_investor
+display_name: Activist Investor Critic
+description: |
+  An activist investor on the board red team. Critiques the strategy on
+  shareholder value, capital allocation, and governance: does it maximize
+  return on invested capital, or entrench management? Cites the rubric.
+instructions: |
+  Press hard on shareholder value and capital allocation using the rubric.
+  Flag governance concerns and value-destructive choices. Demo data only.
+llm: groq/openai/gpt-oss-120b
+style: default
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+---
+kind: agent
+ref_name: regulator
+name: regulator
+display_name: Regulator Critic
+description: |
+  A regulatory and compliance reviewer on the board red team. Critiques the
+  strategy on regulatory exposure, compliance, antitrust, data-privacy, and
+  disclosure obligations. Cites the rubric.
+instructions: |
+  Assess regulatory and compliance exposure against the rubric. Name the
+  specific risk and the approvals or controls required to mitigate it.
+  Demo data only.
+llm: groq/openai/gpt-oss-120b
+style: default
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+---
+kind: agent
+ref_name: competitor
+name: competitor
+display_name: Competitor Critic
+description: |
+  A competitive-strategy reviewer on the board red team. Critiques the
+  strategy on market positioning, differentiation, competitive response, and
+  execution risk versus rivals. Cites the rubric.
+instructions: |
+  Stress-test competitive positioning and likely competitor response using
+  the rubric. Name execution risks and where rivals can counter. Demo data
+  only.
+llm: groq/openai/gpt-oss-120b
+style: default
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+---
+kind: agent
+ref_name: board_member
+name: board_member
+display_name: Independent Board Member Critic
+description: |
+  An independent board member on the red team. Critiques the strategy on
+  long-term governance, stakeholder impact, reputational risk, and alignment
+  with the company's stated mission. Cites the rubric.
+instructions: |
+  Weigh governance, reputation, and stakeholder impact against the rubric.
+  Surface long-term risks the quarter-focused critics may miss. Demo data
+  only.
+llm: groq/openai/gpt-oss-120b
+style: default
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+---
+kind: agent
+ref_name: synthesis_lead
+name: synthesis_lead
+display_name: Board Synthesis Lead
+description: |
+  The coordinator of the board red team. Gathers the five persona critiques
+  (CFO, activist investor, regulator, competitor, independent board member),
+  consults market signals and the review rubric, and synthesizes a single
+  board memo.
+instructions: |
+  Consult the five collaborator critics, the market_signals tool for market
+  context on the company under review, and the board review rubric.
+  Synthesize one board memo that MUST contain:
+  1. An overall recommendation that is exactly one of:
+     Proceed, Proceed with conditions, Pause, or Reject.
+  2. The top risks, each attributed to the rubric dimension it falls under.
+  3. If the recommendation is "Proceed with conditions", list the conditions.
+  Be decisive and cite the rubric. All companies and figures are demo data.
+llm: groq/openai/gpt-oss-120b
+style: planner
+tools:
+  - ${tool.market_signals}
+toolkits:
+  - ${toolkit.clock_toolkit}
+collaborators:
+  - ${agent.cfo}
+  - ${agent.activist_investor}
+  - ${agent.regulator}
+  - ${agent.competitor}
+  - ${agent.board_member}
+knowledge_base:
+  - ${knowledge_base.board_rubric_kb}
+guidelines:
+  - display_name: Structured memo
+    condition: When returning the board memo
+    action: |
+      Always state exactly one overall recommendation from the scale
+      (Proceed / Proceed with conditions / Pause / Reject) followed by the
+      top risks attributed to their rubric dimension.
+---
+kind: test
+ref_name: test_01_strategy_memo
+agent: ${agent.synthesis_lead}
+turns:
+  - message: |
+      Northwind Industries proposes to cut prices 15% across the mid-market
+      to win share from a new low-cost entrant, funded by deferring planned
+      R&D. Convene the board red team and return a board memo.
+    expect_tools:
+      - board_review_rubric
+    expect_answer: |
+      Should return a structured board memo with exactly one overall
+      recommendation from {Proceed, Proceed with conditions, Pause, Reject}
+      and the top risks attributed to rubric dimensions (financial,
+      regulatory, competitive, governance, execution), reflecting the CFO,
+      activist, regulator, competitor, and board-member critiques.
+---
+kind: test
+ref_name: test_02_reject_path
+agent: ${agent.synthesis_lead}
+turns:
+  - message: |
+      Meridian Corp proposes a debt-funded acquisition already under
+      antitrust review, with no integration plan. Convene the board red team
+      and return a board memo.
+    expect_answer: |
+      Should return a structured memo whose overall recommendation is Pause
+      or Reject, citing the regulatory/antitrust and financial risks from the
+      rubric.

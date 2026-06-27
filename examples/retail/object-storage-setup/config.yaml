@@ -1,0 +1,57 @@
+# retail/object-storage-setup — Cloud Object Storage landing zone for retail sales data.
+#
+# The minimal COS chain: an IBM COS bucket holding a sales CSV, surfaced as a
+# governed Watson Knowledge Catalog (Common Core) so analysts can discover it.
+#
+# Kinds: storage_connection (ibm_cos, HMAC), s3_bucket, s3_object, catalog.
+# Ref edges: storage_connection -> s3_bucket -> s3_object;
+#            s3_bucket -> catalog.bucket.bucket_name.
+#
+# Secrets are ${env:VAR} placeholders — never literals. Required env (set to any
+# value for offline `plan`; real COS HMAC keys needed for live apply):
+#   WXCTL_COS_CRN, WXCTL_COS_ACCESS_KEY, WXCTL_COS_SECRET_KEY
+# Target profile for the live run: a SaaS watsonx.data profile whose COS instance
+# is in the bucket's region (see README). This is a data example — no kind: test;
+# the assertion is a clean live apply + destroy.
+
+# ── cloud_object_storage connection (HMAC) ─────────────────────────────────
+kind: storage_connection
+ref_name: sales_cos
+type: ibm_cos
+access_key: ${env:WXCTL_COS_ACCESS_KEY}
+secret_key: ${env:WXCTL_COS_SECRET_KEY}
+instance_crn: ${env:WXCTL_COS_CRN}
+
+---
+kind: s3_bucket
+ref_name: sales_bucket
+connection: ${storage_connection.sales_cos}
+name: wxctl-retail-sales-landing
+region: eu-gb
+storage_class: smart
+force_destroy: true
+on_destroy: delete
+
+---
+kind: s3_object
+ref_name: sales_csv
+bucket: ${s3_bucket.sales_bucket.name}
+region: ${s3_bucket.sales_bucket.region}
+key: sales/daily_sales.csv
+content: |
+  order_id,store,product,quantity,unit_price
+  1001,london,widget,3,9.99
+  1002,tokyo,gadget,1,24.50
+  1003,new-york,widget,5,9.99
+content_type: text/csv
+
+# ── common_core catalog backed by the bucket (WKC × COS) ───────────────────
+---
+kind: catalog
+ref_name: sales_catalog
+name: retail-sales-catalog
+description: Governed catalog over the retail sales landing-zone bucket.
+generator: wxctl-example
+bucket:
+  bucket_name: ${s3_bucket.sales_bucket.name}
+  bucket_type: bmcos_object_storage

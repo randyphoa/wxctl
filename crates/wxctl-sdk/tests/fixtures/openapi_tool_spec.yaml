@@ -1,0 +1,53 @@
+openapi: "3.0.3"
+info:
+  title: Test Echo API
+  version: "1.0"
+servers:
+  - url: https://httpbin.org
+paths:
+  /get:
+    get:
+      operationId: echoGet
+      summary: Echo GET request parameters
+      parameters:
+        - name: query_param
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Echoed response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  args:
+                    type: object
+  /post:
+    post:
+      operationId: echoPost
+      summary: Echo POST request body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+      responses:
+        "200":
+          description: Echoed response
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+security:
+  - bearerAuth: []
