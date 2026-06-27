@@ -15,7 +15,7 @@ serde_json = { workspace = true }
 serde_norway = { workspace = true }
 anyhow = { workspace = true }
 semver = { workspace = true }
-phf = "0.13"
+phf = "0.14"
 tracing = { workspace = true }
 regex = "1.12"
 chrono = { workspace = true }
@@ -24,7 +24,7 @@ wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
 [build-dependencies]
 serde = { workspace = true }
 serde_norway = { workspace = true }
-phf_codegen = "0.13"
+phf_codegen = "0.14"
 wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
 
 [lints]
