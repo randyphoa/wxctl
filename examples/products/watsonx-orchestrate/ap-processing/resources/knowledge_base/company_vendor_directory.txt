@@ -1,0 +1,50 @@
+NORTHWIND MANUFACTURING — VENDOR DIRECTORY
+==========================================
+
+Section 1: Vendor V100 — Atlas Components
+------------------------------------------
+Vendor ID: V100. Category: Raw materials (steel, aluminium sheet stock).
+Payment terms: Net 30. Approved purchase-order range: PO-2024-1000 through
+PO-2024-1999. Remit-to: Atlas Components, Account on file in the ERP vendor
+master. Primary contact: accounts-receivable@atlas-components.example.
+Northwind buyer code: NW-PURCH-07.
+
+Section 2: Vendor V101 — Borealis Logistics
+--------------------------------------------
+Vendor ID: V101. Category: Freight & logistics (inbound and outbound).
+Payment terms: Net 45. Approved purchase-order range: PO-2024-2000 through
+PO-2024-2999. Remit-to: Borealis Logistics, Account on file in the ERP vendor
+master. Primary contact: billing@borealis-logistics.example.
+Northwind buyer code: NW-LOG-03.
+
+Section 3: Vendor V102 — Creston Tooling
+-----------------------------------------
+Vendor ID: V102. Category: Precision tooling & cutting inserts.
+Payment terms: Net 30. Approved purchase-order range: PO-2024-3000 through
+PO-2024-3999. Remit-to: Creston Tooling, Account on file in the ERP vendor
+master. Primary contact: invoices@creston-tooling.example.
+Northwind buyer code: NW-TOOL-11.
+
+Section 4: Vendor V103 — Delphi Packaging
+------------------------------------------
+Vendor ID: V103. Category: Industrial packaging (corrugated cartons, pallets).
+Payment terms: Net 30. Approved purchase-order range: PO-2024-4000 through
+PO-2024-4999. Remit-to: Delphi Packaging, Account on file in the ERP vendor
+master. Primary contact: ar@delphi-packaging.example.
+Northwind buyer code: NW-PKG-02.
+
+Section 5: Vendor V104 — Evergreen Maintenance Services
+--------------------------------------------------------
+Vendor ID: V104. Category: Facilities & equipment maintenance.
+Payment terms: Net 45. Approved purchase-order range: PO-2024-5000 through
+PO-2024-5999. Remit-to: Evergreen Maintenance Services, Account on file in
+the ERP vendor master. Primary contact: billing@evergreen-maint.example.
+Northwind buyer code: NW-FAC-05.
+
+Section 6: Vendor V105 — Ferris Office Supplies
+------------------------------------------------
+Vendor ID: V105. Category: Office & safety supplies.
+Payment terms: Net 15. Approved purchase-order range: PO-2024-6000 through
+PO-2024-6999. Remit-to: Ferris Office Supplies, Account on file in the ERP
+vendor master. Primary contact: invoices@ferris-office.example.
+Northwind buyer code: NW-ADM-09.

@@ -1,0 +1,72 @@
+resource:
+  name: instana_website_config
+  service: instana
+  kind: instana_website_config
+  version: v1
+  description: >
+    An Instana website (End-User Monitoring config) is the top-level unit Instana
+    groups browser/EUM beacons and website smart alerts around. Created via the
+    Website Monitoring config API (/api/website-monitoring/config) and identified
+    by a server-assigned string id. CREATE IS A QUIRK: POST ?name=<name> with the
+    name as a QUERY parameter and no body (WebsiteConfigHandler owns it and
+    records the returned id). The rename-only item PUT is not exercised — `name`
+    is the discovery identity, so a name change is a different website (create),
+    never an update. The EUM key / reporting URL needed for the JS snippet are NOT
+    returned by this API (the Website read model is {appName, id, name}); the
+    created id surfaces as the execution-row [id=…] and the snippet install is a
+    README step (spec Open Q4).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/website-monitoring/config
+    id_field: id
+    list_endpoint: /api/website-monitoring/config
+    get_endpoint: /api/website-monitoring/config/{id}
+    # Create is owned by WebsiteConfigHandler.pre_create (POST ?name=, no body);
+    # this endpoint/method is display-only (the default POST is skipped on Handled).
+    create_endpoint: /api/website-monitoring/config
+    create_method: POST
+    # Item path param is named {websiteId} in OpenAPI, but the placeholder MUST be
+    # {id} (the id_field) — the engine substitutes the id_field value (delete.rs:64,
+    # update.rs:107). Update is the rename-only PUT (never fires; name is identity).
+    update_endpoint: /api/website-monitoring/config/{id}
+    update_method: PUT
+    delete_endpoint: /api/website-monitoring/config/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned (read-only) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned website id (top-level `id` on create/list/get).
+      - name: appName
+        type: string
+        location: Computed
+        description: >
+          Server-derived application name shown for the website (Website read
+          model). Read-only — not settable via this API; excluded from state_fields.
+      # -- Writable --
+      - name: name
+        type: string
+        required: true
+        description: >
+          Website display name; Instana's human identifier (matched on during
+          discovery) and the value WebsiteConfigHandler passes as the ?name= query
+          param on create.
+  reconciliation:
+    # GET /api/website-monitoring/config returns a BARE ARRAY of Website
+    # ({appName, id, name}) -> no list_field, no ENVELOPE_KEYS change. Identity
+    # match on `name` (schema_reconciler default, set explicitly).
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = the single writable scalar `name`. It is also the discovery
+    # identity, so re-apply is always NoChange (no phantom Update). Phase 5 may
+    # widen once live round-trips are verified clean (Invariant I4).
+    state_fields:
+      - name
+    update_strategy: replace
+    immutable_fields: []

@@ -1,0 +1,123 @@
+resource:
+    name: asset_promotion
+    service: common_core
+    kind: asset_promotion
+    version: v1
+    description: >
+        Promotes a project-side asset — a native model the training job stored under a known name —
+        into a deployment space. The handler owns create: it resolves the project-side asset id via
+        a CAMS name search (POST /v2/asset_types/{asset_type}/search), POSTs
+        /v2/assets/{id}/promote?project_id=… with body {space_id}, and exposes the promoted
+        space-side asset id (id) plus the project-side source id (source_asset_id, which feeds
+        factsheets model_tracking). Discovery is owned by the custom AssetPromotionReconciler
+        (registered via wxctl_providers::get_reconciler; the schema's discovery.method stays skip
+        for the destroy-plan optimistic-delete fallback): it runs the same target-space name search
+        as pre_create's adopt step, so an unchanged re-apply plans NoChange with id +
+        source_asset_id cached. Execution-time idempotency is unchanged: pre_create adopts a
+        promoted asset already in the space (no re-promote), and a promote 409/duplicate falls back
+        to the same adopt. A missing project-side asset raises an explicit name-contract error, not
+        a bare 404. Destroy resolves the space-side id by name and deletes only the promoted copy
+        (404-tolerant). Live promote route/response shapes are verified in Phase 5.
+    api:
+        base_path: /v2/assets
+        id_field: id
+        # discovery.method: skip → get_endpoint is never called, but the schema
+        # contract requires it non-empty; it points at the CAMS asset path.
+        get_endpoint: /v2/assets/{id}
+        create_method: POST
+        delete_method: DELETE
+        delete_endpoint: /v2/assets/{id}
+    schema:
+        fields:
+            - name: asset_name
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  The asset name the training code stored (the name contract). Resolves the
+                  project-side source asset and adopts the promoted copy in the target space.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: asset_type
+              type: string
+              required: false
+              default: wml_model
+              description: CAMS asset type for the name search + promote (default wml_model).
+            - name: project_id
+              type: string
+              required: true
+              immutable: true
+              location: Query
+              description: >
+                  Source project id — where the training job stored the asset. Used as the required
+                  project_id query on the search + promote calls. The handler owns every request, so
+                  the Query location never triggers generic materialization.
+              references:
+                  resource: project
+                  field: guid
+                  optional: true
+            - name: space_id
+              type: string
+              required: true
+              immutable: true
+              location: Query
+              description: Target deployment space id the asset is promoted into.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: job_run
+              type: string
+              required: false
+              location: Query
+              description: >
+                  Ordering-only reference to the job_run that trains + stores the model. The handler
+                  never reads or sends it — pre_create/pre_delete always return Handled, so generic
+                  materialization never runs for this resource (mirrors project_id/space_id above).
+                  location: Query (not LocalOnly) only so `references` still produces the DAG edge
+                  job_run -> asset_promotion; LocalOnly/Computed fields are excluded from graph-edge
+                  collection entirely. Whole-field reference (${job_run.x.id}) — nested refs make no
+                  graph edge.
+              references:
+                  resource: job_run
+                  field: id
+                  optional: true
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The promoted (space-side) asset id. Referenceable as ${asset_promotion.x.id}.
+            - name: source_asset_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  The project-side source asset id. Referenceable as
+                  ${asset_promotion.x.source_asset_id}; feeds factsheets model_tracking (develop stage).
+    reconciliation:
+        # method: skip here covers only the schema-driven paths that still read it
+        # (destroy-plan optimistic Delete when refs are unresolved). PLAN-time
+        # discovery is real — the registered AssetPromotionReconciler searches the
+        # target space by asset_name (see the description above), so re-apply is
+        # NoChange, not a re-adopting "create". pre_create keeps the same adopt
+        # check for the first-apply CreateUnchecked path — mirrors environment.
+        discovery:
+            method: skip
+            id_source: id
+        state_fields:
+            - asset_name
+            - asset_type
+        update_strategy: recreate
+        immutable_fields:
+            - asset_name
+            - project_id
+            - space_id
+        use_json_patch: false
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

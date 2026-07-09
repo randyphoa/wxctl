@@ -1,0 +1,71 @@
+resource:
+  name: pa_cube
+  service: planning_analytics
+  kind: pa_cube
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) cube — an N-dimensional data store defined over an
+    ordered list of dimensions, with optional TM1 rules. Created via the TM1 REST OData API
+    (POST /Cubes) and identified by its `name`. The dimension list is bound at create time via
+    `Dimensions@odata.bind` (the CubeHandler pre_create builds it from the `dimensions` name
+    array) and is immutable — changing it recreates the cube.
+  api:
+    base_path: /Cubes
+    id_field: name
+    list_endpoint: /Cubes
+    get_endpoint: /Cubes('{name}')
+    create_endpoint: /Cubes
+    create_method: POST
+    update_endpoint: /Cubes('{name}')
+    update_method: PATCH
+    delete_endpoint: /Cubes('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: Cube name — the OData entity key. Immutable identity.
+      - name: dimensions
+        type: array
+        item_type: string
+        required: true
+        # No api_field: CubeHandler.pre_create consumes these plain names to build the
+        # `Dimensions@odata.bind` create body (a dotted, undeclared OData key the default
+        # materializer would drop — docs/troubleshoot/pre-create-body-reshape-dropped-fix.md).
+        # `references` on this array yields the DAG edge pa_dimension -> pa_cube and validates
+        # each name resolves to a known dimension.
+        references:
+          resource: pa_dimension
+          field: name
+        description: Ordered list of dimension names composing the cube. Immutable (recreate on change).
+      - name: rules
+        type: string
+        required: false
+        api_field: Rules
+        description: TM1 rules text (calculations/feeders). PATCHable.
+      - name: drillthrough_rules
+        type: string
+        required: false
+        api_field: DrillthroughRules
+        description: Drillthrough rules text. PATCHable.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # dimensions is excluded from state_fields: the create body is a name array but the server
+    # returns expanded Dimension objects, so it does not round-trip offline. Immutability is
+    # declared via immutable_fields; live drift-detection on the dimension SET is a Phase-4
+    # concern (would need a post_discover name-extraction to compare).
+    state_fields:
+      - name
+      - rules
+      - drillthrough_rules
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - name
+      - dimensions

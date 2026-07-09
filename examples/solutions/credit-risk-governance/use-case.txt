@@ -1,0 +1,1 @@
+Deploy a transparent credit-risk scoring model on watsonx.ai, govern it with a watsonx.governance OpenScale quality monitor, and put a watsonx Orchestrate loan-decision agent in front of it — the agent scores applicants by calling the same governed deployment through a tool, so every approve/decline answer it gives is the one OpenScale is watching.

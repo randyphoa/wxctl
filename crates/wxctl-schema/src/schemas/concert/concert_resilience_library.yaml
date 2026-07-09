@@ -1,0 +1,94 @@
+resource:
+  name: concert_resilience_library
+  service: concert
+  kind: concert_resilience_library
+  version: v1
+  description: >
+    A Concert resilience library (LibraryRequest) groups resilience requirements into a
+    reusable set. Created via the resilience assessment API
+    (POST /resilience/assessment/api/v1/library); create returns a bare `library_id` while
+    read/list return the canonical `id` (used by GET/PUT/DELETE /library/{id}), so the custom
+    ResilienceLibraryHandler maps library_id → id in post_create and recovers an
+    already-existing library by name on a create conflict. Update is a full PUT replace.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /resilience/assessment/api/v1/library
+    id_field: id
+    list_endpoint: /resilience/assessment/api/v1/library
+    get_endpoint: /resilience/assessment/api/v1/library/{id}
+    create_endpoint: /resilience/assessment/api/v1/library
+    create_method: POST
+    update_endpoint: /resilience/assessment/api/v1/library/{id}
+    update_method: PUT
+    delete_endpoint: /resilience/assessment/api/v1/library/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Canonical library id used by GET/PUT/DELETE /library/{id}. Create returns it under
+          the key `library_id`; ResilienceLibraryHandler.post_create injects it here as `id`.
+      - name: is_oob
+        type: boolean
+        location: Computed
+        immutable: true
+        description: Out-of-the-box flag set by the API (read-only).
+      - name: nfr_count
+        type: integer
+        location: Computed
+        immutable: true
+        description: Server-computed requirement count (read-only; excluded from state_fields).
+      # ── Writable (LibraryRequest = Library + requirements) ──
+      - name: name
+        type: string
+        required: true
+        description: Library name (matched on during discovery).
+      - name: label
+        type: string
+        required: true
+        description: Human-readable label.
+      - name: description
+        type: string
+        required: false
+        description: Free-text library description.
+      - name: use_last_received_data
+        type: string
+        required: false
+        description: >
+          Comma-separated list of input-data-key NAMES evaluated against the last received
+          data (live-verified on 3.0.0.0: a key name is required — a boolean-ish value like
+          `"true"` 400s).
+      - name: requirements
+        type: array
+        item_type: object
+        required: false
+        description: >
+          Resilience requirements (Requirement objects) bundled into the library. Passed
+          through on create/PUT; server-augmented and paginated on read, so excluded from
+          state_fields to avoid phantom Update{} drift.
+  reconciliation:
+    # GET /resilience/assessment/api/v1/library returns a PaginatedLibraryResponse envelope
+    # { items: [...], pagination } → list_field: items. The `items` key is ALREADY registered
+    # in wxctl-core ENVELOPE_KEYS / ListEnvelope, so NO core change is needed. Discovery lists
+    # by name, then GETs by the canonical id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: items
+    # state_fields = round-tripping writable scalars only. requirements (array of objects,
+    # server-augmented/paginated on read) and the Computed read-only fields are excluded to
+    # avoid phantom Update{} drift. Phase 5 may widen once live round-trips are verified clean
+    # (Invariant I4).
+    state_fields:
+      - name
+      - label
+      - description
+      - use_last_received_data
+    # PUT /library/{id} replaces the library (full LibraryRequest body pruned to state_fields).
+    update_strategy: replace
+    immutable_fields: []

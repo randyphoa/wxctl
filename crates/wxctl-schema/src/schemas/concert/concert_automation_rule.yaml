@@ -1,0 +1,160 @@
+resource:
+  name: concert_automation_rule
+  service: concert
+  kind: concert_automation_rule
+  version: v1
+  description: >
+    A Concert automation rule fires an action (e.g. auto-create an ITSM ticket) when a
+    use-case condition is met — the declarative half of Concert's auto-ticketing. Created
+    via the Concert core API (POST /core/api/v1/automation_rules) and identified by a
+    server-assigned id (echoed at top-level `id` on create). Deletion is a COLLECTION
+    operation (DELETE /core/api/v1/automation_rules?delete_ids={id}) — there is no item
+    DELETE — handled by the custom AutomationRuleHandler (mirrors concert_credential).
+    target_service_details may carry ITSM connection secrets, so the whole object is
+    marked sensitive and redacted at emission.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /core/api/v1/automation_rules
+    id_field: id
+    list_endpoint: /core/api/v1/automation_rules
+    get_endpoint: /core/api/v1/automation_rules/{id}
+    create_endpoint: /core/api/v1/automation_rules
+    create_method: POST
+    update_endpoint: /core/api/v1/automation_rules/{id}
+    update_method: PATCH
+    # No item DELETE exists. delete_endpoint points at the COLLECTION (kept non-empty so
+    # the descriptor contract test passes); AutomationRuleHandler.pre_delete owns the
+    # DELETE, appending ?delete_ids={id} and tolerating an already-absent id.
+    delete_endpoint: /core/api/v1/automation_rules
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned automation-rule id (returned at top-level `id` on create).
+      - name: created_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis creation timestamp set by the API.
+      - name: created_by
+        type: string
+        location: Computed
+        immutable: true
+        description: Creator principal (audit; excluded from state_fields).
+      # ── Writable (IngestionjobAutomationPrototype) ──
+      - name: name
+        type: string
+        required: true
+        description: Automation-rule display name (matched on during discovery).
+      - name: use_case
+        type: string
+        required: true
+        description: Use-case condition that triggers the rule (server-enforced enum).
+      - name: action
+        type: string
+        required: true
+        description: Action taken when the rule fires (e.g. create a ticket).
+      - name: description
+        type: string
+        required: false
+        description: Free-text automation-rule description.
+      - name: status
+        type: string
+        required: false
+        description: >
+          Rule status. Writable on create but server-managed on read (required in the read
+          model), so excluded from state_fields to avoid phantom Update{} drift.
+      - name: component_type
+        type: string
+        required: false
+        description: >
+          Type of the component the rule scopes to. Required (together with component_id) by
+          the live API — a rule with neither set 400s ("This component type is invalid.
+          Provide a valid component type."). Both `application` and `environment` are
+          accepted by create-time validation, but live-verified on 3.0.0.0: a rule scoped to
+          `application` returns 201 and a real id, yet the resulting rule is then permanently
+          unlistable/unretrievable (LIST always returns it empty, GET-by-id 400s "The
+          automation rule can't be retrieved.") — a Concert platform indexing gap, not a
+          wxctl bug (confirmed via direct API calls, independent of wxctl). `environment` is
+          the only value confirmed to round-trip cleanly (create, LIST, GET, and collection
+          DELETE all see the rule) — use it for a rule that must be planned/discovered.
+      - name: component_id
+        type: string
+        required: false
+        references:
+          resource: concert_application
+          field: id
+          optional: true
+          also_allows:
+            - concert_environment
+        description: >
+          Id of the component the rule scopes to. Required (together with component_type) by
+          the live API and RBAC-checked — a syntactically-valid but nonexistent id 403s
+          (live-verified on 3.0.0.0). This top-level reference produces the DAG edge → the
+          referenced concert_application or concert_environment is ordered before the rule
+          and ${<kind>.<ref>.id} resolves to the created id. Prefer a concert_environment
+          reference (component_type: environment) — a concert_application reference
+          (component_type: application) creates successfully but leaves the rule permanently
+          unlistable (see component_type's description).
+      - name: credential_id
+        type: string
+        required: false
+        references:
+          resource: concert_credential
+          field: id
+          optional: true
+        description: >
+          Id of the concert_credential the rule's action authenticates with (e.g. ITSM
+          creds). This top-level reference produces the DAG edge → the credential is
+          ordered before the rule and ${concert_credential.<ref>.id} resolves to the
+          created id.
+      - name: target_service_details
+        type: object
+        required: false
+        sensitive: true
+        description: >
+          Target ITSM service connection details (IngestionjobAutomationPrototypeDetail:
+          repository, project_key, organization, assignee, channel_id, ...). May carry
+          connection secrets, so the whole object is marked sensitive → redacted at
+          emission (sensitive_paths → target_service_details). Server-augmented on read,
+          so excluded from state_fields to avoid phantom drift.
+      - name: option
+        type: object
+        required: false
+        description: >
+          Rule option detail (AutomationRuleOptionPrototypeDetail: risk_score, cvss_score,
+          priority, expires_in, ...). Passed through on create; server-augmented on read,
+          so excluded from state_fields.
+  reconciliation:
+    # GET /core/api/v1/automation_rules returns { automation_rules: [...], pagination };
+    # the `automation_rules` envelope key is registered in wxctl-core ENVELOPE_KEYS
+    # (Task 1.3). Discovery lists by name, then GETs by the server-assigned id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: automation_rules
+    # state_fields = round-tripping writable scalars only. status (server-managed),
+    # target_service_details/option (objects, server-augmented), and the Computed
+    # read-only fields are excluded to avoid phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). credential_id
+    # IS included: the resolved credential id round-trips and must re-plan as a no-op
+    # (spec AC3/AC4). Phase 5 may widen once live round-trips are verified clean (Invariant I4).
+    state_fields:
+      - name
+      - use_case
+      - action
+      - description
+      - component_type
+      - component_id
+      - credential_id
+    # PATCH /automation_rules/{id} takes application/merge-patch+json. wxctl materializes a
+    # full JSON body pruned to state_fields (a merge-patch of those fields) — the same
+    # in-place update path concert_credential uses (no use_json_patch). Live content-type
+    # confirmation is Phase 5.
+    update_strategy: replace
+    immutable_fields: []

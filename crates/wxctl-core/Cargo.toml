@@ -1,0 +1,39 @@
+[package]
+name = "wxctl-core"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core types, traits, and HTTP client for wxctl"
+
+[dependencies]
+wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+anyhow = { workspace = true }
+futures = { workspace = true }
+reqwest = { workspace = true, features = ["form", "stream"] }
+tokio = { workspace = true }
+rand = "0.10"
+dirs = { workspace = true }
+base64 = { workspace = true }
+semver = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+opentelemetry = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+tracing-opentelemetry = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true }
+parking_lot = { workspace = true }
+
+[features]
+otel = ["opentelemetry", "opentelemetry_sdk", "opentelemetry-otlp", "tracing-opentelemetry"]
+
+[lints]
+workspace = true

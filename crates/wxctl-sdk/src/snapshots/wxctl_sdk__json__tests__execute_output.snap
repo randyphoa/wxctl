@@ -1,0 +1,25 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&execute).unwrap()"
+---
+{
+  "run_id": "run-001",
+  "summary": {
+    "succeeded": 1,
+    "failed": 1,
+    "skipped": 1,
+    "cancelled": false
+  },
+  "succeeded": [
+    "space/a"
+  ],
+  "failed": [
+    {
+      "key": "space/b",
+      "error": "boom"
+    }
+  ],
+  "skipped": [
+    "space/c"
+  ]
+}

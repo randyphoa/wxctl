@@ -1,0 +1,118 @@
+resource:
+  name: concert_ingestion_job
+  service: concert
+  kind: concert_ingestion_job
+  version: v1
+  description: >
+    A Concert ingestion job pulls data from a source system (authenticating with a
+    concert_credential) into IBM Concert's inventory on a schedule. Created via the
+    Concert core API (/core/api/v1/ingestion_jobs) and identified by a server-assigned
+    UUID.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /core/api/v1/ingestion_jobs
+    id_field: id
+    list_endpoint: /core/api/v1/ingestion_jobs
+    get_endpoint: /core/api/v1/ingestion_jobs/{id}
+    create_endpoint: /core/api/v1/ingestion_jobs
+    create_method: POST
+    update_endpoint: /core/api/v1/ingestion_jobs/{id}
+    update_method: PATCH
+    delete_endpoint: /core/api/v1/ingestion_jobs/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned ingestion-job UUID (returned at top-level `id` on create).
+      - name: created_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis creation timestamp set by the API.
+      - name: last_updated_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis last-update timestamp set by the API.
+      # ── Writable (IngestionjobPrototype) ──
+      - name: name
+        type: string
+        required: false
+        description: Ingestion-job display name.
+      - name: description
+        type: string
+        required: false
+        description: Free-text ingestion-job description.
+      - name: type
+        type: string
+        required: false
+        description: Ingestion-job type (the source-system connector).
+      - name: details
+        type: object
+        required: false
+        description: >
+          Polymorphic connector detail object (IngestionjobPrototypeDetails); shape
+          varies by `type`. Passed through as-is on create; server-augmented on read, so
+          excluded from state_fields to avoid phantom drift.
+      - name: scheduled
+        type: integer
+        required: false
+        description: Schedule cadence for the job (server-constrained to 0-10000; not epoch millis).
+      - name: status
+        type: string
+        required: false
+        description: >
+          Job status. Server-derived operational state; excluded from state_fields
+          (the API updates it independently of declared config).
+      - name: enabled
+        type: string
+        required: false
+        description: Job enablement state — the string "enabled" or "disabled" (not "true"/"false").
+      - name: credentials_id
+        type: string
+        required: false
+        references:
+          resource: concert_credential
+          field: id
+          optional: true
+        description: >
+          Id of the concert_credential this job authenticates with. This top-level
+          reference produces the DAG edge → the credential is ordered before the job and
+          ${concert_credential.<ref>.id} resolves to the created id.
+      - name: created_by
+        type: string
+        required: false
+        description: Creator principal (audit; excluded from state_fields).
+      - name: meta_data
+        type: object
+        required: false
+        description: >
+          Free-form job metadata (IngestionjobMetadata). Passed through on create;
+          server-augmented on read, so excluded from state_fields.
+  reconciliation:
+    # GET /core/api/v1/ingestion_jobs returns { ingestion_jobs: [...], pagination }; the
+    # `ingestion_jobs` envelope key is registered in wxctl-core ENVELOPE_KEYS (Task 1.2).
+    # Discovery lists by name, then GETs by the server-assigned id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: ingestion_jobs
+    # state_fields = round-tripping scalars. details/meta_data (objects) + status
+    # (server-derived) + created_by (audit) are excluded to avoid phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). credentials_id
+    # IS included: the resolved credential id round-trips and must re-plan as a no-op
+    # (spec AC3/AC4). Phase 4 may widen once live round-trips are verified clean (Invariant I4).
+    state_fields:
+      - name
+      - description
+      - type
+      - scheduled
+      - enabled
+      - credentials_id
+    update_strategy: replace
+    immutable_fields: []

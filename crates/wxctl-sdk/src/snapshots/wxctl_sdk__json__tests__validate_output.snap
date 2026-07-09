@@ -1,0 +1,17 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&validate).unwrap()"
+---
+{
+  "valid": false,
+  "errors": [
+    {
+      "code": "V001",
+      "field": "name",
+      "message": "missing",
+      "resource": "agent/a",
+      "suggestion": "add name"
+    }
+  ],
+  "fix_prompt": "fix this"
+}

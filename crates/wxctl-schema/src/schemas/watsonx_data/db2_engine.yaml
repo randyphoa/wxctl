@@ -1,0 +1,93 @@
+resource:
+  name: db2_engine
+  service: watsonx_data
+  kind: db2_engine
+  version: v1
+  description: >
+      A Db2 Engine registers an external IBM Db2 instance as a federated query
+      engine in watsonx.data. The engine is identified by a display name and an
+      external `connection_string`; watsonx.data routes federated queries to it.
+      Registration is metadata-only — there is no pause/resume. The
+      `connection_string` is a Db2 JDBC URL (host/port/database plus embedded
+      credentials); it is the entire connection (no separate credential fields).
+
+  api:
+    base_path: /v3/db2_engines
+    id_field: id
+    list_endpoint: /v3/db2_engines?limit=100
+    get_endpoint: /v3/db2_engines/{id}
+    create_endpoint: /v3/db2_engines
+    create_method: POST
+    update_endpoint: /v3/db2_engines/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/db2_engines/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+      - name: display_name
+        type: string
+        required: true
+        description: >
+            Human-readable engine name; unique within the instance.
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: origin
+        type: string
+        required: true
+        default: external
+        allowed_values: [external]
+        description: >
+            Engine origin. External Db2 registration uses `external`.
+
+      - name: description
+        type: string
+        required: false
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+
+      - name: configuration
+        type: object
+        required: true
+        immutable: true
+        description: >
+            External connection details. Sent on create only; the API enriches this
+            object on reads, so it is excluded from drift detection.
+        schema:
+          fields:
+            - name: connection_string
+              type: string
+              required: true
+              description: >
+                  External Db2 JDBC connection string, e.g.
+                  `jdbc:db2://host:port/db:user=...;password=...;`.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: db2_engines
+      id_source: id
+      name_field: display_name
+    state_fields:
+      - display_name
+      - description
+      - tags
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  unsupported_on: []

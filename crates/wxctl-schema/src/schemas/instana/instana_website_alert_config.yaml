@@ -1,0 +1,137 @@
+resource:
+  name: instana_website_alert_config
+  service: instana
+  kind: instana_website_alert_config
+  version: v1
+  description: >
+    An Instana website smart alert (WebsiteAlertConfig) evaluates a rule over an
+    end-user-monitored website's beacons and routes triggered events to alerting
+    channels. Created via the Events settings API
+    (/api/events/settings/website-alert-configs) and identified by a
+    server-assigned string id; the human identifier is `name`. Update is the
+    smart-alert quirk POST /{id} with the full config body (update_strategy:
+    replace). DELETE is a SOFT delete — the active-configs list omits destroyed
+    alerts, so discovery never resurrects one. `websiteId` references
+    instana_website_config.id (added in Phase 4), so a website is ordered before
+    its website alert and the id resolves at apply.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/website-alert-configs
+    id_field: id
+    list_endpoint: /api/events/settings/website-alert-configs
+    get_endpoint: /api/events/settings/website-alert-configs/{id}
+    create_endpoint: /api/events/settings/website-alert-configs
+    create_method: POST
+    update_endpoint: /api/events/settings/website-alert-configs/{id}
+    # Smart-alert family quirk: update is POST /{id}.
+    update_method: POST
+    delete_endpoint: /api/events/settings/website-alert-configs/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned / read-model metadata (read-only; excluded from state_fields) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned website-alert-config id (top-level `id` on create/list/get).
+      # -- Writable (WebsiteAlertConfig) --
+      - name: name
+        type: string
+        required: true
+        description: Smart-alert display name; Instana's human identifier (matched on during discovery).
+      - name: description
+        type: string
+        required: true
+        description: Alert description shown on triggered events.
+      - name: websiteId
+        type: string
+        required: true
+        references:
+          resource: instana_website_config
+          field: id
+        description: >
+          Id of the website (EUM config) this alert scopes to. `references`
+          produces the website -> website-alert DAG edge; the Phase 5 example
+          resolves it with ${instana_website_config.<ref>.id} interpolation.
+      - name: alertChannelIds
+        type: array
+        item_type: string
+        required: false
+        references:
+          resource: instana_alerting_channel
+          field: id
+          optional: true
+        description: >
+          Ids of the alerting channels triggered events route to (optional in the
+          website-alert API). `references` on this array field produces a DAG edge;
+          each ${instana_alerting_channel.<ref>.id} element resolves at apply.
+      - name: granularity
+        type: integer
+        required: true
+        allowed_values: ["60000", "300000", "600000", "900000", "1200000", "1800000"]
+        description: Evaluation window in milliseconds.
+      - name: tagFilterExpression
+        type: object
+        required: true
+        description: >
+          Tag-filter selector narrowing which beacons the rule applies to.
+          Server-normalized on read, so excluded from state_fields.
+      - name: timeThreshold
+        type: object
+        required: true
+        description: >
+          WebsiteTimeThreshold — how long/often the condition must hold to trigger.
+          Server-normalized on read, so excluded from state_fields.
+      - name: customPayloadFields
+        type: array
+        item_type: object
+        required: true
+        description: >
+          Custom key/value fields attached to triggered events (may be an empty
+          array). Server-normalized on read, so excluded from state_fields.
+      - name: rule
+        type: object
+        required: false
+        description: >
+          Single WebsiteAlertRule. Server-normalized on read, so excluded from
+          state_fields.
+      - name: rules
+        type: array
+        item_type: object
+        required: false
+        description: Multi-rule variant. Server-normalized on read, so excluded from state_fields.
+      - name: threshold
+        type: object
+        required: false
+        description: Static/adaptive threshold for the rule. Excluded from state_fields.
+      - name: severity
+        type: integer
+        required: false
+        description: Event severity (server may default). Optional → excluded from state_fields.
+      - name: gracePeriod
+        type: integer
+        required: false
+        description: Grace period in ms before re-triggering. Optional → excluded from state_fields.
+      - name: triggering
+        type: boolean
+        required: false
+        description: Whether the alert also opens an incident. Optional → excluded from state_fields.
+  reconciliation:
+    # GET /api/events/settings/website-alert-configs returns a BARE ARRAY of
+    # WebsiteAlertConfigWithMetadata -> no list_field, no ENVELOPE_KEYS change.
+    # Identity match on `name`. Soft-delete: active-configs list omits destroyed.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars only; read-model metadata (id/created/
+    # initialCreated/enabled/readOnly) and all object/array fields excluded to
+    # avoid phantom Update{} drift. Phase 5 may widen (Invariant I4).
+    state_fields:
+      - name
+      - description
+      - granularity
+    update_strategy: replace
+    immutable_fields: []

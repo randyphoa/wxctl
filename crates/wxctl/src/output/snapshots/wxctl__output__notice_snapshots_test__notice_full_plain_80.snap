@@ -1,0 +1,12 @@
+---
+source: crates/wxctl/src/output/notice_snapshots_test.rs
+expression: "render(ColorMode::Plain)"
+---
+
+update A new release of wxctl is available: 0.1.0 → 0.2.0
+  Run `wxctl update` to upgrade
+[security] Security fix in 0.2.0
+  Upgrade recommended.
+  https://example.invalid/advisory
+[news] Welcome to wxctl
+  Thanks for installing.

@@ -1,0 +1,31 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&test).unwrap()"
+---
+{
+  "run_id": "run-002",
+  "passed": 1,
+  "failed": 1,
+  "tests": [
+    {
+      "ref_name": "t1",
+      "passed": true,
+      "turns": [
+        {
+          "turn_num": 1,
+          "outcome": "success"
+        }
+      ]
+    },
+    {
+      "ref_name": "t2",
+      "passed": false,
+      "turns": [
+        {
+          "turn_num": 1,
+          "outcome": "tool_mismatch"
+        }
+      ]
+    }
+  ]
+}

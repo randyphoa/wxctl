@@ -1,0 +1,172 @@
+# lakehouse-engines — a retail sales lakehouse on Software watsonx.data,
+# with the full engine zoo.
+#
+# Registers a Cloud Object Storage bucket as an Iceberg catalog (Software-side
+# storage_registration) with a Db2 federated catalog alongside, runs Presto,
+# Prestissimo, an external Db2 engine, and a generic external engine, and loads a
+# CSV into the lakehouse with a Spark ingestion job.
+#
+# Kinds: storage_connection, s3_bucket, storage_registration (storage);
+#        database_connection, database_registration (federation);
+#        presto_engine, prestissimo_engine, db2_engine, other_engine (engine zoo);
+#        ingestion_job (load).
+#
+# Cross-service ref edges:
+#   storage_connection -> s3_bucket -> storage_registration
+#   database_connection -> database_registration -> presto_engine.associated_catalogs
+# (prestissimo_engine, db2_engine, other_engine, ingestion_job are independent.)
+#
+# The ingestion_job runs against a pre-existing Spark engine + registered bucket +
+# target catalog/schema/table on the cluster (not bootstrappable from this DAG),
+# supplied via WXCTL_SOFTWARE_INGEST_* env.
+#
+# Secrets are ${env:VAR} placeholders — never literals. Required env (set to any
+# value for offline `plan`; real creds + sizing + ingest targets for live apply):
+#   WXCTL_COS_ACCESS_KEY, WXCTL_COS_SECRET_KEY, COS_URL, WXCTL_COS_REGION
+#   WXCTL_DB2_HOST, WXCTL_DB2_USERNAME, WXCTL_DB2_PASSWORD, WXCTL_DB2_DATABASE
+#   WXCTL_PRESTO_SIZE_CONFIG, WXCTL_PRESTO_NODE_TYPE
+#   WXCTL_SOFTWARE_INGEST_ENGINE_ID, WXCTL_SOFTWARE_INGEST_SOURCE,
+#   WXCTL_SOFTWARE_INGEST_BUCKET_NAME, WXCTL_SOFTWARE_INGEST_BUCKET_ENDPOINT,
+#   WXCTL_SOFTWARE_INGEST_CATALOG, WXCTL_SOFTWARE_INGEST_SCHEMA,
+#   WXCTL_SOFTWARE_INGEST_TABLE
+# Target profile for the live run: a Software (CP4D) watsonx.data profile with a
+# reachable COS bucket. This is a data example — no kind: test; the assertion is a
+# clean live apply (engines running + ingestion completion) + destroy.
+
+# ── cloud_object_storage chain (Software COS registration) ─────────────────
+# CP4D's object store is typically NooBaa (ODF Multicloud Object Gateway): an
+# S3-compatible, HMAC-only endpoint with NO IBM COS instance CRN. So the type is
+# ibm_ceph (custom S3 — explicit endpoint required), NOT ibm_cos, which would
+# auto-derive the PUBLIC IBM COS endpoint from region and hard-require a CRN.
+# endpoint is the NooBaa/Ceph S3 route (${env:COS_URL}); keys are its HMAC pair.
+kind: storage_connection
+ref_name: sales_cos
+type: ibm_ceph
+access_key: ${env:WXCTL_COS_ACCESS_KEY}
+secret_key: ${env:WXCTL_COS_SECRET_KEY}
+endpoint: ${env:COS_URL}
+
+---
+kind: s3_bucket
+ref_name: sales_bucket
+connection: ${storage_connection.sales_cos}
+name: wxctl-retail-lakehouse-sw
+region: ${env:WXCTL_COS_REGION}
+storage_class: smart
+force_destroy: true
+on_destroy: delete
+
+---
+kind: storage_registration
+ref_name: sales_iceberg
+display_name: retail-sales-iceberg
+description: COS bucket as Iceberg catalog for retail sales.
+bucket: ${s3_bucket.sales_bucket.name}
+managed_by: customer
+associated_catalog:
+  catalog_name: retail_sw_iceberg
+  catalog_type: iceberg
+
+# ── federation ─────────────────────────────────────────────────────────────
+---
+kind: database_connection
+ref_name: sales_db2
+type: db2
+hostname: ${env:WXCTL_DB2_HOST}
+port: 31030
+name: bludb
+username: ${env:WXCTL_DB2_USERNAME}
+password: ${env:WXCTL_DB2_PASSWORD}
+ssl: true
+
+---
+kind: database_registration
+ref_name: sales_db2_catalog
+display_name: retail-sales-db2-catalog
+description: Db2 federated catalog for retail sales.
+connection: ${database_connection.sales_db2}
+associated_catalog:
+  catalog_name: retail_sw_db2_cat
+  catalog_type: db2
+
+# ── engine zoo ─────────────────────────────────────────────────────────────
+---
+kind: presto_engine
+ref_name: sales_presto
+display_name: retail-sales-presto
+description: Native Presto engine over the Db2 catalog.
+origin: native
+configuration:
+  size_config: starter
+  coordinator:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+  worker:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+associated_catalogs:
+  - ${database_registration.sales_db2_catalog.catalog_name}
+status: running
+
+---
+kind: prestissimo_engine
+ref_name: sales_prestissimo
+display_name: retail-sales-prestissimo
+description: Native Prestissimo (C++ Presto) engine.
+origin: native
+configuration:
+  size_config: ${env:WXCTL_PRESTO_SIZE_CONFIG}
+  coordinator:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+  worker:
+    node_type: ${env:WXCTL_PRESTO_NODE_TYPE}
+    quantity: 1
+
+---
+kind: db2_engine
+ref_name: sales_db2_engine
+display_name: retail-sales-db2-engine
+description: External Db2 engine for retail sales.
+origin: external
+configuration:
+  connection_string: "jdbc:db2://${env:WXCTL_DB2_HOST}:31030/${env:WXCTL_DB2_DATABASE}:user=${env:WXCTL_DB2_USERNAME};password=${env:WXCTL_DB2_PASSWORD};sslConnection=true;"
+
+---
+kind: other_engine
+ref_name: sales_other_engine
+display_name: retail-sales-other-engine
+description: Generic external engine for retail sales.
+origin: external
+configuration:
+  type: presto
+  connection_string: "https://retail-other-engine.example.invalid:8443"
+
+# ── ingestion (env-driven target — pre-existing on the cluster) ────────────
+---
+kind: ingestion_job
+ref_name: sales_ingest
+id: wxctl-retail-lakehouse-software-ingest
+engine_id: ${env:WXCTL_SOFTWARE_INGEST_ENGINE_ID}
+execute_config:
+  driver_memory: "2g"
+  driver_cores: 1
+  executor_memory: "2g"
+  executor_cores: 1
+  num_executors: 1
+source:
+  source_type: storage
+  file_type: csv
+  file_paths: ${env:WXCTL_SOFTWARE_INGEST_SOURCE}
+  bucket_details:
+    bucket_name: ${env:WXCTL_SOFTWARE_INGEST_BUCKET_NAME}
+    bucket_type: ibm_cos
+    endpoint: ${env:WXCTL_SOFTWARE_INGEST_BUCKET_ENDPOINT}
+  file_format_properties:
+    header: "true"
+target:
+  catalog: ${env:WXCTL_SOFTWARE_INGEST_CATALOG}
+  schema: ${env:WXCTL_SOFTWARE_INGEST_SCHEMA}
+  table: ${env:WXCTL_SOFTWARE_INGEST_TABLE}
+  write_mode: overwrite
+  schema_infer: true

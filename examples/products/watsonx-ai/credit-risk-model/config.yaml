@@ -1,0 +1,82 @@
+# Deploy a transparent credit-risk scoring model across the watsonx.ai asset
+# kinds and score it. FSI-framed. No deployment pin — `wxctl plan` validates with
+# no live calls under a watsonx.ai profile; live apply/test/destroy needs a
+# watsonx SaaS profile. See README.
+#
+# Edges:
+#   space -> {package_extension, software_specification, wml_*}.space_id
+#   package_extension -> software_specification.package_extensions
+#   software_specification -> {wml_function, wml_script, ai_service}.software_spec
+#   wml_function -> wml_deployment.asset
+#   wml_deployment -> test.deployment
+
+kind: space
+ref_name: credit_space
+name: credit-risk-model-space
+description: scopes the credit-risk watsonx.ai assets and deployment
+type: wx
+
+---
+kind: package_extension
+ref_name: credit_pkg_ext
+name: credit-risk-model-pkg-ext
+description: pure-Python runtime dependency for the custom software specification
+type: requirements_txt
+source_path: resources/model/requirements.txt
+space_id: ${space.credit_space}
+
+---
+kind: software_specification
+ref_name: credit_swspec
+name: credit-risk-model-swspec
+description: base runtime + the credit-risk package extension
+base_software_specification: runtime-25.1-py3.12
+package_extensions:
+  - ${package_extension.credit_pkg_ext}
+space_id: ${space.credit_space}
+
+---
+kind: wml_function
+ref_name: credit_function
+name: credit-risk-model-function
+software_spec: ${software_specification.credit_swspec}
+space_id: ${space.credit_space}
+source_path: resources/model/score.py
+
+---
+kind: wml_script
+ref_name: credit_script
+name: credit-risk-model-script
+software_spec: ${software_specification.credit_swspec}
+space_id: ${space.credit_space}
+source_path: resources/model/score.py
+
+---
+kind: ai_service
+ref_name: credit_ai_service
+name: credit-risk-model-ai-service
+software_spec: ${software_specification.credit_swspec}
+space_id: ${space.credit_space}
+source_path: resources/model/score.py
+
+---
+kind: wml_deployment
+ref_name: credit_deployment
+name: credit-risk-model-deployment
+asset: ${wml_function.credit_function}
+space_id: ${space.credit_space}
+online: {}
+
+---
+kind: test
+ref_name: credit_score_test
+deployment: ${wml_deployment.credit_deployment}
+turns:
+  - payload:
+      input_data:
+        - values:
+            - [120000, 0.25, 720]
+    expect_response:
+      predictions:
+        - values:
+            - [1, 0.847]

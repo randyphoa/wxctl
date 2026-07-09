@@ -1,0 +1,69 @@
+---
+source: crates/wxctl/tests/panel_snapshots.rs
+expression: "run(&[\"explain\", \"agent\"], \"80\", \"dark\", \"unicode\")"
+---
+
+  [1magent[0m   [38;2;125;133;144mwatsonx Orchestrate[0m · [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m
+  [38;2;125;133;144mid field · id[0m
+
+  [38;2;120;169;255m▌[0m [1mEndpoints[0m
+    [38;2;125;133;144mcreate[0m   [38;2;63;185;80mPOST  [0m   /v1/orchestrate/agents
+    [38;2;125;133;144mget   [0m   [38;2;120;169;255mGET   [0m   /v1/orchestrate/agents/{id}
+    [38;2;125;133;144mlist  [0m   [38;2;120;169;255mGET   [0m   /v1/orchestrate/agents
+    [38;2;125;133;144mupdate[0m   [38;2;210;153;34mPATCH [0m   /v1/orchestrate/agents/{id}
+    [38;2;125;133;144mdelete[0m   [38;2;248;81;73mDELETE[0m   /v1/orchestrate/agents/{id}
+
+  [38;2;120;169;255m▌[0m [1mFields[0m   [38;2;125;133;144m(required first)[0m
+    name                          [38;2;125;133;144mstring       [0m   [38;2;63;185;80mrequired[0m            [38;2;125;133;144mBody[0m
+    description                   [38;2;125;133;144mstring       [0m   [38;2;63;185;80mrequired[0m            [38;2;125;133;144mBody[0m
+    style                         [38;2;125;133;144mstring       [0m   [38;2;63;185;80mrequired[0m            [38;2;125;133;144mBody[0m
+    llm                           [38;2;125;133;144mstring       [0m   [38;2;63;185;80mrequired[0m            [38;2;125;133;144mBody[0m
+    display_name                  [38;2;125;133;144mstring       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    instructions                  [38;2;125;133;144mstring       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    llm_config                    [38;2;125;133;144mobject       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    structured_output             [38;2;125;133;144mobject       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    hidden                        [38;2;125;133;144mboolean      [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    hide_reasoning                [38;2;125;133;144mboolean      [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    sync_tool_flow_interactions   [38;2;125;133;144mboolean      [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    context_access_enabled        [38;2;125;133;144mboolean      [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    tools                         [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    toolkits                      [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    collaborators                 [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    knowledge_base                [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    glossary                      [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    guidelines                    [38;2;125;133;144marray<object>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    connection_ids                [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    context_variables             [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    additional_properties         [38;2;125;133;144mobject       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    chat_with_docs                [38;2;125;133;144mobject       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    tags                          [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    id                            [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    agent_mapping                 [38;2;125;133;144mobject       [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+    environments                  [38;2;125;133;144marray        [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+    tenant_id                     [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    created_by                    [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    created_on                    [38;2;125;133;144mtimestamp    [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    updated_by                    [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+    updated_at                    [38;2;125;133;144mtimestamp    [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+    deleted_by                    [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+    deleted_at                    [38;2;125;133;144mtimestamp    [0m   [38;2;125;133;144mcomputed[0m            [38;2;125;133;144mComputed[0m
+
+  [38;2;120;169;255m▌[0m [1mDependencies[0m
+    llm             [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${model.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+    tools           [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${tool.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+    toolkits        [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${toolkit.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+    collaborators   [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${agent.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+    knowledge_base  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${knowledge_base.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+
+  [38;2;120;169;255m▌[0m [1mNotes[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144mAgent `style` controls reasoning: `default` is standard conversational, `react` enables ReAct (Reasoning + Acting) for step-by-step problem solving, `planner` enables advanced multi-step task decomposition.[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144mTools are referenced using `${tool.<ref_name>}` syntax, collaborators using `${agent.<ref_name>}`, and knowledge bases using `${knowledge_base.<ref_name>}`.[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144mThe `llm` field accepts either a `${model.<ref_name>}` reference or a plain string value (e.g., `groq/openai/gpt-oss-120b`). Plain values create no dependency.[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144mThe `description` field serves as the agent's system prompt and defines its core purpose, behavior, and capabilities.[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144mGuidelines provide behavioral rules with `condition` (when the guideline applies) and `action` (what the agent should do).[0m
+    [38;2;125;133;144m•[0m [38;2;125;133;144m`additional_properties` supports `icon` (SVG string), `starter_prompts` (suggested conversation starters), and `welcome_content` (initial greeting).[0m
+
+  [38;2;120;169;255m▌[0m [1mAuthoring[0m
+    [38;2;125;133;144menvelope  [0m [38;2;125;133;144mA config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).[0m
+    [38;2;125;133;144mref_name  [0m [38;2;125;133;144mUnique handle for this resource within the config. Used to reference it from other resources, then stripped before the API call (not a schema field).[0m
+    [38;2;125;133;144mreference [0m [38;2;125;133;144mReference another resource by its ref_name: `${<kind>.<ref_name>}` resolves to its id, `${<kind>.<ref_name>.<field>}` to a specific field. Values resolve late, at plan/apply time.[0m

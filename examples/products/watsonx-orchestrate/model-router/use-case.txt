@@ -1,0 +1,1 @@
+Multi-model router with a fast triage agent and a deep specialist agent on different AI-gateway models, plus a supervisor agent that routes a query to the right collaborator by complexity

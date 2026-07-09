@@ -1,0 +1,10 @@
+input_schema:
+  type: object
+  properties:
+    claim_id:
+      type: string
+      description: The claim identifier to validate (e.g., "CLM-1001")
+  required:
+    - claim_id
+output_schema:
+  type: object

@@ -1,0 +1,2 @@
+This is test document one for knowledge base integration testing.
+It contains sample content about weather forecasting.

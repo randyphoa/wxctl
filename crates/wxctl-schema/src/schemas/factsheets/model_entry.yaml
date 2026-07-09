@@ -1,0 +1,66 @@
+resource:
+  name: model_entry
+  service: factsheets
+  kind: model_entry
+  version: v1
+  description: >
+    A model entry is an AI Factsheets model use case that groups the tracked models, deployments, and
+    factsheets for one business problem within a model inventory.
+  api:
+    base_path: /v1/aigov/model_inventory/model_entries
+    id_field: asset_id
+    list_endpoint: /v1/aigov/model_inventory/model_entries
+    get_endpoint: /v1/aigov/model_inventory/model_entries/{asset_id}
+    create_endpoint: /v1/aigov/model_inventory/model_entries
+    create_method: POST
+    update_endpoint: /v1/aigov/model_inventory/model_entries/{asset_id}
+    update_method: PATCH
+    delete_endpoint: /v1/aigov/model_inventory/model_entries/{asset_id}
+    delete_method: DELETE
+  schema:
+    fields:
+    - name: metadata
+      type: object
+      immutable: true
+      location: Computed
+    - name: entity
+      type: object
+      immutable: true
+      location: Computed
+    - name: href
+      type: string
+      immutable: true
+      location: Computed
+    - name: catalog_id
+      type: string
+      required: true
+      location: Query
+      description: >
+          GUID of the inventory/catalog this model use case belongs to. The factsheets model_entries API
+          requires it as a query parameter on EVERY operation (create, get, update, delete) — not just create —
+          so it is modelled as location: Query (appended to all requests) rather than a create-only body field.
+      references:
+        resource: inventory
+        field: guid
+    - name: name
+      type: string
+      required: true
+      description: Display name of the model entry / AI use case.
+    - name: description
+      type: string
+      description: Description of the model entry.
+  reconciliation:
+    # POST 201 returns the identifier at `asset_id` (not `id`); endpoint placeholders use {asset_id}.
+    # state_fields = only the server-echoed, user-authoritative subset (name, description) — metadata/entity/href
+    # are Computed (outside drift) and would otherwise self-echo and phantom-drift re-apply.
+    discovery:
+      method: list_and_get
+      list_field: results
+      id_source: asset_id
+    update_strategy: patch
+    # RFC 6902 JSON Patch, entity-relative empty prefix (factsheets PATCH is standard); this
+    # field lives on ReconciliationDefinition, not api: (use_json_patch defaults to true).
+    json_patch_path_prefix: ""
+    state_fields:
+      - name
+      - description

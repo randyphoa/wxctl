@@ -1,0 +1,4 @@
+Name,Artifact Type,Description
+Customer Identifier,glossary_term,The bank-wide unique identifier for a customer.
+PII,glossary_term,Personally identifiable information that must be protected and access-controlled.
+KYC Status,glossary_term,The know-your-customer verification state of a customer relationship.

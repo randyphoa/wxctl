@@ -1,0 +1,170 @@
+resource:
+  name: concert_workflow_schedule
+  service: concert_workflows
+  kind: concert_workflow_schedule
+  version: v1
+  description: >
+    A schedule that runs a Concert Workflows (Pliant) flow on a cron cadence. Lives in the
+    Pliant "flowschedules" API, namespaced per user: create is POST /v1/flowschedules/{userName}
+    (the schedule name is in the body and echoed back), read/update/delete are id-in-path at
+    /v1/flowschedules/{userName}/{scheduleName}, and discovery lists per user
+    (GET /v1/flowschedules/{userName}, a bare array). The eight cron fields (second, minute,
+    hour, dayOfMonth, month, dayOfWeek, year) are all required. Software-only: Concert Workflows
+    has no published SaaS API. Distinct service (concert_workflows) from Concert core — its own
+    host + Basic auth realm under the /workflows/api path prefix.
+  unsupported_on: [saas]
+  api:
+    base_path: /v1/flowschedules
+    id_field: name
+    list_endpoint: /v1/flowschedules/{user_name}
+    get_endpoint: /v1/flowschedules/{user_name}/{name}
+    create_endpoint: /v1/flowschedules/{user_name}
+    create_method: POST
+    update_endpoint: /v1/flowschedules/{user_name}/{name}
+    update_method: PUT
+    delete_endpoint: /v1/flowschedules/{user_name}/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Path namespace (Pliant is per-user) ──
+      - name: user_name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Pliant user namespace that owns the schedule. Fills the {user_name} path segment on
+          every endpoint (not sent in the body). Immutable — a change recreates (rename is a
+          spec Non-Goal). Precedent for a non-id Path segment: factsheets/model_tracking.yaml {model}.
+      # ── Identity ──
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: >
+          Schedule name — the natural key. Sent in the create body and used as the {name} path
+          segment (id_field: name) for read/update/delete. Immutable (rename recreates).
+      # ── Cron cadence (all required) ──
+      - name: second
+        type: string
+        required: true
+        description: Cron seconds field.
+      - name: minute
+        type: string
+        required: true
+        description: Cron minutes field.
+      - name: hour
+        type: string
+        required: true
+        description: Cron hours field.
+      - name: day_of_month
+        type: string
+        required: true
+        api_field: dayOfMonth
+        description: Cron day-of-month field.
+      - name: month
+        type: string
+        required: true
+        description: Cron month field.
+      - name: day_of_week
+        type: string
+        required: true
+        api_field: dayOfWeek
+        description: Cron day-of-week field.
+      - name: year
+        type: string
+        required: true
+        description: Cron year field.
+      # ── Optional scalars ──
+      - name: timezone
+        type: string
+        required: false
+        description: IANA timezone the cron expression is evaluated in.
+      - name: enabled
+        type: boolean
+        required: false
+        description: Whether the schedule is active.
+      - name: auto_delete
+        type: boolean
+        required: false
+        api_field: autoDelete
+        description: Delete the schedule after it fires (one-shot).
+      - name: description
+        type: string
+        required: false
+        description: Free-text schedule description.
+      - name: flow_urn
+        type: string
+        required: false
+        api_field: flowUrn
+        description: >
+          URN of the flow this schedule runs — the computed flow_uri on concert_workflow
+          ("{user_name}/{folder}/{name}"). Top-level reference field ⇒ real graph edge (the
+          schedule applies after the flow). Phase 3 confirms flowUrn accepts the flow_uri form live.
+        references:
+          resource: concert_workflow
+          field: flow_uri
+      - name: flow_revision
+        type: integer
+        required: false
+        api_field: flowRevision
+        description: Pinned flow revision to run (omit for latest).
+      - name: worker_group
+        type: string
+        required: false
+        api_field: workerGroup
+        description: >
+          Worker group the scheduled run executes on. Plain string (no reference edge) — the
+          spec Data Flow orders worker groups before schedules via cell config, not a DAG edge.
+      - name: params
+        type: string
+        required: false
+        description: Serialized run parameters passed to the flow.
+      - name: repeats
+        type: integer
+        required: false
+        description: Repeat count.
+      - name: special_condition
+        type: string
+        required: false
+        api_field: specialCondition
+        description: Optional special scheduling condition.
+      - name: start_time
+        type: integer
+        required: false
+        api_field: startTime
+        description: Epoch-millis window start.
+      - name: end_time
+        type: integer
+        required: false
+        api_field: endTime
+        description: Epoch-millis window end.
+  reconciliation:
+    # GET /v1/flowschedules/{user_name} returns a BARE ARRAY of FlowScheduleDto (no envelope) →
+    # no list_field. FlowScheduleDto carries `name`, so discovery's default identity match on
+    # "name" is correct → no name_field needed. id_source: name (item GET by {name}).
+    discovery:
+      method: list_and_get
+      id_source: name
+    # Writable scalars that should round-trip on read. Epoch-millis / revision fields
+    # (start_time, end_time, flow_revision) and serialized params are excluded to avoid phantom
+    # Update{} drift; Phase 3 (Invariant I4) confirms the round-trip set live and may widen.
+    state_fields:
+      - second
+      - minute
+      - hour
+      - day_of_month
+      - month
+      - day_of_week
+      - year
+      - timezone
+      - enabled
+      - description
+    update_strategy: replace
+    use_json_patch: false
+    # Path-located identity fields (user_name/folder) are deliberately NOT listed in
+    # immutable_fields: the API never echoes them in any response body, so a local-vs-remote
+    # compare would phantom-Recreate on every re-plan (live-proven). Changing them still
+    # recreates in practice - the new identity misses discovery => plans a Create.
+    immutable_fields:
+      - name

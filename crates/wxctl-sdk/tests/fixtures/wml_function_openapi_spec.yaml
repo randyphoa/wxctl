@@ -1,0 +1,83 @@
+openapi: "3.0.3"
+info:
+  title: WML Function Scoring API
+  description: Scores input data using a deployed WML function.
+  version: "1.0"
+servers:
+  - url: https://{region}.ml.cloud.ibm.com
+    description: watsonx.ai API
+    variables:
+      region:
+        enum:
+          - us-south
+          - eu-de
+          - eu-gb
+          - jp-tok
+        default: us-south
+        description: The IBM Cloud region for your WML deployment
+security:
+  - oauth2: []
+paths:
+  /ml/v4/deployments/{deployment_id}/predictions:
+    post:
+      operationId: score
+      summary: Score input data
+      description: Sends input data to the WML deployment and returns predictions.
+      parameters:
+        - name: deployment_id
+          in: path
+          required: true
+          description: The WML deployment ID (from wxctl apply output)
+          schema:
+            type: string
+        - name: version
+          in: query
+          required: true
+          schema:
+            type: string
+            default: "2024-01-01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input_data:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      values:
+                        type: array
+                        items:
+                          type: array
+      responses:
+        "200":
+          description: Prediction results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  predictions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        values:
+                          type: array
+                          items:
+                            type: array
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        x-apikey:
+          tokenUrl: https://iam.cloud.ibm.com/identity/token
+          grantType: urn:ibm:params:oauth:grant-type:apikey
+          secretKeys:
+            - apikey
+          paramKeys: []
+          scopes: {}

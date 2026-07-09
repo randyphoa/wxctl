@@ -1,0 +1,120 @@
+kind: orchestrate_connection
+ref_name: erp_connection
+app_id: northwind-erp
+name: Northwind ERP Connection
+description: |
+  Connection to the Northwind Manufacturing ERP used to read the
+  paid-invoice ledger for duplicate detection. The demo tool falls back
+  to bundled mock data when the ERP is unreachable.
+connection_type: key_value_creds
+environment: [draft, live]
+preference: team
+credentials:
+  erp_base_url: ${env:ERP_BASE_URL}
+  api_key: ${env:ERP_API_KEY}
+---
+kind: knowledge_base
+ref_name: ap_policy_kb
+name: ap_policy_kb
+display_name: AP Policy & Vendor Directory
+description: |
+  Accounts-payable policy (3-way matching, tolerance bands, duplicate
+  and exception rules) plus the company vendor directory.
+documents:
+  - path: ./resources/knowledge_base/ap_policy.txt
+  - path: ./resources/knowledge_base/company_vendor_directory.txt
+---
+kind: tool
+ref_name: invoice_matching
+name: invoice_matching
+display_name: Invoice 3-Way Matching
+description: |
+  Runs a 3-way match (invoice vs. purchase order vs. goods receipt) and
+  reports whether the amount is within tolerance. Use when checking an
+  invoice against its PO.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/invoice_matching
+binding:
+  python:
+    function: invoice_matching:main
+---
+kind: tool
+ref_name: duplicate_detection
+name: duplicate_detection
+display_name: Duplicate Invoice Detection
+description: |
+  Checks whether an invoice duplicates one already in the AP ledger,
+  matching on vendor + invoice number or vendor + amount + date. Reads the
+  ERP ledger via the bound connection and falls back to mock data when the
+  ERP is unreachable.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/duplicate_detection
+binding:
+  python:
+    function: duplicate_detection:main
+    connections:
+      erp: ${orchestrate_connection.erp_connection}
+---
+kind: agent
+ref_name: ap_processing_agent
+name: ap_processing_agent
+display_name: AP Processing Agent
+description: |
+  Processes vendor invoices for Northwind Manufacturing: runs 3-way
+  matching, flags duplicates, and routes exceptions to a human AP analyst.
+instructions: |
+  Be precise and operate only on the data the user provides plus the tools.
+  Use the invoice_matching tool for every invoice and report the match
+  result, citing the invoice number, PO number, and amounts you compared.
+  Use the duplicate_detection tool before approving any invoice.
+  Cite the AP policy knowledge base for tolerance bands and routing rules.
+  When an amount is outside tolerance, a vendor or PO does not match, or a
+  duplicate is found, route the invoice to a human AP analyst — never
+  approve it yourself.
+  All data here is mock demo data; do not claim a real payment was made.
+llm: groq/openai/gpt-oss-120b
+style: react
+tools:
+  - ${tool.invoice_matching}
+  - ${tool.duplicate_detection}
+knowledge_base:
+  - ${knowledge_base.ap_policy_kb}
+guidelines:
+  - display_name: Cite the evidence
+    condition: When reporting any matching or duplicate decision
+    action: |
+      Cite the invoice number, PO number, and the invoice vs. PO amounts you
+      compared, and name the AP policy rule that applies.
+  - display_name: Defer exceptions to a human
+    condition: When an invoice is outside tolerance or flagged as a duplicate
+    action: |
+      Route it to a human AP analyst and do not approve it.
+---
+kind: test
+ref_name: test_01_clean_match
+agent: ${agent.ap_processing_agent}
+turns:
+  - message: "Match invoice INV-5567 from vendor V100 for $4,250.00 against PO-2024-1001."
+    expect_tools:
+      - invoice_3_way_matching
+    expect_answer: "Should report a successful 3-way match within tolerance for PO-2024-1001, citing the invoice and PO amounts."
+---
+kind: test
+ref_name: test_02_amount_mismatch
+agent: ${agent.ap_processing_agent}
+turns:
+  - message: "Match invoice INV-5568 from vendor V101 for $20,000.00 against PO-2024-2003."
+    expect_tools:
+      - invoice_3_way_matching
+    expect_answer: "Should flag an amount mismatch outside tolerance and route the invoice to a human AP analyst, citing the AP policy."
+---
+kind: test
+ref_name: test_03_duplicate
+agent: ${agent.ap_processing_agent}
+turns:
+  - message: "Is invoice INV-5501 from vendor V100 for $4,250.00 dated 2024-05-02 a duplicate?"
+    expect_tools:
+      - duplicate_invoice_detection
+    expect_answer: "Should report that the invoice is a duplicate of INV-5501 (same vendor, amount, and date) and route it to a human."

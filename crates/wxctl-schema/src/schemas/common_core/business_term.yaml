@@ -1,0 +1,255 @@
+resource:
+  name: business_term
+  service: common_core
+  kind: business_term
+  version: v1
+  description: >
+      A Business Term is a glossary entry that defines standardized business vocabulary and semantics for
+      data governance in Watsonx Data. Business terms provide agreed-upon definitions, context, and metadata
+      for business concepts, enabling consistent understanding and communication across the organization.
+      Terms can be organized into hierarchies using categories, linked to related terms and synonyms, and
+      associated with data assets to document business meaning. They support data stewardship, regulatory
+      compliance, and enterprise data literacy initiatives.
+
+  api:
+    base_path: /v3/glossary_terms
+    id_field: artifact_id
+    list_endpoint: /v3/glossary_terms
+    get_endpoint: /v3/glossary_terms/{artifact_id}
+    create_endpoint: /v3/glossary_terms
+    create_method: POST
+    update_endpoint: /v3/glossary_terms/{artifact_id}
+    update_method: PATCH
+    delete_endpoint: /v3/glossary_terms/{artifact_id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: artifact_id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during business term creation. This artifact_id serves
+            as the primary key for the term and is used to reference it in relationships, data asset
+            associations, and term management operations.
+
+      - name: version_id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Version identifier assigned by the service for tracking term evolution. Each update to a
+            published term may create a new version, enabling version history and change tracking for
+            governance and audit purposes. Automatically managed by the system.
+
+      - name: name
+        type: string
+        required: true
+        description: >
+            Unique name identifier for the business term within the glossary. This name serves as the
+            primary human-readable reference and should clearly represent the business concept being
+            defined. Must be unique within the glossary to prevent ambiguity and ensure clear term
+            identification across the organization.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_\\s-]+$"
+
+      - name: short_description
+        type: string
+        required: false
+        description: >
+            Brief description of the business term shown in summary views, search results, and quick
+            previews. Should provide a concise definition that users can quickly understand without
+            reading the full long_description. Typically 1-2 sentences.
+
+      - name: long_description
+        type: string
+        required: false
+        description: >
+            Comprehensive definition and explanation of the business term. Should include detailed
+            business context, scope, usage guidelines, and any important clarifications. This is the
+            authoritative definition used for governance, compliance, and data literacy purposes.
+            Supports rich text formatting for detailed documentation.
+
+      - name: abbreviations
+        type: array
+        required: false
+        item_type: string
+        description: >
+            List of alternate abbreviations or acronyms commonly used for this term. Helps users find
+            the term when searching by abbreviation and documents variant forms used across different
+            parts of the organization. Examples: ["CX", "CUST_EXP"] for "Customer Experience".
+
+      - name: example
+        type: string
+        required: false
+        description: >
+            Example usage or illustrative context showing how the term is applied in practice. Helps
+            users understand concrete applications of abstract concepts and clarifies the term's scope
+            through real-world scenarios. Can include sample data values or usage contexts.
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+            User-defined tags for organizing and discovering terms through faceted search and filtering.
+            Tags can represent data domains, regulatory frameworks, business processes, or any other
+            categorization dimension relevant to the organization. Complements the formal category
+            hierarchy with flexible, multi-dimensional classification.
+
+      - name: steward_ids
+        type: array
+        required: false
+        item_type: string
+        description: >
+            List of user identifiers assigned as stewards for this business term. Stewards are responsible
+            for maintaining the term's definition, reviewing proposed changes, and ensuring the term is
+            correctly applied to data assets. Stewards have governance authority over the term's lifecycle.
+
+      - name: steward_group_ids
+        type: array
+        required: false
+        item_type: string
+        description: >
+            List of group identifiers assigned as steward groups for this term. Allows stewardship
+            responsibility to be assigned to teams or organizational units rather than individual users,
+            distributing governance duties across a group.
+
+      - name: parent_category
+        type: object
+        required: false
+        immutable: true
+        description: >
+            Primary category assignment that places this term within the governance taxonomy hierarchy.
+            This establishes the term's main classification and cannot be changed after creation to
+            maintain taxonomy stability. The parent category determines the term's primary organizational
+            context and affects how it appears in hierarchical navigation.
+
+      - name: categories
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of secondary category relationships for multi-dimensional classification. Allows the
+            term to be associated with multiple categories beyond the primary parent_category, enabling
+            cross-cutting organizational views and faceted taxonomy navigation. Each entry is a category
+            relationship object with metadata about the association.
+
+      - name: related_terms
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of relationships to other business terms that are conceptually related but not synonyms.
+            Helps users navigate the semantic network of business concepts and discover connected terms.
+            Each relationship can specify the nature of the relationship (e.g., "has_a", "part_of").
+
+      - name: synonym_terms
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of business terms that are synonyms or represent the same business concept with different
+            naming. Synonym relationships help unify vocabulary across organizational silos and enable
+            users to find the authoritative term when using alternate terminology. Each entry references
+            another business term that is considered equivalent in meaning.
+
+      - name: data_classes
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of data class assignments that associate this term with data classification rules and
+            patterns. Data classes define technical patterns (e.g., regex, data types) for identifying
+            data that represents this business concept. Enables automated term assignment to data assets
+            based on content analysis.
+
+      - name: classifications
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of classification assignments for governance, security, or compliance labeling. Classifications
+            can indicate data sensitivity levels, regulatory scope (PII, PHI, PCI), retention policies, or
+            other governance metadata. Drives policy enforcement and access control decisions for data
+            assets associated with this term.
+
+      - name: custom_attributes
+        type: array
+        required: false
+        item_type: object
+        description: >
+            List of custom attribute values for organization-specific metadata extensions. Allows
+            organizations to capture additional governance metadata beyond the standard fields, such as
+            business owner contacts, approval workflows, data quality metrics, or domain-specific properties.
+            Each custom attribute has a name and value.
+
+      - name: effective_start_date
+        type: string
+        required: false
+        description: >
+            ISO 8601 timestamp indicating when this term definition becomes effective and should be used
+            for governance purposes. Enables planned rollout of terminology changes and supports time-based
+            governance processes. If not specified, the term is immediately effective upon creation.
+
+      - name: effective_end_date
+        type: string
+        required: false
+        description: >
+            ISO 8601 timestamp indicating when this term definition expires or is superseded. Allows
+            organizations to phase out deprecated terminology while maintaining historical context.
+            Terms past their end date may be hidden from active use while remaining available for
+            historical data interpretation.
+
+      - name: workflow_state
+        type: string
+        required: false
+        immutable: true
+        allowed_values: [DRAFT, PUBLISHED, ARCHIVED]
+        description: >
+            Lifecycle state of the business term controlling its visibility and governance status.
+            DRAFT terms are works in progress not yet ready for general use. PUBLISHED terms are approved
+            and actively used for governance. ARCHIVED terms are retired but retained for historical
+            reference. This state cannot be changed after creation through updates - state transitions
+            use separate workflow APIs.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: resources
+      id_source: artifact_id
+    state_fields:
+      - name
+      - short_description
+      - long_description
+      - abbreviations
+      - example
+      - tags
+      - steward_ids
+      - steward_group_ids
+      - categories
+      - related_terms
+      - synonym_terms
+      - data_classes
+      - classifications
+      - custom_attributes
+      - effective_start_date
+      - effective_end_date
+    update_strategy: patch
+    use_json_patch: true
+    json_patch_path_prefix: "/entity"
+    # parent_category is intentionally NOT immutable-compared: the live CP4D
+    # /v3/glossary_terms LIST omits it and the per-item GET does not report it
+    # either (investigated 2026-06-16),
+    # so a read-unreportable field cannot be drift-compared without a false Recreate.
+    # Trade-off: a term reparent is not flagged as drift. The field-level
+    # `immutable: true` on the `parent_category` field is retained as
+    # documentation of intent.
+    immutable_fields: []
+
+  deployments: {}

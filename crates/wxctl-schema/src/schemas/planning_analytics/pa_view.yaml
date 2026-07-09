@@ -1,0 +1,91 @@
+resource:
+  name: pa_view
+  service: planning_analytics
+  kind: pa_view
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) cube view — a saved query over a cube, either a
+    native axis layout (columns/rows/titles) or an MDX view. Created under its parent cube
+    (POST /Cubes('{cube}')/Views) and identified by its `name`. The view is an abstract OData
+    type; the ViewHandler pre_create injects the `@odata.type` discriminator selected by
+    `view_type` (#ibm.tm1.api.v1.NativeView or #ibm.tm1.api.v1.MDXView).
+  api:
+    base_path: /Cubes('{cube}')/Views
+    id_field: name
+    list_endpoint: /Cubes('{cube}')/Views
+    get_endpoint: /Cubes('{cube}')/Views('{name}')
+    create_endpoint: /Cubes('{cube}')/Views
+    create_method: POST
+    update_endpoint: /Cubes('{cube}')/Views('{name}')
+    update_method: PATCH
+    delete_endpoint: /Cubes('{cube}')/Views('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: View name — the OData entity key within the cube. Immutable identity.
+      - name: cube
+        type: string
+        required: true
+        location: Path
+        validation:
+          pattern: "^[^']+$"
+        description: >
+          Parent cube name. Interpolated into every endpoint's `{cube}` segment (location: Path —
+          never rides the body). Its `references` block yields the DAG edge pa_cube -> pa_view.
+        references:
+          resource: pa_cube
+          field: name
+      - name: view_type
+        type: string
+        required: true
+        location: LocalOnly
+        allowed_values: ["native", "mdx"]
+        # LocalOnly: config-only. Never sent under this name — the ViewHandler reads it to pick
+        # the `@odata.type` discriminator (native -> NativeView, mdx -> MDXView).
+        description: Discriminator selecting a native axis view or an MDX view.
+      - name: mdx
+        type: string
+        required: false
+        api_field: MDX
+        description: MDX query text (mdx views only). Passed through by the handler as `MDX`.
+      - name: columns
+        type: array
+        item_type: object
+        required: false
+        # No api_field: native-axis selections carry dotted `Subset@odata.bind` keys the default
+        # materializer would drop, so the ViewHandler passes this array through verbatim as
+        # `Columns`. Free-form objects (config supplies the OData axis shape); the exact axis/bind
+        # form is live-verified in Phase 4. Precedent: concert_resilience_library.requirements.
+        description: Column-axis dimension selections (native views only). Passed through verbatim.
+      - name: rows
+        type: array
+        item_type: object
+        required: false
+        description: Row-axis dimension selections (native views only). Passed through verbatim as `Rows`.
+      - name: titles
+        type: array
+        item_type: object
+        required: false
+        description: Title (context) dimension selections (native views only). Passed through verbatim as `Titles`.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # columns/rows/titles/mdx excluded from state_fields: TM1 expands axis subsets to full member
+    # sets on read, so the view body does not round-trip offline — view-body drift is a Phase-4
+    # (live) concern.
+    state_fields:
+      - name
+    update_strategy: patch
+    use_json_patch: false
+    # Path parents are NOT in immutable_fields: the server never echoes Path fields back,
+    # so declared-vs-missing would phantom-Recreate on every re-plan (concert_workflow_schedule
+    # precedent). Parent immutability is structural: a different parent = a different identity.
+    immutable_fields:
+      - name

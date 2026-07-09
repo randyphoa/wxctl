@@ -1,0 +1,97 @@
+resource:
+  name: instana_maintenance_window
+  service: instana
+  kind: instana_maintenance_window
+  version: v1
+  description: >
+    An Instana maintenance window (MaintenanceConfigV2) suppresses alerting for the
+    entities matched by its `query` during a scheduled window. CREATE IS A QUIRK:
+    there is NO POST — a window is created (and updated) by the same idempotent
+    upsert PUT /api/settings/v2/maintenance/{id} with a CLIENT-SUPPLIED id
+    (MaintenanceWindowHandler.pre_create owns the PUT). Discovery is get_by_id off
+    that client id: absent -> create, present -> state-compare. pause/resume
+    endpoints are out of scope.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/settings/v2/maintenance
+    id_field: id
+    list_endpoint: /api/settings/v2/maintenance
+    get_endpoint: /api/settings/v2/maintenance/{id}
+    # No POST. Create is the PUT-upsert owned by MaintenanceWindowHandler.pre_create;
+    # this endpoint/method is display-only (the default POST is skipped on Handled).
+    create_endpoint: /api/settings/v2/maintenance/{id}
+    create_method: PUT
+    # Update is the same PUT-upsert. NOTE: the default update path prunes the body
+    # to state_fields (update.rs:97), which would drop the required id/query/
+    # scheduling — so an edited-then-re-applied window is a Phase-5 concern (add a
+    # pre_update mirroring the create PUT, or document modify-via-recreate). The AC
+    # lifecycle (apply -> re-plan-no-op -> destroy) never fires an update.
+    update_endpoint: /api/settings/v2/maintenance/{id}
+    update_method: PUT
+    delete_endpoint: /api/settings/v2/maintenance/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Client-supplied identity (rides the PUT body AND is the get_by_id id_source) --
+      - name: id
+        type: string
+        required: true
+        immutable: true
+        description: >
+          CLIENT-SUPPLIED maintenance-window id. Required in the MaintenanceConfigV2
+          PUT body AND the get_by_id discovery id_source (delete.rs/update.rs
+          substitute it into /{id}). Immutable — a different id is a different window.
+      # -- Writable (MaintenanceConfigV2) --
+      - name: name
+        type: string
+        required: true
+        description: Maintenance-window display name.
+      - name: query
+        type: string
+        required: true
+        description: Instana entity query selecting the entities whose alerts are suppressed.
+      - name: scheduling
+        type: object
+        required: true
+        description: >
+          MaintenanceConfigScheduling (start, duration, recurrence, ...).
+          Server-normalized on read (derives `occurrence`), so excluded from
+          state_fields to avoid phantom Update{} drift.
+      - name: paused
+        type: boolean
+        required: false
+        description: Whether the window is paused (server default). Optional → excluded from state_fields.
+      - name: retriggerOpenAlertsEnabled
+        type: boolean
+        required: false
+        description: Re-trigger open alerts when the window ends (server default). Optional → excluded from state_fields.
+      - name: tagFilterExpression
+        type: object
+        required: false
+        description: >
+          Optional tag-filter selector further narrowing the window's scope.
+          Server-normalized on read, so excluded from state_fields.
+      - name: tagFilterExpressionEnabled
+        type: boolean
+        required: false
+        description: Whether the tag-filter expression is applied (server default). Optional → excluded from state_fields.
+  reconciliation:
+    # Discovery is get_by_id off the CLIENT-SUPPLIED id (id_source: id): GET
+    # /api/settings/v2/maintenance/{id} -> 200 (state-compare) / 404 (create).
+    # The upsert PUT is idempotent by construction (MaintenanceWindowHandler).
+    discovery:
+      method: get_by_id
+      id_source: id
+    # state_fields = writable scalars that round-trip cleanly: name + query. `id`
+    # is the immutable path/identity key (never drifts on a matched resource);
+    # `scheduling`/tagFilterExpression objects are server-normalized and the
+    # booleans have server defaults -> all excluded to avoid phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md).
+    # Phase 5 may widen once live round-trips are verified clean (Invariant I4).
+    state_fields:
+      - name
+      - query
+    update_strategy: replace
+    immutable_fields:
+      - id

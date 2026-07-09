@@ -1,0 +1,128 @@
+resource:
+  name: instana_slo_alert_config
+  service: instana
+  kind: instana_slo_alert_config
+  version: v1
+  description: >
+    An Instana SLO smart alert (ServiceLevelsAlertConfig) evaluates a rule (status
+    / error-budget / burn-rate) over one or more SLO configs and routes triggered
+    events to alerting channels. Created via the Events settings API
+    (/api/events/settings/global-alert-configs/service-levels) and identified by a
+    server-assigned string id; the human identifier is `name`. Update is the
+    smart-alert quirk POST /{id} with the full config body (update_strategy:
+    replace). DELETE is a SOFT delete — the active-configs list omits destroyed
+    alerts, so discovery never resurrects one.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/global-alert-configs/service-levels
+    id_field: id
+    list_endpoint: /api/events/settings/global-alert-configs/service-levels
+    get_endpoint: /api/events/settings/global-alert-configs/service-levels/{id}
+    create_endpoint: /api/events/settings/global-alert-configs/service-levels
+    create_method: POST
+    update_endpoint: /api/events/settings/global-alert-configs/service-levels/{id}
+    # Smart-alert family quirk: update is POST /{id}.
+    update_method: POST
+    delete_endpoint: /api/events/settings/global-alert-configs/service-levels/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned / read-model metadata (read-only; excluded from state_fields) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned SLO-alert-config id (top-level `id` on create/list/get).
+      # -- Writable (ServiceLevelsAlertConfig) --
+      - name: name
+        type: string
+        required: true
+        description: Smart-alert display name; Instana's human identifier (matched on during discovery).
+      - name: description
+        type: string
+        required: true
+        description: Alert description shown on triggered events.
+      - name: alertChannelIds
+        type: array
+        item_type: string
+        required: true
+        references:
+          resource: instana_alerting_channel
+          field: id
+        description: >
+          Ids of the alerting channels triggered events route to. `references` on
+          this array field produces a DAG edge; each
+          ${instana_alerting_channel.<ref>.id} element resolves at apply.
+      - name: sloIds
+        type: array
+        item_type: string
+        required: true
+        references:
+          resource: instana_slo_config
+          field: id
+        description: >
+          Ids of the SLO configs this alert evaluates. `references` on this array
+          field produces a DAG edge → SLO configs are ordered before this alert and
+          each ${instana_slo_config.<ref>.id} element resolves at apply.
+      - name: rule
+        type: object
+        required: true
+        description: >
+          ServiceLevelsAlertRule (status / error-budget / burn-rate).
+          Server-normalized on read, so excluded from state_fields.
+      - name: severity
+        type: integer
+        required: true
+        description: Event severity (required in the SLO-alert API; round-trips → in state_fields).
+      - name: timeThreshold
+        type: object
+        required: true
+        description: >
+          ServiceLevelsTimeThreshold — how long/often the condition must hold to
+          trigger. Server-normalized on read, so excluded from state_fields.
+      - name: customPayloadFields
+        type: array
+        item_type: object
+        required: true
+        description: >
+          Custom key/value fields attached to triggered events (may be an empty
+          array). Server-normalized on read, so excluded from state_fields.
+      - name: threshold
+        type: object
+        required: false
+        description: StaticThreshold for the rule. Server-normalized on read, so excluded from state_fields.
+      - name: burnRateConfig
+        type: array
+        item_type: object
+        required: false
+        description: >
+          Burn-rate window configs. Server-normalized on read, so excluded from
+          state_fields.
+      - name: burnRateTimeWindows
+        type: object
+        required: false
+        description: Burn-rate time windows. Server-normalized on read, so excluded from state_fields.
+      - name: triggering
+        type: boolean
+        required: false
+        description: Whether the alert also opens an incident. Optional → excluded from state_fields.
+  reconciliation:
+    # GET /api/events/settings/global-alert-configs/service-levels returns a BARE
+    # ARRAY of ServiceLevelseAlertConfigWithMetadata (upstream typo in the schema
+    # name; we consume the bare array) -> no list_field, no ENVELOPE_KEYS change.
+    # Identity match on `name`. Soft-delete: active-configs list omits destroyed.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars that round-trip cleanly: name/description +
+    # the REQUIRED severity (always user-set, no server-default drift). Read-model
+    # metadata and object/array fields excluded to avoid phantom Update{} drift.
+    # Phase 5 may widen (Invariant I4).
+    state_fields:
+      - name
+      - description
+      - severity
+    update_strategy: replace
+    immutable_fields: []

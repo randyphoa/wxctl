@@ -1,0 +1,14 @@
+---
+source: crates/wxctl/src/output/exec_snapshots_test.rs
+expression: "apply_success_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mExecution[0m
+[38;2;125;133;144m          Type                    Name                                   Action   Time[0m
+    [38;2;125;133;144m├─[0m [38;2;63;185;80m+[0m  orchestrate_connection  httpbin_bearer[38;2;125;133;144m  [id=dd33a261…3418c21][0m  [38;2;63;185;80mcreated[0m  [38;2;125;133;144m0.6s[0m
+    [38;2;125;133;144m├─[0m [38;2;63;185;80m+[0m  tool                    httpbin_tools[38;2;125;133;144m  [id=805591f1…5cd0733][0m   [38;2;63;185;80mcreated[0m  [38;2;125;133;144m1.8s[0m
+    [38;2;125;133;144m└─[0m [38;2;63;185;80m+[0m  agent                   httpbin_agent[38;2;125;133;144m  [id=5d59f99e…3fa0072][0m   [38;2;63;185;80mcreated[0m  [38;2;125;133;144m2.3s[0m
+
+[38;2;63;185;80m✓[0m [1mapply:[0m [38;2;63;185;80m+3 created[0m [38;2;125;133;144m·[0m [38;2;125;133;144m4.8s[0m
+
+  [38;2;125;133;144mcreated resources:[0m
+    agent.httpbin_agent  [38;2;120;169;255mhttps://api.watson-orchestrate.ibm.com/agents/abc123[0m

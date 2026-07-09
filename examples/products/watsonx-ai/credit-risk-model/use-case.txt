@@ -1,0 +1,1 @@
+Deploy a transparent credit-risk scoring model on watsonx.ai — packaging a custom software specification, a deployable scorer, and an online deployment — and score a loan applicant for an approve/decline decision and probability.

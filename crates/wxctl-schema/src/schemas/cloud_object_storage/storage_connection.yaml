@@ -1,0 +1,223 @@
+resource:
+  name: storage_connection
+  service: cloud_object_storage
+  kind: storage_connection
+  version: v1
+  description: >
+      Credential-holding kind for object-store / file-system backends. One
+      `storage_connection` is referenced by one or more bucket / container
+      resources (`s3_bucket`, `adls_container`, `gcs_bucket`)
+      and through them by `storage_registration`. The `type:` discriminator
+      selects a family of auth fields: s3_family (HMAC key pair),
+      adls_family (account key / SAS / service principal, exactly one),
+      gcs (service account JSON), hdfs_family (namenode URI, optional
+      Kerberos), storage_scale (cluster endpoint + basic auth). Local
+      only — no remote API; reconciliation is skipped. The handler
+      performs IAM auto-discovery of `instance_crn` at load time when
+      `type: ibm_cos` and the profile runs in apikey mode.
+
+  api:
+    base_path: /local/storage_connections
+    id_field: ref_name
+    get_endpoint: /local/storage_connections/{ref_name}
+    create_endpoint: /local/storage_connections
+    create_method: POST
+    delete_endpoint: /local/storage_connections/{ref_name}
+    delete_method: DELETE
+
+  schema:
+    discriminator: type
+    fields:
+      - name: type
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Storage backend family. Drives the active variant — fields
+            outside the active variant emit WXCTL-V401 (warn) at
+            validation; unknown values likewise emit WXCTL-V401 rather
+            than blocking (the API catalog grows faster than this list).
+        validation:
+          soft_allowed_values:
+            - ibm_cos
+            - aws_s3
+            - amazon_s3
+            - s3
+            - minio
+            - ibm_ceph
+            - adls_gen1
+            - adls_gen2
+            - google_cs
+            - hdfs
+            - ozone
+            - ibm_storage_scale
+
+    variants:
+      s3_family:
+        applies_to:
+          - ibm_cos
+          - aws_s3
+          - amazon_s3
+          - s3
+          - minio
+          - ibm_ceph
+        fields:
+          - name: access_key
+            type: string
+            required: false
+            sensitive: true
+            description: >
+                S3 HMAC access key (AWS SigV4 access-key-id). Required for HMAC
+                auth and for non-COS S3 backends (aws_s3, minio, ibm_ceph, …).
+                Optional for `type: ibm_cos` when the profile's
+                `cloud_object_storage` block runs in apikey mode — COS then
+                authenticates with the profile IAM key + `instance_crn`. The
+                handler enforces "HMAC keys or apikey-mode" at apply time
+                (WXCTL: missing-creds bail), since profile auth_type is not
+                known at schema-validation time.
+          - name: secret_key
+            type: string
+            required: false
+            sensitive: true
+            description: >
+                S3 HMAC secret key (AWS SigV4 secret-access-key). Paired with
+                `access_key`; same required-vs-optional rule (optional only for
+                `ibm_cos` under apikey mode).
+          - name: endpoint
+            type: string
+            required: false
+            description: >
+                Regional S3 endpoint URL. For `ibm_cos` and `aws_s3` the
+                handler auto-derives this from the linked bucket's
+                `region` when absent. For `minio` / `ibm_ceph` / custom S3
+                installs the value is required explicitly (no default).
+          - name: instance_crn
+            type: string
+            required: false
+            description: >
+                IBM COS service-instance CRN. Applies only when
+                `type: ibm_cos` — sent as `ibm-service-instance-id` on
+                S3 requests. Under IAM apikey auth, the handler
+                auto-discovers this via the Resource Controller API
+                when absent. Under HMAC auth, the value is required.
+
+      adls_family:
+        applies_to:
+          - adls_gen1
+          - adls_gen2
+        fields:
+          - name: account_name
+            type: string
+            required: true
+            description: Azure storage account name.
+          - name: account_key
+            type: string
+            required: false
+            sensitive: true
+            description: Shared access key — one of three auth options.
+            validation:
+              one_of:
+                - [account_key, sas_token, service_principal]
+          - name: sas_token
+            type: string
+            required: false
+            sensitive: true
+            description: Shared Access Signature token — alternative to account_key.
+          - name: service_principal
+            type: object
+            required: false
+            description: Azure AD service principal (tenant_id + client_id + client_secret).
+            schema:
+              fields:
+                - name: tenant_id
+                  type: string
+                  required: true
+                - name: client_id
+                  type: string
+                  required: true
+                - name: client_secret
+                  type: string
+                  required: true
+                  sensitive: true
+          - name: container_name
+            type: string
+            required: false
+            description: >
+                ADLS Gen2 container (filesystem) name. Used to assemble the
+                `StorageDetails.container_name` field for `adls_gen2`
+                registrations; ignored for `adls_gen1`.
+          - name: application_id
+            type: string
+            required: false
+            description: >
+                Azure AD application (client) ID — alternative to a full
+                `service_principal` object. Sent as
+                `StorageDetails.application_id` for `adls_gen2`.
+          - name: directory_id
+            type: string
+            required: false
+            description: >
+                Azure AD directory (tenant) ID. Sent as
+                `StorageDetails.directory_id` for `adls_gen2`.
+
+      gcs:
+        applies_to:
+          - google_cs
+        fields:
+          - name: service_account_json
+            type: string
+            required: true
+            sensitive: true
+            description: >
+                Service account credentials. Either inline JSON string or
+                a filesystem path to a credentials file; handler applies
+                the same file-or-content pattern used by `s3_object`.
+          - name: project_id
+            type: string
+            required: false
+            description: >
+                GCP project ID. Defaults to the `project_id` claim inside
+                `service_account_json` when absent.
+
+      hdfs_family:
+        applies_to:
+          - hdfs
+          - ozone
+        fields:
+          - name: namenode_uri
+            type: string
+            required: true
+            description: >
+                Namenode URI — e.g. `hdfs://nn.internal:8020` for HDFS,
+                `o3fs://om.internal:9862` for Ozone.
+          - name: kerberos_principal
+            type: string
+            required: false
+          - name: keytab_path
+            type: string
+            required: false
+
+      storage_scale:
+        applies_to:
+          - ibm_storage_scale
+        fields:
+          - name: cluster_endpoint
+            type: string
+            required: true
+          - name: username
+            type: string
+            required: true
+          - name: password
+            type: string
+            required: true
+            sensitive: true
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: ref_name
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - type

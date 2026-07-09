@@ -1,0 +1,1 @@
+A calculator agent that does arithmetic with a Python tool and answers IBM history questions from a knowledge base, plus a weather agent that reports city weather and delegates any math to the calculator agent

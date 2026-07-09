@@ -1,0 +1,135 @@
+resource:
+    name: project
+    service: common_core
+    kind: project
+    version: v1
+    description: >
+        A Project is a collaborative workspace that organizes assets, tools, notebooks, jobs, and data connections for data
+        science and AI workflows. Projects provide access control through membership roles, storage configuration for data
+        assets, and integration with compute services. Projects serve as containers that scope resources such as environments,
+        jobs, and deployments.
+    api:
+        base_path: /v2/projects
+        id_field: guid
+        list_endpoint: /v2/projects?limit=100
+        get_endpoint: /v2/projects/{guid}
+        create_endpoint: /transactional/v2/projects
+        create_method: POST
+        update_method: PATCH
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: guid
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Unique identifier (UUID v4) assigned by the API during project creation. Used to reference the project in
+                  all management operations and as a scoping parameter for child resources.
+              validation:
+                  pattern: ^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$
+            - name: created_at
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp indicating when the project was created. Automatically set by the system during creation.
+            - name: updated_at
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp of the most recent update to the project. Automatically maintained by the system.
+            - name: name
+              type: string
+              required: true
+              description: >
+                  The name of the project. Must be non-empty and cannot contain certain special characters. Used as the primary
+                  human-readable identifier for the project.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description of the project's purpose, scope, and contents. Displayed in project listings
+                  and management interfaces.
+              validation:
+                  min_length: 0
+                  max_length: 1000
+            - name: type
+              type: string
+              required: false
+              description: >
+                  The project type. The 'cpd' type classifies IBM Cloud Pak for Data projects. The 'wx' type classifies IBM
+                  watsonx projects. The 'wca' type classifies IBM watsonx Code Assistant projects.
+              default: wx
+              allowed_values: [cpd, wx, wca]
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  User-defined tags for organizing and filtering projects. Tags help categorize projects by purpose, team,
+                  environment, or other organizational dimensions.
+            - name: storage
+              type: object
+              required: false
+              description: >
+                  Object storage configuration for the project. Required for project creation. Specifies the Cloud Object
+                  Storage instance and credentials for storing project assets.
+              schema:
+                  fields:
+                      - name: type
+                        type: string
+                        required: true
+                        description: The project storage type.
+                        allowed_values: [bmcos_object_storage, assetfiles, local_git_storage, amazon_s3]
+                      - name: guid
+                        type: string
+                        required: false
+                        description: >
+                            The project storage ID represented as a version 4 UUID. An ID is required only for the "bmcos_object_storage"
+                            storage type.
+                        validation:
+                            pattern: ^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$
+                      - name: properties
+                        type: object
+                        required: false
+            - name: generator
+              type: string
+              required: false
+              description: >
+                  Identifier for the tool or system that created this project. Defaults to 'wxctl-cli' when created by this tool.
+                  Used for tracking project provenance.
+              validation:
+                  min_length: 8
+                  max_length: 50
+              default: wxctl-cli
+    reconciliation:
+        discovery:
+            method: list_and_get
+            list_field: resources
+            id_source: guid
+        state_fields:
+            - name
+            - description
+            - type
+            - tags
+            - generator
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: true
+        json_patch_path_prefix: /entity
+
+    deployments:
+        "software-5.3":
+            # SaaS and Software 5.3.x share /v2/projects and /transactional/v2/projects
+            # (confirmed in Software 5.3.0 spec). Empty overlay declares the kind is
+            # supported on this deployment without altering the base block.
+            api: {}
+    unsupported_on: []

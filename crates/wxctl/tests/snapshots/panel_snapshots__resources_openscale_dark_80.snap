@@ -1,0 +1,47 @@
+---
+source: crates/wxctl/tests/panel_snapshots.rs
+expression: "run(&[\"resources\", \"--service\", \"openscale\"], \"80\", \"dark\", \"unicode\")"
+---
+
+  [1mwatsonx resource catalog[0m   [38;2;125;133;144m8 kinds · 1 product[0m
+
+  [38;2;120;169;255m▌[0m [1mOpenScale[0m   [38;2;125;133;144m(openscale · 8 kinds)[0m
+    [38;2;120;169;255mdata_mart         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn OpenScale data mart is the[0m
+[38;2;125;133;144m                                          per-instance datastore that holds[0m
+[38;2;125;133;144m                                          monitoring records (payload, feedback,[0m
+[38;2;125;133;144m                                          metrics) for every subscribed[0m
+[38;2;125;133;144m                                          deployment.[0m
+    [38;2;120;169;255mdata_set          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA data set is a typed store within an[0m
+[38;2;125;133;144m                                          OpenScale data mart (payload logging,[0m
+[38;2;125;133;144m                                          feedback, or business payload) that[0m
+[38;2;125;133;144m                                          records the data used to compute a[0m
+[38;2;125;133;144m                                          subscription's monitor metrics.[0m
+    [38;2;120;169;255mguardrails_policy [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA guardrails policy defines[0m
+[38;2;125;133;144m                                          content-filtering and safety rules[0m
+[38;2;125;133;144m                                          (such as PII or HAP detection) that[0m
+[38;2;125;133;144m                                          OpenScale enforces on generative-AI[0m
+[38;2;125;133;144m                                          model inputs and outputs.[0m
+    [38;2;120;169;255mintegrated_system [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn integrated system registers an[0m
+[38;2;125;133;144m                                          external service (notifications, a[0m
+[38;2;125;133;144m                                          custom metrics provider, or a[0m
+[38;2;125;133;144m                                          third-party endpoint) that OpenScale[0m
+[38;2;125;133;144m                                          calls during monitoring.[0m
+    [38;2;120;169;255mmonitor_definition[0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor definition registers a[0m
+[38;2;125;133;144m                                          custom monitor type in OpenScale,[0m
+[38;2;125;133;144m                                          declaring its metrics, thresholds, and[0m
+[38;2;125;133;144m                                          tags.[0m
+    [38;2;120;169;255mmonitor_instance  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor instance activates a monitor[0m
+[38;2;125;133;144m                                          (quality, fairness, drift,[0m
+[38;2;125;133;144m                                          explainability, or a custom[0m
+[38;2;125;133;144m                                          definition) on a subscription, with[0m
+[38;2;125;133;144m                                          its parameters and alert thresholds.[0m
+    [38;2;120;169;255mservice_provider  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA service provider binds a[0m
+[38;2;125;133;144m                                          machine-learning serving environment[0m
+[38;2;125;133;144m                                          (such as a watsonx.ai or WML space) to[0m
+[38;2;125;133;144m                                          OpenScale so its deployments can be[0m
+[38;2;125;133;144m                                          discovered and monitored.[0m
+    [38;2;120;169;255msubscription      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA subscription connects one deployed[0m
+[38;2;125;133;144m                                          model to OpenScale for monitoring,[0m
+[38;2;125;133;144m                                          linking it to a service provider and[0m
+[38;2;125;133;144m                                          data mart and capturing its input and[0m
+[38;2;125;133;144m                                          output schema.[0m

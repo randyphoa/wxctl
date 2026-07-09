@@ -1,0 +1,84 @@
+resource:
+  name: pa_user
+  service: planning_analytics
+  kind: pa_user
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) user — a security principal with a password and a set
+    of group memberships. Created via the TM1 REST OData API (POST /Users) and identified by its
+    `name`. Group memberships are bound at create time via `Groups@odata.bind` (the UserHandler
+    pre_create builds it from the `groups` name array). The `password` is write-only: it is sent
+    on create and redacted at emission, and the server never returns it.
+  api:
+    base_path: /Users
+    id_field: name
+    list_endpoint: /Users
+    get_endpoint: /Users('{name}')
+    create_endpoint: /Users
+    create_method: POST
+    update_endpoint: /Users('{name}')
+    update_method: PATCH
+    delete_endpoint: /Users('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: User name — the OData entity key. Immutable identity.
+      - name: password
+        type: string
+        required: false
+        api_field: Password
+        sensitive: true
+        # sensitive: true -> the schema's sensitive_paths includes `password`; the UserHandler
+        # additionally marks the emitted body key `Password` sensitive on its RequestSpec so the
+        # value is redacted at emission (AC8, Phase 4). Excluded from state_fields below: the
+        # server never returns a password, so it must not participate in state comparison.
+        description: Write-only password set at create time. Never returned by the server.
+      - name: friendly_name
+        type: string
+        required: false
+        api_field: FriendlyName
+        description: Display name for the user. PATCHable.
+      - name: type
+        type: string
+        required: false
+        api_field: Type
+        allowed_values: ["User", "SecurityAdmin", "DataAdmin", "Admin", "OperationsAdmin"]
+        description: TM1 user type (UserType enum). Sent at create; excluded from state comparison (server defaulting).
+      - name: enabled
+        type: boolean
+        required: false
+        api_field: Enabled
+        description: Whether the user is enabled. PATCHable.
+      - name: groups
+        type: array
+        item_type: string
+        required: false
+        # No api_field: UserHandler.pre_create consumes these plain group names to build the
+        # `Groups@odata.bind` create body (a dotted, undeclared OData key the default materializer
+        # would drop). `references` yields the DAG edge pa_group -> pa_user and validates each name
+        # resolves to a known group.
+        references:
+          resource: pa_group
+          field: name
+        description: Group names this user belongs to. Bound as Groups@odata.bind at create.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # password excluded (write-only, never returned); groups excluded (server expands to full
+    # Group objects on read, does not round-trip); type excluded (server defaulting). Membership
+    # and password drift are Phase-4 (live) concerns.
+    state_fields:
+      - name
+      - friendly_name
+      - enabled
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - name

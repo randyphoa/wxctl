@@ -1,0 +1,134 @@
+kind: knowledge_base
+ref_name: ibm_history_kb
+name: ibm_history_kb
+display_name: IBM History Knowledge Base
+description: |
+  General information about IBM: its founding, the origin of the name,
+  early products, and major milestones.
+documents:
+  - path: ./resources/knowledge_base/ibm_history.txt
+---
+kind: tool
+ref_name: calculator_tool
+name: calculator_tool
+display_name: Calculator Tool
+description: |
+  A calculator that adds, multiplies, or divides two numbers.
+  Use for any arithmetic the user requests.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/calculator
+binding:
+  python:
+    function: calculator:main
+---
+kind: tool
+ref_name: weather_tool
+name: weather_tool
+display_name: Weather Tool
+description: |
+  Returns the current weather and a short forecast for a given city.
+  Use whenever the user asks about weather conditions.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/weather
+binding:
+  python:
+    function: weather:main
+---
+kind: agent
+ref_name: calculator_agent
+name: calculator_agent
+display_name: Calculator Agent
+description: |
+  Performs arithmetic with the calculator tool and answers questions
+  about IBM's history from the knowledge base.
+instructions: |
+  Use the calculator tool for any arithmetic the user requests; do not
+  compute results yourself.
+  Use the IBM history knowledge base for questions about IBM and cite it.
+  Keep answers concise.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.calculator_tool}
+knowledge_base:
+  - ${knowledge_base.ibm_history_kb}
+chat_with_docs:
+  enabled: true
+additional_properties:
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#0f62fe" width="64" height="64" rx="8"/><rect x="16" y="10" width="32" height="44" rx="4" fill="#fff"/><rect x="20" y="14" width="24" height="10" rx="2" fill="#0f62fe"/><circle cx="24" cy="32" r="3" fill="#0f62fe"/><circle cx="32" cy="32" r="3" fill="#0f62fe"/><circle cx="40" cy="32" r="3" fill="#0f62fe"/><circle cx="24" cy="40" r="3" fill="#0f62fe"/><circle cx="32" cy="40" r="3" fill="#0f62fe"/><circle cx="40" cy="40" r="3" fill="#0f62fe"/><circle cx="24" cy="48" r="3" fill="#0f62fe"/><circle cx="32" cy="48" r="3" fill="#0f62fe"/><circle cx="40" cy="48" r="3" fill="#0f62fe"/></svg>'
+  welcome_content:
+    welcome_message: Hello, I'm your Calculator Agent
+    description: I perform calculations and answer questions about IBM's history from my knowledge base.
+  starter_prompts:
+    customize:
+      - title: Calculate
+        subtitle: Do some math
+        prompt: What is 42 multiplied by 17?
+        state: "active"
+      - title: IBM History
+        subtitle: Ask about IBM
+        prompt: When was IBM founded and what were its early products?
+        state: "active"
+---
+kind: agent
+ref_name: weather_agent
+name: weather_agent
+display_name: Weather Agent
+description: |
+  Reports the current weather and a short forecast for a city, and
+  delegates any arithmetic to the Calculator Agent.
+instructions: |
+  Use the weather tool to answer weather questions; never invent
+  conditions yourself.
+  Delegate any arithmetic to the Calculator Agent collaborator.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.weather_tool}
+collaborators:
+  - ${agent.calculator_agent}
+additional_properties:
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#0f62fe" width="64" height="64" rx="8"/><circle cx="26" cy="28" r="10" fill="#ffdd57"/><path d="M44 36c0-5.5-4.5-10-10-10a10 10 0 0 0-9.8 8A8 8 0 0 0 16 42a8 8 0 0 0 8 8h20a7 7 0 0 0 0-14z" fill="#fff"/></svg>'
+  welcome_content:
+    welcome_message: Hello, I'm your Weather Agent
+    description: I report city weather and hand any math off to the Calculator Agent.
+  starter_prompts:
+    customize:
+      - title: Weather
+        subtitle: Check a city
+        prompt: What's the weather in Tokyo right now?
+        state: "active"
+---
+kind: test
+ref_name: test_01_calculator
+agent: ${agent.calculator_agent}
+turns:
+  - message: "What is 42 multiplied by 17?"
+    expect_tools:
+      - calculator_tool
+    expect_answer: "Should state the result is 714, computed with the calculator tool"
+---
+kind: test
+ref_name: test_02_ibm_history
+agent: ${agent.calculator_agent}
+turns:
+  - message: "When was IBM founded and under what name?"
+    expect_answer: "Should state IBM was founded in 1911 as the Computing-Tabulating-Recording Company (CTR), citing the knowledge base"
+---
+kind: test
+ref_name: test_03_weather
+agent: ${agent.weather_agent}
+turns:
+  - message: "What's the weather in Tokyo right now?"
+    expect_tools:
+      - weather_tool
+    expect_answer: "Should report Tokyo as sunny with temperatures around 50°F, from the weather tool"
+---
+kind: test
+ref_name: test_04_delegation
+agent: ${agent.weather_agent}
+turns:
+  - message: "What is 19 plus 23?"
+    expect_answer: "Should answer 42, delegating the arithmetic to the Calculator Agent collaborator"

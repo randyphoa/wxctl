@@ -1,0 +1,116 @@
+# Generated from OpenAPI — reviewed and tuned.
+# Live behavior may diverge from the OpenAPI source: verify `required` flags and
+# server-enforced params at first live apply.
+resource:
+  name: guardrails_policy
+  service: openscale
+  kind: guardrails_policy
+  version: v1
+  description: >
+    A guardrails policy defines content-filtering and safety rules (such as PII or HAP detection) that OpenScale enforces
+    on generative-AI model inputs and outputs.
+  api:
+    # Real Guardrails Manager surface (hyphen, v1). The schema documents the paths
+    # for `wxctl explain`; GuardrailsPolicyHandler issues the actual requests against
+    # the OpenScale ROOT host (no /openscale/{guid} prefix) with the
+    # x-governance-instance-id header — the schema layer can't express that host swap.
+    base_path: /guardrails-manager/v1/policies
+    # id_field is the LEAF key `id`, NOT the dotted `metadata.id`: the engine's
+    # extract_resource_id (resolution.rs) looks up `data.get("id")`, then
+    # `metadata.id`, then `entity.id` — it does not split a dotted id_field. So `id`
+    # correctly resolves the response's metadata.id (mirrors inventory.yaml id_field: guid).
+    id_field: id
+    list_endpoint: /guardrails-manager/v1/policies
+    get_endpoint: /guardrails-manager/v1/policies/{id}
+    create_endpoint: /guardrails-manager/v1/policies
+    create_method: POST
+    update_endpoint: /guardrails-manager/v1/policies/{id}
+    update_method: PUT
+    delete_endpoint: /guardrails-manager/v1/policies/{id}
+    delete_method: DELETE
+  schema:
+    # No active references: the guardrails policy create body carries no subscription_id /
+    # deployment_id field — a policy is a global detector/threshold config, not targeted at a
+    # subscription or deployment. (PolicyEntity exposes inventory_id on GET only; `inventory`
+    # is a Phase 4 factsheets kind. Promote to references: only after a live probe confirms a
+    # targeting field exists on the wire.)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: name
+      type: string
+      required: true
+      validation:
+        pattern: ^[a-zA-Z0-9 _.-]+$
+    - name: description
+      type: string
+      validation:
+        pattern: ^.*$
+      description: Description of the policy
+    - name: block_message
+      type: string
+      validation:
+        pattern: ^.*$
+      description: Message to display when content is blocked
+    - name: mask_character
+      type: string
+      validation:
+        pattern: ^.$
+      description: Character to use for masking (e.g. "*")
+    - name: input
+      type: array
+      required: true
+      item_type: object
+      description: >
+        Detector configurations for the input (prompt) direction. Each item is an
+        object {detector, action, detector_properties}: `detector` names the built-in
+        (e.g. pii, hap); `action` is block|mask; `detector_properties` is a list of
+        {name, value} pairs (values are strings). The block|mask choice and inner
+        shape are documented here, not schema-enforced — the engine validates only
+        that the field is an array (array items are not type-checked).
+    - name: output
+      type: array
+      required: true
+      item_type: object
+      description: >
+        Detector configurations for the output (response) direction. Same item shape
+        as `input`: {detector, action(block|mask), detector_properties:[{name,value}]}.
+    - name: policy_status
+      type: string
+      required: true
+      allowed_values:
+      - publish
+      - draft
+      description: Status of the policy (publish for active, draft for inactive).
+    - name: tags
+      type: array
+      item_type: string
+  reconciliation:
+    # TODO(verify): response schema echoes the create request (entity/metadata self-echo) —
+    # state_fields below are the writable scalar subset; widen only if live GET proves a field
+    # is server-authoritative and stable.
+    # TODO(verify): identity_match — guardrails policies have a `name`; set local_path/remote_path
+    # only if the list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      # skip: the handler owns discover/create/delete against the root host (the
+      # schema's list_endpoint would hit the wrong /openscale/{guid} host). apply →
+      # Create → pre_create (lists+adopts or creates); destroy → optimistic Delete →
+      # pre_delete (lists by name, deletes, tolerates absence). Mirrors model_tracking.
+      method: skip
+      id_source: id
+    update_strategy: replace
+    json_patch_path_prefix: ""
+    state_fields:
+      - name
+      - description
+      - block_message
+      - mask_character
+      - policy_status
+      - tags

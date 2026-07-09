@@ -1,0 +1,122 @@
+resource:
+  name: data_set
+  service: openscale
+  kind: data_set
+  version: v1
+  description: >
+    A data set is a typed store within an OpenScale data mart (payload logging, feedback, or business payload) that
+    records the data used to compute a subscription's monitor metrics.
+  api:
+    base_path: /v2/data_sets
+    id_field: id
+    list_endpoint: /v2/data_sets
+    get_endpoint: /v2/data_sets/{id}
+    create_endpoint: /v2/data_sets
+    create_method: POST
+    update_endpoint: /v2/data_sets/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/data_sets/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref blocks below are UNVERIFIED heuristic seams. Promote to `references:` only after a P4 probe confirms.
+    # candidate-ref (tier2x:target.target_id score=60): field `target.target_id` may reference `subscription` (openscale/subscription) when target_type=subscription
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: data_mart_id
+      type: string
+      required: true
+      validation:
+        pattern: '[a-z0-9_\-]+'
+      references:
+        resource: data_mart
+        field: id
+    - name: name
+      type: string
+      required: true
+      description: Name of the data set
+    - name: description
+      type: string
+      description: Description of the data set
+    - name: type
+      type: string
+      required: true
+      allowed_values:
+      - manual_labeling
+      - payload_logging
+      - feedback
+      - business_payload
+      - explanations
+      - explanations_whatif
+      - training
+      - payload_logging_error
+      - model_health
+      - drift_stats
+      - drift_intervals
+      - drift_insights
+      - gen_ai_quality_metrics
+      - drift_scores
+      - aidc_feedback
+      - custom
+      description: Type of the data set
+    - name: target
+      type: object
+      required: true
+      schema:
+        fields:
+        - name: target_type
+          type: string
+          required: true
+          allowed_values:
+          - subscription
+          - instance
+          - data_mart
+          - project
+          - space
+          description: Type of the target
+        - name: target_id
+          type: string
+          required: true
+          references:
+            resource: subscription
+            field: id
+    - name: schema_update_mode
+      type: string
+      allowed_values:
+      - none
+      - auto
+      description: Defines what happens when incoming record has field not present in data set schema. If 'none' is specified, unknown fields will be ignored. If 'auto' is specified, the schema will be automatically updated with new fields.
+    - name: data_schema
+      type: object
+      required: true
+      description: Schema of data stored in the data set (Spark StructType format)
+    - name: location
+      type: object
+      description: Location of the data set table
+    - name: managed_by
+      type: string
+      description: Indicates who manages the data set
+  reconciliation:
+    # TODO(verify): identity_match — set local_path/remote_path if list-item identity differs from `name`.
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: data_sets
+      id_source: id
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    # data_schema and location are write-only / server-managed after creation — excluded so they can't phantom-drift into a patch.
+    state_fields:
+      - name
+      - description
+      - data_mart_id
+      - type
+      - target
+      - schema_update_mode
+      - managed_by

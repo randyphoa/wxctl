@@ -1,0 +1,69 @@
+resource:
+  name: gcs_bucket
+  service: cloud_object_storage
+  kind: gcs_bucket
+  version: v1
+  description: >
+      Google Cloud Storage bucket. Register-only: validates the linked
+      `storage_connection` (`type: google_cs`) and exposes passthrough
+      location state for `storage_registration`; never calls GCS.
+      SaaS-only (`unsupported_on: software`).
+
+  api:
+    base_path: /gcs/{name}
+    id_field: name
+    get_endpoint: /gcs/{name}
+    create_endpoint: /gcs/{name}
+    create_method: PUT
+    delete_endpoint: /gcs/{name}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: connection
+        type: string
+        required: true
+        immutable: true
+        description: "Reference to a `storage_connection` of `type: google_cs`."
+        references:
+          resource: storage_connection
+          field: ref_name
+
+      - name: name
+        type: string
+        required: true
+        immutable: true
+
+      - name: location
+        type: string
+        required: true
+        immutable: true
+
+      - name: storage_class
+        type: string
+        required: false
+        default: STANDARD
+        immutable: true
+        allowed_values: [STANDARD, NEARLINE, COLDLINE, ARCHIVE]
+
+      - name: endpoint
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: name
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - connection
+      - name
+      - location
+      - storage_class
+
+  unsupported_on:
+    - "software"

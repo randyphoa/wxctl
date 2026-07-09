@@ -1,0 +1,118 @@
+resource:
+  name: sal_glossary
+  service: watsonx_data
+  kind: sal_glossary
+  version: v1
+  description: >
+      Uploads a business-glossary CSV into the watsonx.data Semantic Automation Layer
+      (SAL) and polls the upload process to a terminal state, so a glossary can be
+      uploaded before/around enrichment (richer term assignment). Live-discovered
+      v3-singular surface `/v3/sal_integration/glossary/*` (multipart confirmed on 2.3.x
+      Software, CP4D). An ACTION-create resource: `SalGlossaryHandler::pre_create`
+      multipart-`POST`s the CSV (`glossary_csv` + optional `replace_option`) →
+      `201 {id}`, then polls `…/upload_processes/{id}/status` until a terminal marker
+      appears in the opaque `response` string (best-effort on poll exhaustion; a failed
+      marker bails).
+      Identity is a deterministic hash over the CSV content + `replace_option`
+      (+ optional `generation` nonce) persisted in wxctl's local run-hash record
+      (the documented Q2 fallback — the upload id is server-minted with no
+      client-settable name/tags to discover by): an unchanged config re-plans
+      NoChange; an edited CSV, changed `replace_option`, or bumped `generation`
+      re-uploads (terms merge per `replace_option`). Fresh machine or cleared
+      record ⇒ one re-upload, then idempotent.
+      No DELETE endpoint — destroy is a no-op via
+      `on_destroy: retain` (the fixture sets it). SAL must be enabled first
+      (`sal_integration` with `status: active`) or the glossary endpoints 400.
+      Field shapes (`replace_option` values, status strings) are LIVE-DISCOVERED on
+      CP4D — do not let a spec refresh "correct" them to a stale OpenAPI shape.
+
+  api:
+    # NOTE: create is multipart and is performed in the handler (pre_create). These
+    # fields are documentary / used only by the status poll + verification.
+    base_path: /v3/sal_integration/glossary/upload_processes
+    id_field: id
+    get_endpoint: /v3/sal_integration/glossary/upload_processes
+    create_endpoint: /v3/sal_integration/glossary/upload_processes
+    create_method: POST
+    delete_method: DELETE
+
+  schema:
+    fields:
+      # No `name` field — the config's `ref_name` is the framework-level ref handle
+      # (same as sal_enrichment_job); a schema `name` field would be a second, separate
+      # required field the fixture does not supply.
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Upload-process id returned by the multipart POST; used for the status poll.
+
+      - name: glossary_csv
+        type: string
+        required: true
+        location: LocalOnly
+        is_path: true
+        description: >
+            Path to the business-glossary CSV (relative to the config file or absolute).
+            `is_path: true` ⇒ build.rs adds it to PATH_FIELDS ⇒ resolved against the config
+            dir by `resolve_file_paths`; LocalOnly so the path is never sent to the API.
+
+      - name: replace_option
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            Field-merge strategy for the uploaded terms, sent as an extra multipart text field.
+            Live-confirmed (CP4D) ∈ [all, specified, empty]: `all` replaces all fields of
+            matching terms, `specified` only non-empty imported fields, `empty` only currently-empty
+            fields. NOT a glossary wipe — terms absent from the CSV are retained (no DELETE surface).
+            Omit when unset (do not guess a default into the form).
+        validation:
+          enum: ["all", "specified", "empty"]
+
+      - name: generation
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            Optional nonce folded into the identity hash. Set any new value to force a
+            fresh upload with all other inputs unchanged; uploaded terms accumulate/merge
+            per `replace_option`. LocalOnly — never sent to the API body.
+
+      - name: csv_content_hash
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            BLAKE3 of the glossary CSV CONTENT, stamped by the handler's post_validate
+            (do not set by hand). It — not the machine-dependent file path — is folded
+            into the identity hash, so editing the CSV re-runs the upload while moving
+            the file does not. Absent when the file is missing at validation time (an
+            apply-create then still fails in pre_create with a clear file-not-found).
+
+  reconciliation:
+    discovery:
+      method: skip
+    # Q2 local-hash fallback: this API is non-discoverable (server-minted
+    # upload-process id, no client-settable name/tags), so the identity hash is
+    # persisted in the local env-scoped record store by pre_create after a
+    # SUCCEEDED upload; the Skip-discovery arm consults it — recorded → NoChange,
+    # else Create. The hash covers the CSV *content* (csv_content_hash, stamped in
+    # post_validate) + replace_option + generation — not the file path.
+    identity_hash:
+      fields:
+        - csv_content_hash
+        - replace_option
+      nonce_field: generation
+      storage: local
+      length: 8
+    # Explicit [] bypasses the parser's synthetic identity_hash state field.
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on:
+    - "saas"

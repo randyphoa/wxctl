@@ -1,0 +1,31 @@
+[package]
+name = "wxctl-schema"
+publish = false
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Wasm-safe schema descriptors, compile-time schema set, dependency graph, and reference rendering for wxctl"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+anyhow = { workspace = true }
+semver = { workspace = true }
+phf = "0.14"
+tracing = { workspace = true }
+regex = { workspace = true }
+chrono = { workspace = true }
+wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+
+[build-dependencies]
+serde = { workspace = true }
+serde_norway = { workspace = true }
+phf_codegen = "0.14"
+wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+
+[lints]
+workspace = true

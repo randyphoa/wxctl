@@ -1,0 +1,10 @@
+input_schema:
+  properties:
+    employee_id:
+      description: The employee identifier to look up (e.g., "E001")
+      type: string
+  required:
+  - employee_id
+  type: object
+output_schema:
+  type: object

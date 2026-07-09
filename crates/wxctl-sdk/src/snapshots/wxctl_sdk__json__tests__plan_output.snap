@@ -1,0 +1,20 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&plan).unwrap()"
+---
+{
+  "summary": {
+    "create": 1,
+    "update": 2,
+    "delete": 3,
+    "no_change": 4
+  },
+  "operations": [
+    {
+      "key": "space/a",
+      "op_type": "create",
+      "kind": "space",
+      "ref_name": "a"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+kind: space
+ref_name: wxctl_test_pkgext_space___TEST_ID__
+name: wxctl-test-pkgext-space-__TEST_ID__
+type: wx
+---
+kind: package_extension
+ref_name: wxctl_test_pkg_requests___TEST_ID__
+name: wxctl-test-pkg-requests-__TEST_ID__
+type: requirements_txt
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/env_requests.txt
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+---
+kind: package_extension
+ref_name: wxctl_test_pkg_pyyaml___TEST_ID__
+name: wxctl-test-pkg-pyyaml-__TEST_ID__
+type: requirements_txt
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/env_pyyaml.txt
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+---
+kind: software_specification
+ref_name: wxctl_test_swspec_requests___TEST_ID__
+name: wxctl-test-swspec-requests-__TEST_ID__
+base_software_specification: runtime-25.1-py3.12
+package_extensions:
+    - ${package_extension.wxctl_test_pkg_requests___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+---
+kind: software_specification
+ref_name: wxctl_test_swspec_pyyaml___TEST_ID__
+name: wxctl-test-swspec-pyyaml-__TEST_ID__
+base_software_specification: runtime-25.1-py3.12
+package_extensions:
+    - ${package_extension.wxctl_test_pkg_pyyaml___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+---
+kind: ai_service
+ref_name: wxctl_test_svc_requests___TEST_ID__
+name: wxctl-test-svc-requests-__TEST_ID__
+software_spec: ${software_specification.wxctl_test_swspec_requests___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/ai_service_requests.py
+---
+kind: ai_service
+ref_name: wxctl_test_svc_pyyaml___TEST_ID__
+name: wxctl-test-svc-pyyaml-__TEST_ID__
+software_spec: ${software_specification.wxctl_test_swspec_pyyaml___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/ai_service_pyyaml.py
+---
+kind: wml_deployment
+ref_name: wxctl_test_deploy_requests___TEST_ID__
+name: wxctl-test-deploy-requests-__TEST_ID__
+asset: ${ai_service.wxctl_test_svc_requests___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+online: {}
+---
+kind: wml_deployment
+ref_name: wxctl_test_deploy_pyyaml___TEST_ID__
+name: wxctl-test-deploy-pyyaml-__TEST_ID__
+asset: ${ai_service.wxctl_test_svc_pyyaml___TEST_ID__}
+space_id: ${space.wxctl_test_pkgext_space___TEST_ID__}
+online: {}
+---
+kind: test
+ref_name: test_requests
+deployment: ${wml_deployment.wxctl_test_deploy_requests___TEST_ID__}
+turns:
+    - payload:
+          hello: world
+      expect_response:
+          package: requests
+---
+kind: test
+ref_name: test_pyyaml
+deployment: ${wml_deployment.wxctl_test_deploy_pyyaml___TEST_ID__}
+turns:
+    - payload:
+          hello: world
+      expect_response:
+          package: pyyaml

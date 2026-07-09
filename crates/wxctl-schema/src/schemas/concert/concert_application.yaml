@@ -1,0 +1,135 @@
+resource:
+  name: concert_application
+  service: concert
+  kind: concert_application
+  version: v1
+  description: >
+    A Concert application is the top-level managed entity in IBM Concert's inventory —
+    the unit Concert tracks for risk posture, vulnerabilities, dependencies, and
+    resilience. Created via the Concert core API (/core/api/v1/applications) and
+    identified by a server-assigned UUID.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /core/api/v1/applications
+    id_field: id
+    list_endpoint: /core/api/v1/applications
+    get_endpoint: /core/api/v1/applications/{id}
+    create_endpoint: /core/api/v1/applications
+    create_method: POST
+    update_endpoint: /core/api/v1/applications/{id}
+    update_method: PATCH
+    delete_endpoint: /core/api/v1/applications/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned application UUID (returned at top-level `id` on create).
+      - name: status
+        type: string
+        location: Computed
+        immutable: true
+        description: API-derived application status; not writable.
+      - name: created_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis creation timestamp set by the API.
+      - name: last_updated_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis last-update timestamp set by the API.
+      - name: application_release_id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Server-computed id of the application's release record (distinct from the
+          application `id`). This — not `id` — is what concert_compliance_profile's
+          application_releases_ids must carry (live-verified on Concert 3.0.0.0:
+          sending the application id 500s, the release id succeeds).
+      # ── Writable (ApplicationPrototype — all optional) ──
+      - name: name
+        type: string
+        required: false
+        description: Application display name.
+      - name: version
+        type: string
+        required: false
+        description: Application version label.
+      - name: description
+        type: string
+        required: false
+        description: Free-text application description.
+      - name: sample
+        type: boolean
+        required: false
+        description: Whether this is a sample application.
+      - name: criticality
+        type: integer
+        required: false
+        description: Business criticality score.
+      - name: data_impact_risk
+        type: integer
+        required: false
+        description: Data-impact risk score.
+      - name: business_name
+        type: string
+        required: false
+        description: Owning business name.
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+          Application tags. Writable on create but enriched/reshaped by the API on read
+          (EntityTags in, TagsPrototype out), so excluded from state_fields to avoid phantom drift.
+      - name: business_units
+        type: object
+        required: false
+        description: >
+          Business-unit association object. Writable on create; server-augmented on read, so
+          excluded from state_fields.
+      - name: properties
+        type: object
+        required: false
+        description: >
+          Application release properties object. Writable on create; server-augmented on read,
+          so excluded from state_fields.
+      - name: associations
+        type: object
+        required: false
+        description: >
+          Application associations object. Writable on create; server-augmented on read, so
+          excluded from state_fields.
+  reconciliation:
+    # GET /core/api/v1/applications returns { pagination, applications: [...] }; the
+    # `applications` envelope key is already registered in wxctl-core ENVELOPE_KEYS.
+    # Discovery lists by name, then GETs by the server-assigned id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: applications
+    # state_fields = writable scalars that round-trip cleanly on GET. The object/array
+    # fields (tags, business_units, properties, associations) are writable Body fields but
+    # excluded here because the API enriches them on read, which would cause phantom Update{}
+    # drift (see docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Phase 4
+    # may widen this set once live round-trips are verified clean (spec Invariant I4).
+    # Concert's LIST (collection) response — which discovery compares against — is a
+    # SUMMARY that omits `description` and `business_name` (verified live 3.0.0.0:
+    # GET /applications returns neither per item). They are still sent on create (Body
+    # fields) but excluded here, else every re-plan shows a phantom Update
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md).
+    state_fields:
+      - name
+      - version
+      - sample
+      - criticality
+      - data_impact_risk
+    update_strategy: replace
+    immutable_fields: []

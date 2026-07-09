@@ -1,0 +1,166 @@
+resource:
+  name: pa_process
+  service: planning_analytics
+  kind: pa_process
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) TurboIntegrator process — the scripting unit
+    (four procedure stages, a data source, typed parameters and source variables) created
+    via the TM1 REST OData API (/Processes) and identified by its `name` (the OData entity
+    key).
+  api:
+    base_path: /Processes
+    id_field: name
+    list_endpoint: /Processes
+    get_endpoint: /Processes('{name}')
+    create_endpoint: /Processes
+    create_method: POST
+    update_endpoint: /Processes('{name}')
+    update_method: PATCH
+    delete_endpoint: /Processes('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"   # OData single-quote delimits the entity key; reject it here
+        description: Process name — the OData entity key. Immutable identity.
+      - name: has_security_access
+        type: boolean
+        required: false
+        api_field: HasSecurityAccess
+        description: Whether the process runs with elevated security access.
+      - name: prolog_procedure
+        type: string
+        required: false
+        api_field: PrologProcedure
+        description: TurboIntegrator Prolog-stage script.
+      - name: metadata_procedure
+        type: string
+        required: false
+        api_field: MetadataProcedure
+        description: TurboIntegrator Metadata-stage script.
+      - name: data_procedure
+        type: string
+        required: false
+        api_field: DataProcedure
+        description: TurboIntegrator Data-stage script.
+      - name: epilog_procedure
+        type: string
+        required: false
+        api_field: EpilogProcedure
+        description: TurboIntegrator Epilog-stage script.
+      - name: parameters
+        type: array
+        item_type: object
+        required: false
+        api_field: Parameters
+        description: Declared process parameters (prompted at execution).
+        schema:
+          fields:
+            - name: name
+              type: string
+              required: true
+              api_field: Name
+              description: Parameter name.
+            - name: prompt
+              type: string
+              required: false
+              api_field: Prompt
+              description: Prompt text shown when the process is run interactively.
+            - name: value
+              type: string
+              required: false
+              api_field: Value
+              description: Default value (string-encoded; TM1 coerces to the parameter type).
+            - name: parameter_type
+              type: string
+              required: false
+              api_field: Type
+              allowed_values: ["String", "Numeric"]
+              description: Parameter data type.
+      - name: variables
+        type: array
+        item_type: object
+        required: false
+        api_field: Variables
+        description: Source-record variables bound by the Data stage.
+        schema:
+          fields:
+            - name: name
+              type: string
+              required: true
+              api_field: Name
+              description: Variable name.
+            - name: variable_type
+              type: string
+              required: false
+              api_field: Type
+              allowed_values: ["String", "Numeric"]
+              description: Variable data type.
+            - name: position
+              type: integer
+              required: false
+              api_field: Position
+              description: 1-based column position in the source record.
+            - name: start_byte
+              type: integer
+              required: false
+              api_field: StartByte
+              description: Fixed-width start byte (fixed-width sources).
+            - name: end_byte
+              type: integer
+              required: false
+              api_field: EndByte
+              description: Fixed-width end byte (fixed-width sources).
+      - name: data_source
+        type: object
+        required: false
+        api_field: DataSource
+        description: >
+          Process data source. The TM1 REST OpenAPI models this loosely (only `Type` is
+          enumerated), so this schema declares the common fields only; Phase 4 live testing
+          may widen it (e.g. ODBC credential fields, which would need `sensitive_paths`).
+        schema:
+          fields:
+            - name: data_source_type
+              type: string
+              required: false
+              api_field: Type
+              description: Data-source kind (e.g. None, ASCII, ODBC, TM1CubeView, TM1DimensionSubset).
+            - name: data_source_name_for_server
+              type: string
+              required: false
+              api_field: DataSourceNameForServer
+              description: Server-side data-source name or path.
+            - name: data_source_name_for_client
+              type: string
+              required: false
+              api_field: DataSourceNameForClient
+              description: Client-side data-source name or path.
+            - name: query
+              type: string
+              required: false
+              api_field: Query
+              description: SQL query text (ODBC data sources).
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # parameters/variables/data_source are excluded from state_fields: TM1 enriches and
+    # reorders them on read (injected defaults, computed keys), so they do not round-trip
+    # offline. Modeling-body drift is a Phase-4 (live) concern.
+    state_fields:
+      - name
+      - has_security_access
+      - prolog_procedure
+      - metadata_procedure
+      - data_procedure
+      - epilog_procedure
+    update_strategy: patch
+    use_json_patch: false   # TM1 OData PATCH is plain partial JSON, not RFC 6902 (Phase-1 learning; the registration validator rejects patch + default use_json_patch: true with no json_patch_path_prefix)
+    immutable_fields:
+      - name

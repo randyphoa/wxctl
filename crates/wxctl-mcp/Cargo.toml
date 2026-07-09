@@ -1,0 +1,35 @@
+[package]
+name = "wxctl-mcp"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "MCP (Model Context Protocol) stdio server exposing wxctl as tools for LLM hosts"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+wxctl-sdk = { path = "../wxctl-sdk", version = "0.1", features = ["schema"] }
+wxctl-engine = { path = "../wxctl-engine", version = "0.1" }
+wxctl-compose = { path = "../wxctl-compose", version = "0.1" }
+wxctl-compose-core = { path = "../wxctl-compose-core", version = "0.1" }
+rmcp = { workspace = true }
+schemars = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+rmcp = { workspace = true, features = ["client", "transport-async-rw"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-util"] }
+
+[lints]
+workspace = true
