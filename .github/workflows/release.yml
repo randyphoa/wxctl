@@ -140,138 +140,134 @@ jobs:
             wxctl-*
             SHA256SUMS
 
-      - name: Prune older releases and tags (keep only the latest)
+      - name: Prune older releases and tags (keep the latest 3)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           KEEP: ${{ github.ref_name }}
+          KEEP_COUNT: "3"
         run: |
           set -euo pipefail
-          # Retention policy: keep ONLY the just-published release. Every prior
-          # release and its tag are deleted, so the Releases page shows a single
-          # entry. HAZARD: binaries + checksums for old versions vanish, so any
-          # pinned/old-version install 404s. The wxctl-updates Worker tracks only
-          # LATEST, so auto-update is unaffected. Runs after the new release +
-          # binaries exist, so there is no availability gap.
+          # Retention policy: keep only the newest $KEEP_COUNT releases (by version
+          # sort). Every older release and its tag are deleted, so the Releases page
+          # shows at most $KEEP_COUNT entries. HAZARD: binaries + checksums for
+          # dropped versions vanish, so an install pinned to an evicted version 404s.
+          # The wxctl-updates Worker tracks only LATEST, so auto-update is
+          # unaffected. Runs after the new release + binaries exist, so there is no
+          # availability gap.
           #
           # Guard: only prune when THIS tag is the newest — prevents a manual
           # re-run of an old tag's workflow from deleting a newer release.
           # All ${{ github.* }} inputs are passed via env and quoted below.
-          newest=$(gh api --paginate "repos/$GH_REPO/tags" -q '.[].name' | sort -V | tail -1)
+          all_tags=$(gh api --paginate "repos/$GH_REPO/tags" -q '.[].name' | sort -V)
+          newest=$(echo "$all_tags" | tail -1)
           if [ "$KEEP" != "$newest" ]; then
             echo "::warning::$KEEP is not the newest tag ($newest) — skipping prune."
             exit 0
           fi
-          # 1. Delete every release except $KEEP (also removes its git tag).
+          # Newest $KEEP_COUNT tags to retain (includes $KEEP, which is $newest).
+          keep_tags=$(echo "$all_tags" | tail -n "$KEEP_COUNT")
+          echo "keeping: $(echo "$keep_tags" | tr '\n' ' ')"
+          # 1. Delete every release outside the keep set (also removes its git tag).
           for tag in $(gh release list --limit 200 --json tagName -q '.[].tagName' || true); do
-            [ "$tag" = "$KEEP" ] && continue
+            echo "$keep_tags" | grep -Fxq "$tag" && continue
             echo "deleting release $tag (+ tag)"
             gh release delete "$tag" --yes --cleanup-tag
           done
-          # 2. Sweep any leftover tags that had no release, so only $KEEP remains.
+          # 2. Sweep any leftover tags that had no release and fall outside the keep set.
           for tag in $(gh api --paginate "repos/$GH_REPO/tags" -q '.[].name' || true); do
-            [ "$tag" = "$KEEP" ] && continue
+            echo "$keep_tags" | grep -Fxq "$tag" && continue
             echo "deleting orphan tag $tag"
             gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$tag" || true
           done
-          echo "Done — only $KEEP remains."
+          echo "Done — kept newest $KEEP_COUNT: $(echo "$keep_tags" | tr '\n' ' ')."
 
-  # ---------------------------------------------------------------------------
-  # npm-publish: DISABLED until the one-time npm/OIDC bootstrap is complete.
-  # Re-enable (uncomment this whole job) after: (1) the six @randyphoa/wxctl-<slug>
-  # sub-package names are reserved as bare 0.1.0 stubs by hand with a token, (2) a
-  # trusted publisher (repo wxctl, workflow release.yml) is configured on all seven
-  # packages on npmjs.com, and (3) the first functional 0.1.1 is hand-published with
-  # a token. OIDC covers every release after. See wxctl/npm/README.md. Note the
-  # crate is still 0.1.0, so generate.mjs would refuse to build until Cargo.toml is
-  # bumped to >= 0.1.1.
-  # ---------------------------------------------------------------------------
-  # npm-publish:
-  #   name: Publish to npm
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 15
-  #   permissions:
-  #     contents: read
-  #     # OIDC trusted publishing: id-token mints the short-lived npm auth token
-  #     # (no NPM_TOKEN) and signs Sigstore provenance for `npm publish --provenance`.
-  #     # Requires each of the seven package names to already exist on npm with a
-  #     # trusted publisher configured (repo + this workflow filename); see npm/README.md.
-  #     id-token: write
-  #   steps:
-  #     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-  #
-  #     # ubuntu-latest ships Node 20+; OIDC trusted publishing needs npm >= 11.5.1,
-  #     # so upgrade npm in place rather than adding a new pinned action.
-  #     - name: Ensure npm supports OIDC trusted publishing
-  #       run: npm install -g npm@^11.5.1
-  #
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-  #       with:
-  #         pattern: wxctl-*
-  #         path: artifacts-dl
-  #
-  #     - name: Extract binaries by target
-  #       shell: bash
-  #       run: |
-  #         set -euo pipefail
-  #         mkdir -p npm-artifacts
-  #         for d in artifacts-dl/wxctl-*/; do
-  #           target=$(basename "$d"); target=${target#wxctl-}
-  #           mkdir -p "npm-artifacts/$target"
-  #           archive=$(find "$d" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print -quit)
-  #           case "$archive" in
-  #             *.tar.gz) tar -xzf "$archive" -C "$d" ;;
-  #             *.zip)    unzip -oq "$archive" -d "$d" ;;
-  #           esac
-  #           bin=$(find "$d" -type f \( -name wxctl -o -name wxctl.exe \) -print -quit)
-  #           cp "$bin" "npm-artifacts/$target/$(basename "$bin")"
-  #         done
-  #
-  #     - name: Resolve publish version
-  #       id: ver
-  #       shell: bash
-  #       run: |
-  #         set -euo pipefail
-  #         # On a tag the version is the tag (already verified == crate by `verify`).
-  #         # On workflow_dispatch GITHUB_REF_NAME is a branch, so derive from cargo.
-  #         if [ "${{ github.ref_type }}" = "tag" ]; then
-  #           v="${GITHUB_REF_NAME#v}"
-  #         else
-  #           v=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="wxctl") | .version')
-  #         fi
-  #         echo "version=$v" >> "$GITHUB_OUTPUT"
-  #
-  #     - name: Generate npm packages
-  #       run: node npm/generate.mjs --version "${{ steps.ver.outputs.version }}" --artifacts npm-artifacts --out npm-dist
-  #
-  #     - name: Publish (sub-packages, then meta)
-  #       shell: bash
-  #       env:
-  #         VERSION: ${{ steps.ver.outputs.version }}
-  #         # `github.ref_type == 'tag'` gates the real publish; a branch
-  #         # (workflow_dispatch) dry-runs with no registry writes.
-  #         DRY_RUN: ${{ github.ref_type == 'tag' && 'false' || 'true' }}
-  #       run: |
-  #         set -euo pipefail
-  #         publish() {
-  #           local dir="$1" name="$2"
-  #           # Existence check: a version already live is skipped as success and
-  #           # logged loudly, so a re-run after a partial failure is idempotent and
-  #           # a skip is never mistaken for a fresh publish.
-  #           if npm view "$name@$VERSION" version >/dev/null 2>&1; then
-  #             echo "::warning::$name@$VERSION already published, NOT updated"
-  #             return 0
-  #           fi
-  #           local flags=(--access public --provenance)
-  #           if [ "$DRY_RUN" = "true" ]; then
-  #             flags+=(--dry-run)
-  #             echo "dry-run: $name@$VERSION"
-  #           fi
-  #           npm publish "$dir" "${flags[@]}"
-  #         }
-  #         for slug in darwin-x64 darwin-arm64 linux-x64-gnu linux-arm64-gnu win32-x64 win32-arm64; do
-  #           publish "npm-dist/$slug" "@randyphoa/wxctl-$slug"
-  #         done
-  #         publish "npm-dist/meta" "wxctl"
+  npm-publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # OIDC trusted publishing: id-token mints the short-lived npm auth token
+      # (no NPM_TOKEN) and signs Sigstore provenance for `npm publish --provenance`.
+      # Requires each of the seven package names to already exist on npm with a
+      # trusted publisher configured (repo + this workflow filename); see npm/README.md.
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # ubuntu-latest ships Node 20+; OIDC trusted publishing needs npm >= 11.5.1,
+      # so upgrade npm in place rather than adding a new pinned action.
+      - name: Ensure npm supports OIDC trusted publishing
+        run: npm install -g npm@^11.5.1
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: wxctl-*
+          path: artifacts-dl
+
+      - name: Extract binaries by target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p npm-artifacts
+          for d in artifacts-dl/wxctl-*/; do
+            target=$(basename "$d"); target=${target#wxctl-}
+            mkdir -p "npm-artifacts/$target"
+            archive=$(find "$d" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print -quit)
+            case "$archive" in
+              *.tar.gz) tar -xzf "$archive" -C "$d" ;;
+              *.zip)    unzip -oq "$archive" -d "$d" ;;
+            esac
+            bin=$(find "$d" -type f \( -name wxctl -o -name wxctl.exe \) -print -quit)
+            cp "$bin" "npm-artifacts/$target/$(basename "$bin")"
+          done
+
+      - name: Resolve publish version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          # On a tag the version is the tag (already verified == crate by `verify`).
+          # On workflow_dispatch GITHUB_REF_NAME is a branch, so derive from cargo.
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="wxctl") | .version')
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Generate npm packages
+        run: node npm/generate.mjs --version "${{ steps.ver.outputs.version }}" --artifacts npm-artifacts --out npm-dist
+
+      - name: Publish (sub-packages, then meta)
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          # `github.ref_type == 'tag'` gates the real publish; a branch
+          # (workflow_dispatch) dry-runs with no registry writes.
+          DRY_RUN: ${{ github.ref_type == 'tag' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          publish() {
+            local dir="$1" name="$2"
+            # Existence check: a version already live is skipped as success and
+            # logged loudly, so a re-run after a partial failure is idempotent and
+            # a skip is never mistaken for a fresh publish.
+            if npm view "$name@$VERSION" version >/dev/null 2>&1; then
+              echo "::warning::$name@$VERSION already published, NOT updated"
+              return 0
+            fi
+            local flags=(--access public --provenance)
+            if [ "$DRY_RUN" = "true" ]; then
+              flags+=(--dry-run)
+              echo "dry-run: $name@$VERSION"
+            fi
+            npm publish "$dir" "${flags[@]}"
+          }
+          for slug in darwin-x64 darwin-arm64 linux-x64-gnu linux-arm64-gnu win32-x64 win32-arm64; do
+            publish "npm-dist/$slug" "@randyphoa/wxctl-$slug"
+          done
+          publish "npm-dist/meta" "wxctl"
