@@ -1,0 +1,29 @@
+kind: toolkit
+ref_name: wxctl_test_mcp_node___TEST_ID__
+name: wxctl-test-mcp-node-__TEST_ID__
+description: A simple MCP hello world toolkit (Node.js)
+server_path: __MANIFEST_DIR__/tests/fixtures/mcp_hello_server_node
+mcp:
+    source: files
+    command: node
+    args: ["server.js"]
+    tools: ["*"]
+---
+kind: agent
+ref_name: wxctl_test_mcp_node_agent___TEST_ID__
+name: wxctl_test_mcp_node_agent___TEST_ID__
+display_name: Hello Agent (Node.js)
+description: An AI assistant that can greet people by name
+style: default
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${toolkit.wxctl_test_mcp_node___TEST_ID__.tools.hello}
+---
+kind: test
+ref_name: test_hello
+agent: ${agent.wxctl_test_mcp_node_agent___TEST_ID__}
+turns:
+    - message: "Use the hello tool to greet Alice"
+      expect_tools:
+          - hello
+      expect_answer: "The response should contain Hello, Alice"

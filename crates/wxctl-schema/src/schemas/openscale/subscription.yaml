@@ -1,0 +1,159 @@
+resource:
+  name: subscription
+  service: openscale
+  kind: subscription
+  version: v1
+  description: >
+    A subscription connects one deployed model to OpenScale for monitoring, linking it to a service provider and data
+    mart and capturing its input and output schema.
+  api:
+    base_path: /v2/subscriptions
+    id_field: id
+    list_endpoint: /v2/subscriptions
+    get_endpoint: /v2/subscriptions/{id}
+    create_endpoint: /v2/subscriptions
+    create_method: POST
+    update_endpoint: /v2/subscriptions/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/subscriptions/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref (tier2x:service_provider.integrated_project_id score=60): field `service_provider.integrated_project_id` may reference `project` (common_core/project)
+    # candidate-ref (tier2x:service_provider.operational_space_id score=60): field `service_provider.operational_space_id` may reference `space` (common_core/space)
+    # candidate-ref (tier2x:integration_reference.integrated_system_id score=60): field `integration_reference.integrated_system_id` may reference `system` (concert/system)
+    # candidate-ref (tier2x:asset.foundational_model_id score=60): field `asset.foundational_model_id` may reference `model` (watsonx_ai/model)
+    # candidate-ref (tier2x:asset.foundational_model_id score=60): field `asset.foundational_model_id` may reference `model` (watsonx_orchestrate/model)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: analytics_engine
+      type: object
+    - name: asset
+      type: object
+      required: true
+      schema:
+        fields:
+        - name: asset_id
+          type: string
+          required: true
+          references:
+            resource: wml_deployment
+            field: id
+        - name: asset_type
+          type: string
+          required: true
+        - name: url
+          type: string
+          description: >
+            The scored asset's REST URL. Required by OpenScale to create the default
+            payload/feedback data sets when the deployed asset carries no discoverable
+            URL (a bare wml_function deployment); without it the subscription errors
+            with AIQPO0012E (missing `asset.url`) and no monitor can initialize.
+        - name: name
+          type: string
+          description: Human-readable asset name shown in the OpenScale UI.
+        - name: problem_type
+          type: string
+          description: "Model problem type: binary, multiclass, or regression."
+        - name: input_data_type
+          type: string
+          description: "Input data type: structured or unstructured."
+    - name: asset_properties
+      type: object
+      description: >
+        Free-form asset metadata OpenScale would otherwise discover — supplied inline when the
+        deployed asset carries no discoverable schema (a bare wml_function deployment). Passed
+        through verbatim as JSON (the object type is itself the fix for the AIQCS0002E/AIQPO0003E
+        ClassCastException that a JSON-encoded string triggered). KB-blessed keys
+        (models-configure-asset-deployments-using-json-configuration-files): `input_data_schema`
+        and `output_data_schema` and `training_data_schema` (each a Spark StructType
+        `{"fields":[{"name","type","nullable","metadata":{"modeling_role"}}]}`), `prediction_field`,
+        `prediction_probability_field`, `label_column`, `problem_type`. Drift baseline (OQ2): put
+        `training_data_reference` (a COS location object) here for OpenScale to compute stats itself,
+        or let the governance step attach precomputed `training_data_stats`.
+    - name: data_mart_id
+      type: string
+      required: true
+      validation:
+        pattern: '[a-z0-9_\-]+'
+      references:
+        resource: data_mart
+        field: id
+    - name: data_sources
+      type: array
+      item_type: string
+    - name: deployment
+      type: object
+      required: true
+      schema:
+        fields:
+        - name: deployment_id
+          type: string
+          required: true
+          references:
+            resource: wml_deployment
+            field: id
+        - name: name
+          type: string
+          required: true
+        - name: deployment_type
+          type: string
+          required: true
+    - name: risk_evaluation_status
+      type: object
+    - name: service_provider_id
+      type: string
+      required: true
+      references:
+        resource: service_provider
+        field: id
+    - name: payload_records
+      type: string
+      required: false
+      location: LocalOnly
+      is_path: true
+      description: >
+        Local path to a JSON file of scoring records to seed into the subscription's
+        payload-logging data set after it activates. Content is the verbatim OpenScale
+        store-records body: a JSON array of {request, response} objects (a single
+        {fields, values} object is also accepted and wrapped into a one-element array).
+        Read once by the post_create hook — never sent to the API and never re-seeded
+        on re-apply.
+    - name: feedback_records
+      type: string
+      required: false
+      location: LocalOnly
+      is_path: true
+      description: >
+        Local path to a JSON file of scored feedback records to seed into the
+        subscription's feedback data set after it activates. Content is the verbatim
+        OpenScale store-records body: a JSON array (or a single {fields, values} object,
+        which is wrapped) whose rows carry the model's prediction and probability
+        columns. Read once by the post_create hook — never sent to the API.
+  reconciliation:
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: subscriptions
+      id_source: id
+      identity_match:
+        local_path: asset.asset_id
+        remote_path: entity.asset.asset_id
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    # Explicit state_fields: OpenScale enriches `asset`, `asset_properties`, and `deployment`
+    # on GET (discovered schemas, timestamps, status) that the create body never sent and never
+    # echoes back byte-identically. Including them makes every re-apply plan a phantom PATCH that
+    # then fails on json_patch_path_prefix (see
+    # docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Limit drift
+    # comparison to the stable scalar refs the config sets and GET returns unchanged. The exact
+    # minimal set is confirmed at the Phase 4 re-apply (I3) live leg.
+    state_fields:
+      - data_mart_id
+      - service_provider_id

@@ -1,0 +1,77 @@
+# Two-phase scenario: deploy a WML function, then consume it in
+# watsonx Orchestrate as an OpenAPI-backed tool wired to an agent.
+# Verifies the full multi-service resource graph deploys and destroys correctly.
+
+# --- Phase 1: WML Function Infrastructure ---
+
+kind: space
+ref_name: wxctl_test_fn_oa_space___TEST_ID__
+name: wxctl-test-fn-oa-space-__TEST_ID__
+type: wx
+---
+kind: software_specification
+ref_name: wxctl_test_fn_oa_swspec___TEST_ID__
+name: wxctl-test-fn-oa-swspec-__TEST_ID__
+base_software_specification: runtime-25.1-py3.12
+space_id: ${space.wxctl_test_fn_oa_space___TEST_ID__}
+---
+kind: wml_function
+ref_name: wxctl_test_fn_oa_function___TEST_ID__
+name: wxctl-test-fn-oa-function-__TEST_ID__
+software_spec: ${software_specification.wxctl_test_fn_oa_swspec___TEST_ID__}
+space_id: ${space.wxctl_test_fn_oa_space___TEST_ID__}
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/function.py
+---
+kind: wml_deployment
+ref_name: wxctl_test_fn_oa_deploy___TEST_ID__
+name: wxctl-test-fn-oa-deploy-__TEST_ID__
+asset: ${wml_function.wxctl_test_fn_oa_function___TEST_ID__}
+space_id: ${space.wxctl_test_fn_oa_space___TEST_ID__}
+online: {}
+---
+# --- Phase 2: Orchestrate — consume the deployment via OpenAPI ---
+
+kind: orchestrate_connection
+ref_name: wxctl_test_fn_oa_conn___TEST_ID__
+app_id: wxctl-test-fn-oa-conn-__TEST_ID__
+connection_type: bearer_token
+credentials:
+    token: test-token-value
+---
+kind: tool
+ref_name: wxctl_test_fn_oa_tool___TEST_ID__
+spec_path: __MANIFEST_DIR__/tests/fixtures/wml_function_openapi_spec.yaml
+binding:
+    openapi:
+        connection_id: wxctl-test-fn-oa-conn-__TEST_ID__
+        permission: read_write
+        tools: ["*"]
+---
+kind: agent
+ref_name: wxctl_test_fn_oa_agent___TEST_ID__
+name: wxctl_test_fn_oa_agent___TEST_ID__
+display_name: WML Function OpenAPI Agent
+description: >
+    You are a helpful assistant that can score data using a deployed WML function.
+    Use the score tool to process input data and return predictions.
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${tool.wxctl_test_fn_oa_tool___TEST_ID___score}
+---
+# Verify the WML deployment works directly
+kind: test
+ref_name: test_deployment
+deployment: ${wml_deployment.wxctl_test_fn_oa_deploy___TEST_ID__}
+turns:
+    - payload:
+          input_data:
+              - values:
+                    - - 1
+                      - 2
+                      - 3
+      expect_response:
+          predictions:
+              - values:
+                    - - 1
+                      - 2
+                      - 3

@@ -1,0 +1,124 @@
+resource:
+  name: pa_chore
+  service: planning_analytics
+  kind: pa_chore
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) chore — a schedule that runs an ordered list of
+    tasks (each executing a process) at a start time and frequency. Created via the TM1 REST
+    OData API (POST /Chores) and identified by its `name`. Each task binds its process via
+    `Tasks[].Process@odata.bind` (built by the ChoreHandler pre_create); the `active` state is
+    reconciled through the tm1.Activate/tm1.Deactivate actions.
+  api:
+    base_path: /Chores
+    id_field: name
+    list_endpoint: /Chores
+    get_endpoint: /Chores('{name}')
+    create_endpoint: /Chores
+    create_method: POST
+    update_endpoint: /Chores('{name}')
+    update_method: PATCH
+    delete_endpoint: /Chores('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: Chore name — the OData entity key. Immutable identity.
+      - name: start_time
+        type: string
+        required: false
+        api_field: StartTime
+        description: First-run timestamp, ISO 8601 date-time (e.g. 2026-01-01T00:00:00Z).
+      - name: dst_sensitive
+        type: boolean
+        required: false
+        api_field: DSTSensitive
+        description: Whether the schedule shifts with daylight-saving transitions.
+      - name: active
+        type: boolean
+        required: false
+        api_field: Active
+        description: >
+          Whether the chore is scheduled to run. Reconciled by the ChoreHandler via the
+          tm1.Activate/tm1.Deactivate actions (not a writable body property), and compared
+          against the server's `Active` on discovery.
+      - name: execution_mode
+        type: string
+        required: false
+        api_field: ExecutionMode
+        allowed_values: ["SingleCommit", "MultipleCommit"]
+        description: Whether tasks commit together (SingleCommit) or independently (MultipleCommit).
+      - name: frequency
+        type: string
+        required: false
+        api_field: Frequency
+        description: Run interval as an ISO 8601 duration (e.g. P1DT0H0M0S for daily).
+      - name: tasks
+        type: array
+        item_type: object
+        required: true
+        # No api_field: ChoreHandler consumes these to build the Tasks[].Process@odata.bind
+        # write body (a dotted, undeclared OData key the default materializer would drop).
+        # The nested `process` reference validates each name resolves to a pa_process.
+        description: Ordered list of tasks, each running one process with optional parameters.
+        schema:
+          fields:
+            - name: step
+              type: integer
+              required: true
+              api_field: Step
+              description: 0-based task order within the chore.
+            - name: process
+              type: string
+              required: true
+              api_field: Process
+              validation:
+                pattern: "^[^']+$"
+              references:
+                resource: pa_process
+                field: name
+              description: Name of the process this task runs.
+            - name: parameters
+              type: array
+              item_type: object
+              required: false
+              api_field: Parameters
+              description: Parameter name/value overrides passed to the process.
+              schema:
+                fields:
+                  - name: name
+                    type: string
+                    required: true
+                    api_field: Name
+                    description: Parameter name.
+                  - name: value
+                    type: string
+                    required: false
+                    api_field: Value
+                    description: Parameter value (string-encoded).
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # tasks excluded from state_fields: the write body uses Process@odata.bind but the server
+    # returns expanded Task/Process objects, so it does not round-trip offline — a Phase-4 concern.
+    # start_time/frequency excluded too (live 2026-07-03; docs/troubleshoot/pa-live-gateway-quirks.md):
+    # the server normalizes StartTime to the gateway-local UTC offset (sent "2026-01-01T00:00:00Z" ->
+    # returned "2025-12-31T18:00-06:00") and zero-pads Frequency's ISO-8601 duration components (sent
+    # "P1DT0H0M0S" -> returned "P1DT00H00M00S"), so neither round-trips against the declared literal —
+    # every re-plan showed a phantom `~ update`. The fields stay declared (still sent on create/update),
+    # just excluded from state comparison.
+    state_fields:
+      - name
+      - dst_sensitive
+      - active
+      - execution_mode
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - name

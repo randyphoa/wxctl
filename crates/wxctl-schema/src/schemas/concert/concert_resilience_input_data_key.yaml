@@ -1,0 +1,119 @@
+resource:
+  name: concert_resilience_input_data_key
+  service: concert
+  kind: concert_resilience_input_data_key
+  version: v1
+  description: >
+    A Concert resilience input-data key (InputDataKeyRequest) defines a named metric
+    input — its label, units, and data type — that resilience requirements evaluate
+    against. Created via the resilience assessment API
+    (POST /resilience/assessment/api/v1/input_data_keys) and identified by a
+    server-assigned `input_data_key_id` returned identically on create and read, so it is
+    a pure schema-first kind (no custom handler). Consumed by concert_resilience_profile
+    requirements (Phase 4).
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /resilience/assessment/api/v1/input_data_keys
+    id_field: input_data_key_id
+    list_endpoint: /resilience/assessment/api/v1/input_data_keys
+    get_endpoint: /resilience/assessment/api/v1/input_data_keys/{input_data_key_id}
+    create_endpoint: /resilience/assessment/api/v1/input_data_keys
+    create_method: POST
+    update_endpoint: /resilience/assessment/api/v1/input_data_keys/{input_data_key_id}
+    update_method: PATCH
+    delete_endpoint: /resilience/assessment/api/v1/input_data_keys/{input_data_key_id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: input_data_key_id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned input-data-key id (returned identically on create, list, and get).
+      - name: domain_id
+        type: string
+        location: Computed
+        immutable: true
+        description: Owning-domain id set by the API (audit; excluded from state_fields).
+      - name: is_oob
+        type: boolean
+        location: Computed
+        immutable: true
+        description: Out-of-the-box flag set by the API (read-only).
+      - name: created_by
+        type: string
+        location: Computed
+        immutable: true
+        description: Creator principal (audit; excluded from state_fields).
+      - name: creation_ts
+        type: string
+        location: Computed
+        immutable: true
+        description: Creation timestamp set by the API (excluded from state_fields).
+      # ── Writable (InputDataKeyRequest) ──
+      - name: name
+        type: string
+        required: true
+        description: Input-data-key name (matched on during discovery).
+      - name: label
+        type: string
+        required: true
+        description: Human-readable label.
+      - name: description
+        type: string
+        required: true
+        description: Free-text description (required by the API).
+      - name: units
+        type: string
+        required: true
+        description: Measurement units for the metric input.
+      - name: data_type
+        type: string
+        required: true
+        description: Data type of the metric input (server-enforced enum).
+      - name: origin
+        type: string
+        required: false
+        description: Optional origin of the metric input.
+      - name: assessment_query
+        type: string
+        required: false
+        description: Optional query used to source the metric value.
+      - name: aggregation
+        type: string
+        required: false
+        description: Optional aggregation applied to the metric input.
+      - name: metadata
+        type: object
+        required: false
+        description: >
+          Optional free-form metadata object. Passed through on create; server-augmented on
+          read, so excluded from state_fields to avoid phantom Update{} drift.
+  reconciliation:
+    # GET /resilience/assessment/api/v1/input_data_keys returns a ListInputDataKeyResponse
+    # envelope { items: [...], pagination } → list_field: items. The `items` key is ALREADY
+    # registered in wxctl-core ENVELOPE_KEYS / ListEnvelope (used by instana + watsonx.data),
+    # so NO core change is needed. Discovery lists by name, then GETs by input_data_key_id.
+    discovery:
+      method: list_and_get
+      id_source: input_data_key_id
+      list_field: items
+    # state_fields = round-tripping writable scalars only. metadata (object, server-augmented)
+    # and the Computed read-only fields are excluded to avoid phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Phase 5 may widen
+    # once live round-trips are verified clean (Invariant I4).
+    state_fields:
+      - name
+      - label
+      - description
+      - units
+      - data_type
+      - origin
+      - assessment_query
+      - aggregation
+    # PATCH /input_data_keys/{id} takes the full InputDataKeyRequest body (full-object replace
+    # pruned to state_fields). Live content-type confirmation is Phase 5.
+    update_strategy: replace
+    immutable_fields: []

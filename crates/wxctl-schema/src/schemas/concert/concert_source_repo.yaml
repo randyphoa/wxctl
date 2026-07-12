@@ -1,0 +1,102 @@
+resource:
+  name: concert_source_repo
+  service: concert
+  kind: concert_source_repo
+  version: v1
+  description: >
+    A Concert source repository is a version-controlled code repo tracked in IBM
+    Concert's inventory for SBOM, CVE, and dependency posture. Created via the
+    Concert core API bulk endpoint (POST /core/api/v1/source_repos wraps repos in
+    a `source_repos` array); item operations are singular. Identified by a
+    server-assigned UUID.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /core/api/v1/source_repos
+    id_field: id
+    list_endpoint: /core/api/v1/source_repos
+    get_endpoint: /core/api/v1/source_repos/{id}
+    create_endpoint: /core/api/v1/source_repos
+    create_method: POST
+    update_endpoint: /core/api/v1/source_repos/{id}
+    update_method: PATCH
+    delete_endpoint: /core/api/v1/source_repos/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned source-repo UUID (returned at top-level `id` on create).
+      - name: created_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis creation timestamp set by the API.
+      - name: last_updated_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis last-update timestamp set by the API.
+      # ── Writable (WorkspaceRepositoryPrototypeDetail) ──
+      - name: name
+        type: string
+        required: true
+        description: Source-repo display name.
+      - name: repo_url
+        type: string
+        required: true
+        description: Repository URL — the stable identity used to match on discovery.
+      - name: branch
+        type: string
+        required: false
+        description: Tracked branch.
+      - name: commit_sha
+        type: string
+        required: false
+        description: Pinned commit SHA.
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+          Repo tags. Writable on create but enriched/reshaped by the API on read
+          (TagsPrototype), so excluded from state_fields to avoid phantom drift.
+      - name: associations
+        type: object
+        required: false
+        description: >
+          Repo associations object. Writable on create; server-augmented on read, so
+          excluded from state_fields.
+      - name: properties
+        type: array
+        required: false
+        item_type: object
+        description: >
+          Repo inventory properties. Writable on create; server-augmented on read, so
+          excluded from state_fields.
+  reconciliation:
+    # GET /core/api/v1/source_repos returns { pagination, source_repos: [...] }; the
+    # `source_repos` envelope key is registered in wxctl-core ENVELOPE_KEYS (Task 1.3).
+    # Identity is repo_url (not name), so identity_match matches on repo_url both sides.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: source_repos
+      identity_match:
+        local_path: repo_url
+        remote_path: repo_url
+    # state_fields = writable scalars that round-trip cleanly on GET. tags/associations/
+    # properties are enriched on read → excluded to avoid phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Phase 4 may
+    # widen once live round-trips are verified clean (spec Invariant I4).
+    # Concert's LIST summary returns `branch`/`commit_sha` as null on read (verified live
+    # 3.0.0.0 — they are not persisted from the create body), so they are excluded from
+    # state_fields to avoid a phantom Update every re-plan. `repo_url` is the stable identity.
+    state_fields:
+      - name
+      - repo_url
+    update_strategy: replace
+    immutable_fields: []

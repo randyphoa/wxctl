@@ -1,0 +1,161 @@
+resource:
+  name: spark_engine
+  service: watsonx_data
+  kind: spark_engine
+  version: v1
+  description: >
+      A Spark Engine is a serverless Apache Spark execution environment in watsonx.data
+      used for data ingestion jobs, Spark SQL, and general Spark applications. Engines
+      have an origin (`native`, `external`, or `discover`) and an optional configuration
+      object. Create is asynchronous — the API returns 202 and the `post_create` handler
+      polls the engine until it reaches a terminal state. Pause and resume are exposed as
+      desired-state transitions on the top-level `status` field, mirroring the
+      presto_engine resource.
+
+  api:
+    base_path: /v3/spark_engines
+    id_field: id
+    list_endpoint: /v3/spark_engines
+    get_endpoint: /v3/spark_engines/{id}
+    create_endpoint: /v3/spark_engines
+    create_method: POST
+    update_endpoint: /v3/spark_engines/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/spark_engines/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during engine creation (e.g.,
+            `spark-123`). Used by ingestion jobs to target this engine.
+
+      - name: display_name
+        type: string
+        required: true
+        description: >
+            Human-readable engine name shown in the watsonx.data UI. Must be unique within
+            the instance.
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: origin
+        type: string
+        required: true
+        default: native
+        allowed_values: [native, external]
+        description: >
+            Engine origin. `native` is a Spark engine provisioned inside watsonx.data —
+            supported on classic (`lakehouse-enterprise`), MCSP
+            (`lakehouse-enterprise-mcsp`), and CPD. `external` registers a bring-your-own
+            Spark cluster and requires an `api_key` field on create.
+
+      - name: description
+        type: string
+        required: false
+        description: >
+            Optional free-text description (max 50 chars).
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: associated_catalogs
+        type: array
+        required: false
+        item_type: string
+        description: >
+            Catalogs this engine can operate against. Accepts either
+            wxctl-managed registrations via ${storage_registration.name} /
+            ${database_registration.name} refs (resolved to their
+            associated_catalog.catalog_name via the `catalog_name` computed
+            field) or plain catalog-name strings for catalogs that already
+            exist on the instance and are not managed by wxctl.
+        references:
+          resource: storage_registration
+          field: catalog_name
+          also_allows:
+            - database_registration
+            - s3_bucket
+
+      - name: dataplane_name
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Remote-dataplane placement identifier (CPD only). Leave unset for SaaS.
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+            Free-form tags for organizing and filtering engines.
+
+      - name: type
+        type: string
+        required: true
+        default: spark
+        allowed_values: [spark, gluten]
+        description: >
+            Engine flavour. `spark` is the standard Apache Spark runtime; `gluten` is
+            the vectorised Velox-backed runtime. Required at the top level of the
+            create body — the API's opaque 500 on POST is typically caused by this
+            field being omitted.
+
+      - name: configuration
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Engine configuration — sent on create only (the API enriches this object
+            on reads, so it's excluded from drift detection). Required sub-fields for
+            `origin: native`:
+              • `default_version` — one of `3.4`, `3.5`, `4.0` (query
+                `GET /v3/spark_versions` for live values)
+              • `engine_home.storage_name` — id of a registered storage_registration
+                that will host engine metadata (SAAS; use `engine_home.volume_id` on
+                CPD instead)
+              • `scale_config.node_type` + `scale_config.number_of_nodes` — MCSP
+                accepts tier names (`starter`, `small`, `medium`, `large`); CPD uses
+                volume-backed sizing. Node counts are capped at 1000.
+            For `origin: external`, include `api_key`, `connection_string`, and
+            `instance_id` pointing at the existing IBM Analytics Engine deployment.
+
+      - name: status
+        type: string
+        required: false
+        default: running
+        allowed_values: [running, paused]
+        description: >
+            Desired lifecycle state. Setting `paused` triggers
+            `POST /v3/spark_engines/{id}/pause`; setting `running` triggers `/resume`.
+            Handled in `pre_update` via `HookOutcome::Handled`.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: spark_engines
+      id_source: id
+      name_field: display_name
+    state_fields:
+      - display_name
+      - description
+      - associated_catalogs
+      - tags
+      - status
+    update_strategy: patch
+    use_json_patch: false
+    # `configuration`, `origin`, and `dataplane_name` are intentionally excluded
+    # from immutable_fields: the list/get API flattens or omits these so literal
+    # equality checks always fail and trigger spurious Recreate. They are
+    # create-only inputs; changes post-create are ignored — users must recreate
+    # the engine explicitly.
+    immutable_fields: []
+
+  unsupported_on: []

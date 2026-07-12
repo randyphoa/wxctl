@@ -1,0 +1,10 @@
+input_schema:
+  properties:
+    account_id:
+      description: The account identifier to look up (e.g., "ACC-1001")
+      type: string
+  required:
+  - account_id
+  type: object
+output_schema:
+  type: object

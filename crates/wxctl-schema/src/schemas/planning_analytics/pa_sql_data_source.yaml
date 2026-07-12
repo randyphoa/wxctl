@@ -1,0 +1,45 @@
+resource:
+  name: pa_sql_data_source
+  service: planning_analytics
+  kind: pa_sql_data_source
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) named SQL data source — a reusable ODBC/SQL
+    connection definition that TurboIntegrator processes read from. Created via the TM1 REST
+    OData API (POST /SQLDataSources) and identified by its `name` (the OData entity key).
+  api:
+    base_path: /SQLDataSources
+    id_field: name
+    list_endpoint: /SQLDataSources
+    get_endpoint: /SQLDataSources('{name}')
+    create_endpoint: /SQLDataSources
+    create_method: POST
+    update_endpoint: /SQLDataSources('{name}')
+    update_method: PATCH
+    delete_endpoint: /SQLDataSources('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: SQL data source name — the OData entity key. Immutable identity.
+      - name: description
+        type: string
+        required: false
+        api_field: Description
+        description: Human-readable description of the data source. PATCHable.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    state_fields:
+      - name
+      - description
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - name

@@ -1,0 +1,140 @@
+resource:
+  name: instana_custom_event_spec
+  service: instana
+  kind: instana_custom_event_spec
+  version: v1
+  description: >
+    An Instana custom event specification raises events (and optionally
+    incidents, via `triggering`) when a rule over an entity type's metrics
+    matches — threshold breaches, entity verification, entity count, and the
+    other AbstractRule variants. Managed via the Events settings API
+    (/api/events/settings/event-specifications/custom) and identified by a
+    server-assigned string id; discovery matches on `name`. The per-spec
+    enable/disable subresource endpoints are out of scope (declare the desired
+    state via the `enabled` field instead).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/event-specifications/custom
+    id_field: id
+    list_endpoint: /api/events/settings/event-specifications/custom
+    get_endpoint: /api/events/settings/event-specifications/custom/{id}
+    create_endpoint: /api/events/settings/event-specifications/custom
+    create_method: POST
+    update_endpoint: /api/events/settings/event-specifications/custom/{id}
+    update_method: PUT
+    delete_endpoint: /api/events/settings/event-specifications/custom/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned (read-only) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned custom-event-specification id (top-level `id` on create/list/get).
+      # -- Writable (CustomEventSpecification; required set = name, entityType, rules) --
+      - name: name
+        type: string
+        required: true
+        validation:
+          min_length: 1
+          max_length: 256
+        description: Event-specification display name; Instana's human identifier for the spec (matched on during discovery).
+      - name: entityType
+        type: string
+        required: true
+        validation:
+          min_length: 1
+          max_length: 64
+        description: >
+          Plugin/entity type the rules evaluate against (e.g. `host`,
+          `ibmMqQueue`, `ibmiActiveJobsInfo`). Metric rules fire per entity of
+          this type.
+      - name: rules
+        type: array
+        required: true
+        item_type: object
+        description: >
+          1-5 AbstractRule objects (discriminated by `ruleType`: threshold,
+          system, entity_verification, entity_count, ...). A threshold rule
+          carries severity (5 warning / 10 critical), metricName (or
+          metricPattern), aggregation, conditionOperator, conditionValue, and
+          window (ms). Combined with `ruleLogicalOperator` when more than one.
+      - name: description
+        type: string
+        required: false
+        description: Free-text description shown on the event.
+      - name: query
+        type: string
+        required: false
+        validation:
+          max_length: 2048
+        description: >
+          Optional Dynamic Focus query scoping which entities the rules are
+          evaluated on (e.g. `entity.ibmmq.queue.name:"CC.PAYMENTS.IN"`).
+      - name: ruleLogicalOperator
+        type: string
+        required: false
+        allowed_values: [AND, OR]
+        description: How multiple `rules` combine (AND / OR).
+      - name: enabled
+        type: boolean
+        required: false
+        description: Whether the specification is active (server default true).
+      - name: triggering
+        type: boolean
+        required: false
+        description: Whether a matching event also raises an incident (server default false).
+      - name: expirationTime
+        type: integer
+        required: false
+        description: >
+          Grace period in ms before an open event auto-closes; multiple of 1000
+          in [5000, 86400000]. Optional in the OpenAPI spec but REQUIRED by
+          self-hosted 1.11.0 backends (a missing value 422s as "grace period ...
+          invalid").
+      - name: transientEventEnabled
+        type: boolean
+        required: false
+        description: Emit transient events for short-lived violations (server default).
+      - name: transientEventAlertMuted
+        type: boolean
+        required: false
+        description: Mute alerting on transient events (server default).
+      - name: transientEventThreshold
+        type: integer
+        required: false
+        description: Threshold (ms) below which a violation counts as transient (server default).
+  reconciliation:
+    # GET /api/events/settings/event-specifications/custom returns a BARE ARRAY of
+    # CustomEventSpecification (no envelope) -> no list_field. The id is
+    # server-minted, so identity is name-based list_and_get (name_field: name).
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = the FULL writable set, deliberately wider than the usual
+    # required-scalars-only pattern: the PUT update is a full replace and the
+    # update path prunes the body to state_fields (execution/operations/
+    # update.rs), so any writable field left out here would be silently dropped
+    # from every update. Safe because compare() skips fields absent from the
+    # local config and values_match() ignores server-added keys inside objects,
+    # so optional/omitted fields and server enrichment cause no phantom drift.
+    # Including `rules` is what lets an edited threshold/metricName re-apply as
+    # an Update instead of a silent no-op.
+    state_fields:
+      - name
+      - entityType
+      - rules
+      - description
+      - query
+      - ruleLogicalOperator
+      - enabled
+      - triggering
+      - expirationTime
+      - transientEventEnabled
+      - transientEventAlertMuted
+      - transientEventThreshold
+    update_strategy: replace
+    immutable_fields: []

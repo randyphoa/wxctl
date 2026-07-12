@@ -1,0 +1,27 @@
+kind: toolkit
+ref_name: wxctl_test_mcp_sse___TEST_ID__
+name: wxctl-test-mcp-sse-__TEST_ID__
+description: coingecko toolkit
+mcp:
+    transport: sse
+    server_url: https://mcp.api.coingecko.com/sse
+    tools: ["get_range_coins_market_chart"]
+---
+kind: agent
+ref_name: wxctl_test_mcp_sse_agent___TEST_ID__
+name: wxctl_test_mcp_sse_agent___TEST_ID__
+display_name: Crypto Agent
+description: An AI assistant that can fetch cryptocurrency market data
+style: default
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${toolkit.wxctl_test_mcp_sse___TEST_ID__.tools.get_range_coins_market_chart}
+---
+kind: test
+ref_name: test_coingecko
+agent: ${agent.wxctl_test_mcp_sse_agent___TEST_ID__}
+turns:
+    - message: "Get the market chart data for bitcoin over the last 7 days"
+      expect_tools:
+          - get_range_coins_market_chart
+      expect_answer: "The response should contain market data for bitcoin"

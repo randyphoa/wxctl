@@ -1,0 +1,78 @@
+# Ops assistant backed by a CUSTOM LOCAL MCP server: wxctl packages the server
+# dir into a ZIP and uploads it to the tools-runtime (mcp.source: files). The
+# server exposes a service_status lookup over bundled mock data. The gateway
+# model is gpt-oss-120b served by watsonx.ai (custom_host: ${env:WATSONX_URL}),
+# scoped by a deployment space; creds are a ${env:GATEWAY_API_KEY} reference. Set
+# both env vars (placeholders suffice for plan). Runs live on a SaaS watsonx
+# Orchestrate profile; set WXCTL_REQUEST_TIMEOUT=300 for the live apply (the
+# server build/upload can exceed the 30s default). See README.
+kind: orchestrate_connection
+ref_name: gateway_connection
+app_id: ops-gateway
+name: Ops Model Gateway Connection
+connection_type: key_value_creds
+environment: [draft, live]
+preference: team
+credentials:
+  api_key: ${env:GATEWAY_API_KEY}
+---
+# Deployment space that anchors the tools-runtime / scopes gateway inference.
+kind: space
+ref_name: ops_space
+name: ops-mcp-assistant-space
+description: Deployment space that anchors the tools-runtime for the ops MCP assistant
+type: wx
+---
+kind: model
+ref_name: gateway_model
+name: virtual-model/watsonx/openai/gpt-oss-120b
+display_name: Ops Assistant Gateway Model (gpt-oss-120b via watsonx.ai)
+description: |
+  Chat gateway model the ops assistant runs on: gpt-oss-120b served by
+  watsonx.ai through the AI gateway, scoped by a deployment space.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_connection}
+provider_config:
+  custom_host: ${env:WATSONX_URL}
+  watsonx_space_id: ${space.ops_space}
+---
+# Custom local MCP server: wxctl packages ./resources/server/ops into a ZIP and
+# uploads it. command: python runs server.py; tools: ["*"] binds every tool the
+# server exposes (here: service_status).
+kind: toolkit
+ref_name: ops_toolkit
+name: ops_toolkit
+description: Custom local-files MCP toolkit exposing a service-status lookup tool
+server_path: ./resources/server/ops
+mcp:
+  source: files
+  command: python
+  args: ["server.py"]
+  tools: ["*"]
+---
+kind: agent
+ref_name: ops_assistant
+name: ops_assistant
+display_name: Ops Assistant
+description: |
+  Answers service-health questions by calling the service_status MCP tool over
+  bundled mock data.
+instructions: |
+  Use the service_status tool to look up the current status of a named service
+  before answering. Report the status, uptime, and region. All data here is
+  mock demo data.
+llm: ${model.gateway_model}
+style: default
+tools:
+  - ${toolkit.ops_toolkit.tools.service_status}
+collaborators: []
+knowledge_base: []
+---
+kind: test
+ref_name: test_01_service_status
+agent: ${agent.ops_assistant}
+turns:
+  - message: "What is the current status of the billing service?"
+    expect_tools:
+      - service_status
+    expect_answer: "Should report that the billing service is operational at 99.98% uptime in us-east."

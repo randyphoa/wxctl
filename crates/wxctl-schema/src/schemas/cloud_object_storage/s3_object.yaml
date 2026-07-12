@@ -1,0 +1,109 @@
+resource:
+  name: s3_object
+  service: cloud_object_storage
+  kind: s3_object
+  version: v1
+  description: >
+      An object inside an `s3_bucket`. Written via S3 PUT; drift detection
+      uses an `x-amz-meta-wxctl-sha256` header over ETag equality. Exactly
+      one of `content` / `path` must be set (oneOf cross-field validator,
+      `WXCTL-V501`); files over 100 MB are rejected without opening them.
+      Credentials flow from the bucket's linked `storage_connection`.
+
+  api:
+    base_path: /cos/{bucket}/{key}
+    id_field: key
+    get_endpoint: /cos/{bucket}/{key}
+    create_endpoint: /cos/{bucket}/{key}
+    create_method: PUT
+    update_endpoint: /cos/{bucket}/{key}
+    update_method: PUT
+    delete_endpoint: /cos/{bucket}/{key}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: bucket
+        type: string
+        required: true
+        immutable: true
+        references:
+          resource: s3_bucket
+          field: name
+
+      - name: region
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Backing region of the containing bucket. Typically populated
+            via `${s3_bucket.<ref>.region}` so the object follows the
+            bucket's region.
+        references:
+          resource: s3_bucket
+          field: region
+
+      - name: key
+        type: string
+        required: true
+        immutable: true
+        validation:
+          min_length: 1
+          max_length_bytes: 1024
+        description: >
+            Object key. S3 limit is 1024 **UTF-8 bytes**, not characters —
+            multibyte keys are measured post-encoding.
+
+      - name: content
+        type: string
+        required: false
+        validation:
+          one_of:
+            - [content, path]
+        description: >
+            Inline literal content. Exactly one of `content` or `path`
+            must be set (`WXCTL-V501`).
+
+      - name: path
+        type: string
+        required: false
+        synthesize: true
+        description: >
+            Local filesystem path, resolved relative to CWD. The file
+            must exist at apply time. Files larger than 100 MB are
+            rejected without being opened.
+
+      - name: content_type
+        type: string
+        required: false
+        description: >
+            MIME type. Auto-detected from the `key` extension when
+            omitted; falls back to `application/octet-stream`.
+
+      - name: metadata
+        type: object
+        required: false
+        description: >
+            User metadata sent as `x-amz-meta-*` headers. The handler
+            automatically adds `x-amz-meta-wxctl-sha256` holding the
+            streaming SHA-256 of the body for drift detection.
+
+      - name: etag
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: key
+    state_fields:
+      - content_type
+      - metadata
+      - etag
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields:
+      - bucket
+      - key

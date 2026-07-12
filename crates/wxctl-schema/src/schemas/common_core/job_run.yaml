@@ -1,0 +1,138 @@
+resource:
+    name: job_run
+    service: common_core
+    kind: job_run
+    version: v1
+    description: >
+        A single execution of a platform job. Create is owned by the handler: POST
+        /v2/jobs/{job}/runs submits a run, then the handler polls GET /v2/jobs/{job}/runs/{id} to a
+        terminal state — Completed succeeds; Failed / Canceled / CompletedWithErrors fail with the
+        run's log tail (GET .../runs/{id}/logs) folded into the error. Identity is a deterministic
+        hash over the run inputs (plus the optional generation nonce), carried as a
+        WXCTL_IDENTITY=<hash8> entry injected into configuration.env_variables — the server
+        clobbers the submitted run name to "Notebook Job" on both CPDaaS and CP4D (live-pinned
+        2026-07-05), so the name cannot carry identity, while the configuration round-trips
+        verbatim. Re-applying an unchanged config matches the marker and is a no-op; a changed
+        input or a bumped generation launches a new run and retains prior runs (accumulate). On
+        the apply path, discovery of a still-running run tail-polls it to a terminal state.
+        Destroy matches the marker too and deletes the run (404-tolerant — a run cascade-deleted
+        with its job is not a failure). The poll is bound to 40 minutes; WXCTL_JOB_RUN_TIMEOUT
+        (seconds) overrides. Live run-body / status / log shapes are verified in Phase 5.
+    api:
+        base_path: /v2/jobs/{job}/runs
+        id_field: id
+        list_endpoint: /v2/jobs/{job}/runs
+        get_endpoint: /v2/jobs/{job}/runs/{id}
+        create_endpoint: /v2/jobs/{job}/runs
+        create_method: POST
+        delete_endpoint: /v2/jobs/{job}/runs/{id}
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Run name — display only. The server stores every run as "Notebook Job"
+                  regardless of the submitted name (both CPDaaS and CP4D, live-pinned
+                  2026-07-05); identity rides the WXCTL_IDENTITY env marker instead, so the
+                  name is submitted but never matched or diffed.
+              validation:
+                  min_length: 1
+                  max_length: 250
+            - name: job
+              type: string
+              required: true
+              immutable: true
+              location: Path
+              description: >
+                  Id of the parent job to run. Fills the {job} path segment. References job.asset_id
+                  → DAG edge so the run submits after the job exists.
+              references:
+                  resource: job
+                  field: asset_id
+            - name: env_variables
+              type: array
+              required: false
+              item_type: object
+              sensitive: true
+              location: LocalOnly
+              api_field: configuration.env_variables
+              description: >
+                  Per-run environment-variable overrides (name/value objects in config — readable
+                  YAML, individually sensitive-markable), folded into the submit body by the handler
+                  as an array of "NAME=value" strings — the wire shape the API actually requires
+                  (live-verified 2026-07-05, both SaaS and CP4D: the object shape 400s with "must be
+                  string"). ${env:VAR}-interpolatable and sensitive. LocalOnly — the handler owns the
+                  submit body, so it is never materialized generically; the api_field records the
+                  wire path so redaction covers the response envelopes
+                  ([results.]entity.job_run.configuration.env_variables — responses echo the values
+                  back verbatim). It is still folded into the identity hash, and the validation
+                  stamp step injects a reserved WXCTL_IDENTITY=<hash8> entry here (replacing any
+                  user entry of that name) — the run's identity marker.
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope for the run endpoints.
+              references:
+                  resource: project
+                  field: guid
+                  optional: true
+            - name: generation
+              type: integer
+              required: false
+              location: LocalOnly
+              description: >
+                  Optional re-run nonce (Kubernetes metadata.generation semantics). Bump to launch a new
+                  run with all other inputs unchanged; folded into the identity hash and never sent to
+                  the API body. Prior generations are retained.
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Run id.
+            - name: state
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Terminal run state (Completed / Failed / Canceled / CompletedWithErrors).
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+            list_field: results
+        # Identity is a deterministic hash over the run inputs (identity_hash.fields below)
+        # plus the optional `generation` nonce, stored as a WXCTL_IDENTITY=<hash8> entry in
+        # configuration.env_variables (storage: env_marker). The submitted run NAME cannot
+        # carry identity — both CPDaaS and CP4D clobber it to "Notebook Job" (live-pinned
+        # 2026-07-05: 201 + LIST both report the clobbered name; the <name>-<hash8> suffix
+        # scheme never matched, so every apply created a duplicate run) — while
+        # entity.job_run.configuration round-trips verbatim. The parser drops the hashed
+        # fields (and `name`) from the default state_fields and injects the synthetic
+        # `identity_hash`; discovery matches the marker (ignoring names entirely,
+        # Completed runs preferred among same-marker duplicates): a matching run re-plans
+        # clean (NoChange); a changed input or a bumped `generation` yields a new hash →
+        # new marker → no match → a new run, while prior runs are retained (accumulate).
+        # `name` is deliberately NOT immutable-compared: a discovered run always carries
+        # the clobbered name, and diffing it would trade the create-loop for a
+        # Recreate-loop.
+        identity_hash:
+            fields:
+                - job
+                - env_variables
+                - project_id
+            nonce_field: generation
+            storage: env_marker
+            length: 8
+        update_strategy: recreate
+        immutable_fields: []
+        use_json_patch: false
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

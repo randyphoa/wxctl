@@ -1,0 +1,81 @@
+resource:
+  name: business_terms
+  service: common_core
+  kind: business_terms
+  version: v1
+  description: >
+      Business Terms provides bulk creation functionality for multiple business terms
+      in a single API call. The API accepts an array of term definitions and creates them
+      as a batch. This enables efficient loading of glossary content from external sources
+      or migration from other governance systems.
+
+  api:
+    base_path: /v3/glossary_terms
+    id_field: name
+    get_endpoint: /v3/glossary_terms/{name}
+    create_endpoint: /v3/glossary_terms
+    create_method: POST
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        description: >
+            Name identifier for this business terms operation. Used as a reference
+            within configuration files to identify the batch.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_\\s-]+$"
+
+      - name: terms
+        type: array
+        required: false
+        item_type: object
+        description: >
+            Array of business term definitions to create. Each term object should include
+            name, short_description, long_description, and optionally parent_category.
+            The parent_category should be an object with an id field referencing the
+            category artifact_id. Required if import_file is not specified.
+
+      - name: import_file
+        type: string
+        required: false
+        location: LocalOnly
+        is_path: true
+        description: >
+            Path to a CSV file containing business terms to import. The CSV should have
+            columns matching the term fields (name, short_description, long_description, etc.).
+            Required if terms is not specified.
+
+      - name: merge_option
+        type: string
+        required: false
+        default: "all"
+        description: >
+            Merge option for import operations (only used with import_file).
+            Controls how imported terms are merged with existing terms.
+            Valid values: all, specified, none. Ignored for inline terms.
+        validation:
+          enum: ["all", "specified", "none"]
+
+      - name: async_mode
+        type: boolean
+        required: false
+        default: false
+        description: >
+            Whether to run the import operation asynchronously (only used with import_file).
+            When true, the API returns immediately and processes the import in the background.
+            Ignored for inline terms.
+
+  reconciliation:
+    discovery:
+      method: skip
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}

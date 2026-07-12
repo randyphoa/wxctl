@@ -1,0 +1,831 @@
+resource:
+    name: agent
+    service: watsonx_orchestrate
+    kind: agent
+    version: v1
+    description: >
+        An Agent is a configurable AI assistant within Watsonx Orchestrate that can perform tasks using tools, collaborate
+        with other agents, and leverage knowledge bases. Agents are defined by their description, style (default, react, or
+        planner), instructions, and the resources (tools, collaborators, knowledge bases) they can access to fulfill user
+        requests. Agents can be configured with voice capabilities, structured output schemas, custom join tools for result
+        synthesis, and context variable access for dynamic behavior.
+    api:
+        base_path: /v1/orchestrate/agents
+        id_field: id
+        list_endpoint: /v1/orchestrate/agents
+        get_endpoint: /v1/orchestrate/agents/{id}
+        create_method: POST
+        update_method: PATCH
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Unique name identifier for the agent. Used as the primary reference for the agent within the system and
+                  must be unique across all agents in the tenant.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: display_name
+              type: string
+              required: false
+              description: >
+                  Human-readable display name shown in the UI. This is the friendly name that users will see when interacting
+                  with or selecting the agent.
+            - name: description
+              type: string
+              required: true
+              description: >
+                  Primary description of what the agent does. This serves as the agent's system prompt and defines its core
+                  purpose, behavior, and capabilities.
+            - name: instructions
+              type: string
+              required: false
+              description: >
+                  Additional instructions that supplement the description. Used to provide specific behavioral guidelines,
+                  constraints, or detailed operating procedures for the agent.
+            - name: style
+              type: string
+              required: true
+              description: >
+                  Defines the agent's interaction and reasoning style. The 'default' style provides standard conversational
+                  responses. The 'react' style enables ReAct (Reasoning + Acting) pattern for more deliberate, step-by-step
+                  problem solving with explicit reasoning chains. The 'planner' style enables advanced planning capabilities
+                  for complex multi-step task decomposition and execution.
+              default: default
+              allowed_values: [default, react, planner, custom, react_intrinsic, experimental_customer_care]
+            - name: llm
+              type: string
+              required: true
+              description: >
+                  LLM model identifier that specifies which language model the agent uses. Format typically follows the pattern:
+                  provider/model-family/model-name (e.g., watsonx/meta-llama/llama-3-2-90b-vision-instruct). This determines
+                  the agent's language understanding and generation capabilities.
+              references:
+                  resource: model
+                  field: name
+                  optional: true
+            - name: llm_config
+              type: object
+              required: false
+              schema:
+                  fields:
+                      - name: decoding_method
+                        type: string
+                        required: false
+                      - name: prompt
+                        type: object
+                        required: false
+                      - name: max_tokens
+                        type: integer
+                        required: false
+                      - name: max_completion_tokens
+                        type: integer
+                        required: false
+                      - name: temperature
+                        type: float
+                        required: false
+                      - name: top_p
+                        type: float
+                        required: false
+                      - name: n
+                        type: integer
+                        required: false
+                      - name: stream
+                        type: boolean
+                        required: false
+                      - name: logprobs
+                        type: integer
+                        required: false
+                      - name: top_logprobs
+                        type: boolean
+                        required: false
+                      - name: echo
+                        type: boolean
+                        required: false
+                      - name: stop
+                        type: object
+                        required: false
+                      - name: presence_penalty
+                        type: float
+                        required: false
+                      - name: frequency_penalty
+                        type: float
+                        required: false
+                      - name: best_of
+                        type: integer
+                        required: false
+                      - name: logit_bias
+                        type: object
+                        required: false
+                      - name: user
+                        type: string
+                        required: false
+                      - name: context
+                        type: string
+                        required: false
+                      - name: examples
+                        type: array
+                        required: false
+                        item_type: object
+                        schema:
+                            fields:
+                                - name: input
+                                  type: object
+                                  required: true
+                                - name: output
+                                  type: object
+                                  required: true
+                      - name: top_k
+                        type: integer
+                        required: false
+                      - name: response_format
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: type
+                                  type: string
+                                  required: true
+                                - name: json_schema
+                                  type: object
+                                  required: false
+                      - name: seed
+                        type: integer
+                        required: false
+                      - name: store
+                        type: boolean
+                        required: false
+                      - name: metadata
+                        type: object
+                        required: false
+                      - name: modalities
+                        type: array
+                        required: false
+                        item_type: string
+                      - name: audio
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: voice
+                                  type: string
+                                  required: true
+                                - name: format
+                                  type: string
+                                  required: true
+                      - name: service_tier
+                        type: string
+                        required: false
+                      - name: prediction
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: type
+                                  type: string
+                                  required: true
+                                - name: content
+                                  type: object
+                                  required: true
+                      - name: safety_settings
+                        type: object
+                        required: false
+                      - name: anthropic_beta
+                        type: string
+                        required: false
+                      - name: anthropic_version
+                        type: string
+                        required: false
+                      - name: thinking
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: type
+                                  type: string
+                                  required: false
+                                - name: budget_tokens
+                                  type: integer
+                                  required: true
+                      - name: space_id
+                        type: string
+                        required: false
+                      - name: project_id
+                        type: string
+                        required: false
+                      - name: reasoning_effort
+                        type: string
+                        required: false
+                      - name: parallel_tool_calls
+                        type: boolean
+                        required: false
+                      - name: disable_tool_validation
+                        type: boolean
+                        required: false
+            - name: structured_output
+              type: object
+              required: false
+              description: >
+                  JSON schema that defines the required structure for the agent's responses. When configured, the agent will
+                  format its outputs to match this schema, enabling consistent, machine-parseable responses for integration
+                  with downstream systems.
+            - name: hidden
+              type: boolean
+              required: false
+              description: >
+                  Controls visibility when listing agents. When true, the agent is hidden from default agent listings and
+                  discovery interfaces. Useful for internal/system agents or work-in-progress agents that shouldn't be publicly
+                  available.
+              default: false
+            - name: hide_reasoning
+              type: boolean
+              required: false
+              description: >
+                  When enabled, hides the agent's internal reasoning steps and chain-of-thought from the user interface. Users
+                  will only see the final answer/response, not the intermediate reasoning process. Useful for cleaner UX when
+                  reasoning details aren't needed.
+              default: false
+            - name: sync_tool_flow_interactions
+              type: boolean
+              required: false
+              description: Enable/disable syncing user interactions from tool flow to the agent
+              default: true
+            - name: context_access_enabled
+              type: boolean
+              required: false
+              description: >
+                  Enables the agent to access context variables from the runtime environment. When enabled, the agent can
+                  read and utilize context-specific information that may vary by session, user, or environment.
+              default: true
+            - name: tools
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  List of tool names that the agent can invoke to perform actions and retrieve information. Tools extend the
+                  agent's capabilities beyond conversation, enabling it to interact with external systems, APIs, and data
+                  sources.
+              default: []
+              references:
+                  resource: tool
+                  field: id
+            - name: toolkits
+              type: array
+              required: false
+              item_type: string
+              description: List of toolkit ids available to the agent
+              default: []
+              references:
+                  resource: toolkit
+                  field: id
+            - name: collaborators
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  List of other agent names that this agent can collaborate with. Enables multi-agent workflows where agents
+                  can delegate tasks, consult specialists, and coordinate to solve complex problems.
+              default: []
+              references:
+                  resource: agent
+                  field: id
+            - name: knowledge_base
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  List of knowledge base names that provide the agent with access to document-based information. Enables the
+                  agent to retrieve relevant context, facts, and domain-specific knowledge when answering user queries.
+              default: []
+              references:
+                  resource: knowledge_base
+                  field: id
+            - name: glossary
+              type: array
+              required: false
+              item_type: string
+              description: List of glossary available to the agent
+              default: []
+            - name: guidelines
+              type: array
+              required: false
+              item_type: object
+              description: >
+                  Behavioral guidelines that define specific rules, policies, or constraints the agent should follow. Each
+                  guideline is an object with display_name (optional), condition (when the guideline applies), and action
+                  (what the agent should do).
+              default: []
+              schema:
+                  fields:
+                      - name: display_name
+                        type: string
+                        required: false
+                        description: Display name of the guideline
+                      - name: condition
+                        type: string
+                        required: true
+                        description: Condition when the guideline should be applied
+                      - name: action
+                        type: string
+                        required: true
+                        description: Action to take when the condition is met
+                      - name: tool
+                        type: string
+                        required: false
+                        description: The tool id use for this guideline
+            - name: connection_ids
+              type: array
+              required: false
+              item_type: string
+              description: List of connection IDs for direct agent-to-connection bindings
+              default: []
+            - name: context_variables
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  List of specific context variable names that this agent is permitted to access. Only the variables listed
+                  here will be available to the agent when context_access_enabled is true. Provides fine-grained control over
+                  what contextual information the agent can utilize.
+              default: []
+            - name: additional_properties
+              type: object
+              required: false
+              description: >
+                  Container for additional agent settings such as starter_prompts (suggested conversation starters shown to
+                  users), welcome_content (initial greeting message), and other UI/UX customizations defined in the AgentAdditionalPropertiesIn
+                  schema.
+              schema:
+                  fields:
+                      - name: starter_prompts
+                        type: object
+                        required: false
+                        description: Agent Starter Prompts
+                        schema:
+                            fields:
+                                - name: customize
+                                  type: array
+                                  required: false
+                                  item_type: object
+                                  description: list of starter prompts of the agent
+                                  schema:
+                                      fields:
+                                          - name: id
+                                            type: string
+                                            required: false
+                                            description: Unique identifier for the prompt
+                                          - name: title
+                                            type: string
+                                            required: true
+                                            description: Title of the prompt
+                                          - name: subtitle
+                                            type: string
+                                            required: false
+                                            description: description of the prompt
+                                          - name: prompt
+                                            type: string
+                                            required: true
+                                            description: contents of the prompt
+                                          - name: state
+                                            type: string
+                                            required: false
+                                            description: active/inactivate
+                      - name: welcome_content
+                        type: object
+                        required: false
+                        description: Agent Welcome Message
+                        schema:
+                            fields:
+                                - name: welcome_message
+                                  type: string
+                                  required: false
+                                  description: Welcome message
+                                - name: description
+                                  type: string
+                                  required: false
+                                  description: Description
+                                - name: is_default_voice_greeting
+                                  type: boolean
+                                  required: false
+                                  description: is the welcome message the default voice greeting
+                                  default: false
+                      - name: icon
+                        type: string
+                        required: false
+                        description: Icon identifier for the agent displayed in the UI.
+            - name: chat_with_docs
+              type: object
+              required: false
+              description: >
+                  Configuration for the Chat with Documents feature, which allows agents to dynamically create and interact
+                  with document-based knowledge bases during conversation threads. Enables document upload and contextual
+                  Q&A within chat sessions.
+              schema:
+                  fields:
+                      - name: enabled
+                        type: boolean
+                        required: false
+                        description: Controls if the Chat with Documents feature is enabled for this agent
+                        default: false
+                      - name: supports_full_document
+                        type: boolean
+                        required: false
+                        description: >
+                            Controls if the Agent can request to use the full document. Only used if generation.enabled =
+                            false
+                        default: true
+                      - name: vector_index
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: embeddings_model_name
+                                  type: string
+                                  required: false
+                                - name: chunk_size
+                                  type: integer
+                                  required: false
+                                  default: 400
+                                - name: chunk_overlap
+                                  type: integer
+                                  required: false
+                                  default: 50
+                                - name: limit
+                                  type: integer
+                                  required: false
+                                  default: 10
+                                - name: extraction_strategy
+                                  type: string
+                                  required: false
+                                  allowed_values: [express, standard, high_quality]
+                      - name: generation
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+                            {
+                                "model_id": "meta-llama/llama-3-1-70b-instruct",
+                                "prompt_instruction": "When the documents are in different languages, you should respond in
+                            english.",
+                                "max_docs_passed_to_llm": 5,
+                                "retrieval_confidence_threshold": "Lowest",
+                                "generated_response_length": "Moderate",
+                                "response_confidence_threshold": "Low",
+                                "display_text_no_results_found": "no docs found",
+                                "display_text_connectivity_issue": "conn failed",
+                            }
+                        schema:
+                            fields:
+                                - name: model_id
+                                  type: string
+                                  required: false
+                                - name: prompt_instruction
+                                  type: string
+                                  required: false
+                                  default: ''
+                                - name: max_docs_passed_to_llm
+                                  type: integer
+                                  required: false
+                                  default: 5
+                                - name: generated_response_length
+                                  type: string
+                                  required: false
+                                  allowed_values: [Concise, Moderate, Verbose]
+                                - name: display_text_no_results_found
+                                  type: string
+                                  required: false
+                                  default: I searched my knowledge base, but did not find anything related to your query
+                                - name: display_text_connectivity_issue
+                                  type: string
+                                  required: false
+                                  default: I might have information related to your query to share, but am unable to connect
+                                      to my knowledge base at the moment
+                                - name: idk_message
+                                  type: string
+                                  required: false
+                                  default: I'm afraid I don't understand. Please rephrase your question.
+                                - name: enabled
+                                  type: boolean
+                                  required: false
+                                  default: false
+                      - name: query_rewrite
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+
+                            {
+                                "enabled": True,
+                                "model_id": "meta-llama/llama-3-1-70b-instruct"
+                            }
+                        schema:
+                            fields:
+                                - name: enabled
+                                  type: boolean
+                                  required: false
+                                  default: true
+                                - name: model_id
+                                  type: string
+                                  required: false
+                      - name: confidence_thresholds
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: retrieval_confidence_threshold
+                                  type: string
+                                  required: false
+                                  allowed_values: [Off, Lowest, Low, High, Highest]
+                                - name: response_confidence_threshold
+                                  type: string
+                                  required: false
+                                  allowed_values: [Off, Lowest, Low, High, Highest]
+                      - name: citations
+                        type: object
+                        required: false
+                        description: "example:\n{\n    \"citation_title\": \"how do i know\",\n    \"citations_shown\": 5,\n\
+                            }"
+                        schema:
+                            fields:
+                                - name: citation_title
+                                  type: string
+                                  required: false
+                                  default: How do we know?
+                                - name: citations_shown
+                                  type: integer
+                                  required: false
+                                  default: -1
+                      - name: hap_filtering
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+                            {
+                                "output": {
+                                    "enabled": True,
+                                    "threshold": 0.7,
+                                }
+                            }
+                        schema:
+                            fields:
+                                - name: output
+                                  type: object
+                                  required: false
+                                  schema:
+                                      fields:
+                                          - name: enabled
+                                            type: boolean
+                                            required: false
+                                            default: false
+                                          - name: threshold
+                                            type: float
+                                            required: false
+                                            default: 0.5
+                      - name: query_source
+                        type: string
+                        required: false
+                        allowed_values: [SessionHistory, Agent]
+                      - name: agent_query_description
+                        type: string
+                        required: false
+                        default: The query to search for in the knowledge base
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  Categorization tags for organizing and filtering agents. Used for grouping related agents and enabling tag-based
+                  search and discovery within the system.
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Unique identifier assigned by the API
+            - name: agent_mapping
+              type: object
+              required: false
+              location: Computed
+              description: >
+                  Internal mapping object used by the system for agent relationship tracking and configuration management.
+                  Contains system-managed metadata about agent associations.
+            - name: environments
+              type: array
+              required: false
+              location: Computed
+              description: >
+                  List of simplified environment objects (EnvironmentSchema) associated with the agent, typically including
+                  'draft' and 'live' environments. Each environment represents a deployment stage with its own configuration
+                  snapshot.
+              schema:
+                  fields:
+                      - name: id
+                        type: string
+                        required: true
+                        description: Unique identifier for the environment
+                      - name: name
+                        type: string
+                        required: true
+                        description: Name of the environment
+                      - name: current_version
+                        type: integer
+                        required: false
+                        description: current_version
+                      - name: voice
+                        type: object
+                        required: false
+                        description: Voice configuration for the environment
+                      - name: enable_wxg_integration
+                        type: string
+                        required: false
+                        description: Flag to enable/disable wxg integration
+                        default: inactive
+                      - name: wxg_metrics_url
+                        type: string
+                        required: false
+                        description: URL to watsonx.governance metrics dashboard for this agent
+                        default: ''
+            - name: tenant_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  UUID of the tenant that owns this agent. Automatically assigned by the system during creation and used for
+                  multi-tenancy isolation and access control.
+            - name: created_by
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  User ID of the person who created this agent. Automatically captured during agent creation for audit trail
+                  and ownership tracking.
+            - name: created_on
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  ISO 8601 timestamp indicating when the agent was created. Automatically set by the system and cannot be
+                  modified.
+            - name: updated_by
+              type: string
+              required: false
+              location: Computed
+              description: >
+                  User ID of the person who last modified this agent. Updated automatically on each agent modification for
+                  audit and change tracking purposes.
+            - name: updated_at
+              type: timestamp
+              required: false
+              location: Computed
+              description: >
+                  ISO 8601 timestamp of the most recent update to this agent. Automatically maintained by the system to track
+                  modification history.
+            - name: deleted_by
+              type: string
+              required: false
+              location: Computed
+              description: >
+                  User ID of the person who deleted this agent (for soft-delete scenarios). Set when the agent is marked as
+                  deleted rather than permanently removed.
+            - name: deleted_at
+              type: timestamp
+              required: false
+              location: Computed
+              description: >
+                  ISO 8601 timestamp when the agent was deleted (for soft-delete scenarios). Indicates when the agent was
+                  marked as deleted while retaining its data.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+        state_fields:
+            - name
+            - display_name
+            - description
+            - instructions
+            - style
+            - llm
+            - llm_config
+            - structured_output
+            - hidden
+            - hide_reasoning
+            - sync_tool_flow_interactions
+            - context_access_enabled
+            - tools
+            - toolkits
+            - collaborators
+            - knowledge_base
+            - glossary
+            - guidelines
+            - connection_ids
+            - context_variables
+            - additional_properties
+            - chat_with_docs
+            - tags
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "Agent `style` controls reasoning: `default` is standard conversational, `react` enables ReAct (Reasoning + Acting) for step-by-step problem solving, `planner` enables advanced multi-step task decomposition."
+            - "Tools are referenced using `${tool.<ref_name>}` syntax, collaborators using `${agent.<ref_name>}`, and knowledge bases using `${knowledge_base.<ref_name>}`."
+            - "The `llm` field accepts either a `${model.<ref_name>}` reference or a plain string value (e.g., `groq/openai/gpt-oss-120b`). Plain values create no dependency."
+            - "The `description` field serves as the agent's system prompt and defines its core purpose, behavior, and capabilities."
+            - "Guidelines provide behavioral rules with `condition` (when the guideline applies) and `action` (what the agent should do)."
+            - "`additional_properties` supports `icon` (SVG string), `starter_prompts` (suggested conversation starters), and `welcome_content` (initial greeting)."
+        examples:
+            minimal: |
+                kind: agent
+                ref_name: my_agent
+                name: my_agent
+                description: An AI assistant that answers general questions
+                llm: groq/openai/gpt-oss-120b
+                style: default
+            full: |
+                kind: agent
+                ref_name: ops_agent
+                name: ops_agent
+                display_name: Operations Assistant
+                description: |
+                  An AI assistant for incident resolution. Searches logs, retrieves
+                  runbooks, and guides operators through remediation steps.
+                instructions: |
+                  Always check the runbook before suggesting manual remediation.
+                  Provide step-by-step instructions and cite the source document.
+                llm: groq/openai/gpt-oss-120b
+                style: react
+                hidden: false
+                hide_reasoning: false
+                sync_tool_flow_interactions: true
+                context_access_enabled: true
+                tools:
+                  - ${tool.search_tool}
+                collaborators: []
+                knowledge_base:
+                  - ${knowledge_base.ops_kb}
+                guidelines:
+                  - display_name: "Safety First"
+                    condition: "When the user asks about production changes"
+                    action: "Always recommend a staging test before applying to production"
+                  - condition: "When troubleshooting an outage"
+                    action: "Prioritize service restoration over root-cause analysis"
+                additional_properties:
+                  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="#0f62fe" width="64" height="64" rx="8"/></svg>'
+                  starter_prompts:
+                    customize:
+                      - title: "Search Logs"
+                        subtitle: "Find recent events"
+                        prompt: "Search the last 24 hours of logs for error events"
+                        state: "active"
+                      - title: "Runbook Lookup"
+                        subtitle: "Find a procedure"
+                        prompt: "Find the runbook for database failover"
+                        state: "active"
+                  welcome_content:
+                    welcome_message: "Operations Assistant"
+                    description: "I can search logs, retrieve runbooks, and help resolve incidents."
+                    is_default_voice_greeting: false
+                chat_with_docs:
+                  enabled: true
+                  supports_full_document: true
+                  vector_index:
+                    chunk_size: 400
+                    chunk_overlap: 50
+                    limit: 10
+                    extraction_strategy: standard
+                  generation:
+                    enabled: true
+                    model_id: meta-llama/llama-3-1-70b-instruct
+                    max_docs_passed_to_llm: 5
+                    generated_response_length: Moderate
+                  query_rewrite:
+                    enabled: true
+                    model_id: meta-llama/llama-3-1-70b-instruct
+                  confidence_thresholds:
+                    retrieval_confidence_threshold: Low
+                    response_confidence_threshold: Low
+                  citations:
+                    citation_title: "How do we know?"
+                    citations_shown: -1
+                  hap_filtering:
+                    output:
+                      enabled: false
+                      threshold: 0.5
+                  query_source: SessionHistory
+                tags:
+                  - operations
+                  - incident-response
+
+  # TODO: Add hooks if needed
+  # hooks:
+  #   post_create: service::handlers::kind::function_name

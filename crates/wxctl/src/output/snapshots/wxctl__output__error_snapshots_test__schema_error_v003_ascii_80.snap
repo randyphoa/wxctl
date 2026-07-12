@@ -1,0 +1,11 @@
+---
+source: crates/wxctl/src/output/error_snapshots_test.rs
+expression: "schema_error_screen(&panel(80, ColorMode::Plain, GlyphSet::Ascii))"
+---
+x agent/churn_agent - WXCTL-V003
+  | Errors
+
+    x agent/churn_agent  WXCTL-V003
+      field name
+      Missing required field: name
+      fix add `name:` to the resource (see `wxctl explain <kind>`)

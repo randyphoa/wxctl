@@ -1,0 +1,15 @@
+---
+source: crates/wxctl/src/output/discovery_snapshots_test.rs
+expression: "print_grouped(&sample_rows(),\n&panel(80, ColorMode::Dark, GlyphSet::Unicode)).join(\"\\n\")"
+---
+
+  [1mresource catalog[0m   [38;2;125;133;144m2 kinds · 2 products[0m
+
+  [38;2;120;169;255m▌[0m [1mwatsonx.data[0m   [38;2;125;133;144m(watsonx_data · 1 kind)[0m
+    [38;2;120;169;255mpresto_engine[0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mInteractive federated SQL query engine for[0m
+[38;2;125;133;144m                                     the lakehouse: queries across catalogs with[0m
+[38;2;125;133;144m                                     autoscaling worker pods and per-tenant[0m
+[38;2;125;133;144m                                     t-shirt sizing.[0m
+
+  [38;2;120;169;255m▌[0m [1mCloud Object Storage[0m   [38;2;125;133;144m(cloud_object_storage · 1 kind)[0m
+    [38;2;120;169;255ms3_bucket    [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mAn object-storage bucket.[0m

@@ -1,0 +1,21 @@
+---
+source: crates/wxctl/src/output/plan_snapshots_test.rs
+expression: "reconcile_error_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mPipeline[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mvalidation[0m       [38;2;125;133;144m0.1s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mreconciliation[0m   [38;2;125;133;144m2 reconciled[0m   [38;2;125;133;144m0.5s[0m
+
+  [38;2;120;169;255m▌[0m [1mChanges[0m
+[38;2;125;133;144m       Type   Name          Action[0m
+    [38;2;63;185;80m+[0m  tool   ok_tool       [38;2;63;185;80mcreate[0m
+    [38;2;248;81;73m![0m  agent  probe_failed  [38;2;248;81;73mundetermined[0m
+
+    [38;2;125;133;144m? unchecked — identity path templated; ! undetermined — discovery failed (see ▌ Errors)[0m
+  [38;2;120;169;255m▌[0m [1mErrors[0m
+
+    [38;2;248;81;73m✗[0m [1magent/probe_failed[0m  [38;2;125;133;144mWXCTL-R001[0m
+      HTTP 500 Internal Server Error during discovery
+      [38;2;120;169;255mfix[0m Check network connectivity and API credentials, then retry
+
+[38;2;248;81;73m✗[0m [1mplan failed[0m [38;2;125;133;144m·[0m [38;2;63;185;80m+1 to add[0m [38;2;125;133;144m·[0m [38;2;248;81;73m1 undetermined[0m [38;2;125;133;144m·[0m run 20260612-000000-plan-def456 [38;2;125;133;144m—[0m wxctl debug

@@ -1,0 +1,138 @@
+resource:
+  name: concert_compliance_profile
+  service: concert
+  kind: concert_compliance_profile
+  version: v1
+  description: >
+    A Concert compliance profile is a named, versioned set of controls (drawn from a
+    pre-imported compliance catalog) that Concert evaluates applications against to score
+    compliance posture — the declarative half of Concert's compliance / AI-governance
+    surface (sovereign, CSCF/ISCF, etc.). Created via the Concert compliance API
+    (POST /compliance/api/v1/profiles) and identified by a `uuid`. Create returns
+    201 {message} with NO id, so ComplianceProfileHandler recovers the uuid by listing
+    /profiles and matching on `title`. Update is a full PUT replace. Lives under the
+    /compliance/api/v1/ base-path prefix — distinct from the Tier 1 /core/api/v1/ kinds —
+    resolved against the same bare-host concert service url + bearer auth + InstanceId header.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /compliance/api/v1/profiles
+    id_field: uuid
+    list_endpoint: /compliance/api/v1/profiles
+    get_endpoint: /compliance/api/v1/profiles/{uuid}
+    create_endpoint: /compliance/api/v1/profiles
+    create_method: POST
+    update_endpoint: /compliance/api/v1/profiles/{uuid}
+    update_method: PUT
+    delete_endpoint: /compliance/api/v1/profiles/{uuid}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: uuid
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Server-assigned profile UUID. NOT returned on create (201 {message}); recovered
+          by ComplianceProfileHandler.post_create via list-and-match on `title`. Present at
+          the top level on GET /profiles and GET /profiles/{uuid} (discovery id_source: uuid).
+      - name: mapped_profile
+        type: boolean
+        location: Computed
+        immutable: true
+        description: Whether the profile was created from a crosswalk mapping; server-derived, not writable.
+      - name: last_updated_by
+        type: string
+        location: Computed
+        immutable: true
+        description: Principal who last updated the profile (audit; excluded from state_fields).
+      - name: last_updated_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis last-update timestamp set by the API.
+      # ── Writable (ComplianceProfileRequest) ──
+      - name: title
+        type: string
+        required: true
+        description: >
+          Profile title — the only required create field and the human label matched on
+          during id recovery / discovery (ComplianceProfileHandler lists /profiles and
+          matches `title` to recover the uuid). Assumed unique per instance (spec Q5).
+      - name: description
+        type: string
+        required: false
+        description: Free-text profile description.
+      - name: version
+        type: string
+        required: false
+        description: Profile version label.
+      - name: allow_manual_assessment
+        type: boolean
+        required: false
+        description: >
+          Whether the profile permits manual assessment of its controls. Writable, but does
+          NOT round-trip: Concert's GET always reports `false` regardless of what
+          create/PUT sent (live-verified on 3.0.0.0), so it is excluded from state_fields to
+          avoid a phantom `~allow_manual_assessment` Update on every re-plan.
+      - name: controls
+        type: array
+        required: false
+        item_type: object
+        description: >
+          Profile controls (ProfileControls: { catalog_id, control_ids[] }). control_ids
+          reference control ids from a catalog imported out-of-band into Concert
+          (/import_catalogs — a spec Non-Goal; the Phase 5 example supplies ids via
+          ${env:...} placeholders). Server-augmented on read (catalog_info added), so
+          excluded from state_fields to avoid phantom Update{} drift.
+      - name: application_releases_ids
+        type: array
+        required: false
+        item_type: string
+        references:
+          resource: concert_application
+          field: application_release_id
+          optional: true
+        description: >
+          Ids of the Concert applications (application releases) this profile scopes to.
+          This top-level reference produces the DAG edge → each concert_application is
+          ordered before the profile and ${concert_application.<ref>.application_release_id}
+          resolves to the created application's server-computed release id (spec AC4
+          intent). Sending the application's own `id` here 500s (live-verified on 3.0.0.0);
+          the release id succeeds. NOT echoed on read (absent from ProfileDetails), so
+          excluded from state_fields to avoid phantom drift. (3.0.0.0 names this field
+          application_releases_ids; the spec table's application_ids maps onto it.)
+  reconciliation:
+    # GET /compliance/api/v1/profiles lists profiles; the `profiles` envelope key is
+    # registered in wxctl-core ENVELOPE_KEYS (Task 1.3). The 3.0.0.0 OpenAPI types the list
+    # response as a single object (CreateProfileResponse) — an authoring inconsistency — so
+    # the real list shape (bare array vs {profiles:[…]}) is confirmed live in Phase 5;
+    # find_profile_by_title + the Direct/Profiles envelope variants tolerate both. Discovery
+    # reads the top-level uuid (id_source: uuid), then GETs the profile by uuid.
+    discovery:
+      method: list_and_get
+      id_source: uuid
+      list_field: profiles
+      # This kind has NO `name` field (title is the identifier); without name_field the
+      # reconciler defaults to matching on "name" and errors WXCTL-R001 "Resource has no
+      # 'name' field" before discovery can match anything (live-caught, Phase 5).
+      name_field: title
+    # state_fields = writable scalars that round-trip cleanly on GET (title, description,
+    # version). allow_manual_assessment is writable but NEVER round-trips true (Concert's GET
+    # always reports false regardless of what was sent, live-verified on 3.0.0.0), controls
+    # (server-augmented on read) and application_releases_ids (not echoed on read) are
+    # writable Body fields but excluded here, else every re-plan shows a phantom Update{}
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Phase 5 may
+    # widen once live round-trips are verified clean (spec Invariant I4).
+    state_fields:
+      - title
+      - description
+      - version
+    # Update is a full PUT replace (PUT /compliance/api/v1/profiles/{uuid}, body
+    # ComplianceProfileRequest). update_method: PUT + update_strategy: replace + no
+    # use_json_patch → a plain JSON PUT body pruned to state_fields. Whether a live PUT must
+    # also re-send controls/application_releases_ids to avoid clearing them is a Phase-5
+    # live concern.
+    update_strategy: replace
+    immutable_fields: []

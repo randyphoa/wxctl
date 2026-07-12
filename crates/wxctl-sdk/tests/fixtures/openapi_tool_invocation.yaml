@@ -1,0 +1,37 @@
+kind: orchestrate_connection
+ref_name: wxctl_test_httpbin_conn___TEST_ID__
+app_id: wxctl-test-httpbin-conn-__TEST_ID__
+connection_type: bearer_token
+credentials:
+    token: test-token-value
+---
+kind: tool
+ref_name: wxctl_test_httpbin_tools___TEST_ID__
+spec_path: __MANIFEST_DIR__/tests/fixtures/openapi_tool_spec.yaml
+binding:
+    openapi:
+        connection_id: wxctl-test-httpbin-conn-__TEST_ID__
+        permission: read_write
+        tools: ["*"]
+---
+kind: agent
+ref_name: wxctl_test_httpbin_agent___TEST_ID__
+name: wxctl_test_httpbin_agent___TEST_ID__
+display_name: HTTPBin Agent
+description: >
+  You are a helpful assistant with access to the HTTPBin echo API.
+  Use the echoGet tool to echo query parameters and the echoPost tool to echo request bodies.
+  Always use the tools to answer questions rather than making up responses.
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${tool.wxctl_test_httpbin_tools___TEST_ID___echoGet}
+    - ${tool.wxctl_test_httpbin_tools___TEST_ID___echoPost}
+---
+kind: test
+ref_name: test_echo_get
+agent: ${agent.wxctl_test_httpbin_agent___TEST_ID__}
+turns:
+    - message: "Use the echoGet tool to echo the word hello"
+      expect_tools:
+          - echo_get
+      expect_answer: "The agent should have called echoGet and returned a response"

@@ -1,0 +1,95 @@
+resource:
+  name: concert_workflow_role
+  service: concert_workflows
+  kind: concert_workflow_role
+  version: v1
+  description: >
+    A Concert Workflows (Pliant) flow role — a named grant bundling users, worker groups, and
+    per-surface policies (flow, application, auth-storage, schedule, automation-panel). Name-keyed
+    symmetric CRUD: create POST /v1/flow-roles/, read/update/delete at /v1/flow-roles/{name},
+    discovery lists GET /v1/flow-roles/ (a bare array). Full read-back needs the
+    includeUserNames/includePolicies/includeWorkerGroupNames query flags, sent inline on the
+    get_endpoint (Query-location constants). Software-only.
+  unsupported_on: [saas]
+  api:
+    base_path: /v1/flow-roles
+    id_field: name
+    list_endpoint: /v1/flow-roles/
+    get_endpoint: /v1/flow-roles/{name}?includeUserNames=true&includePolicies=true&includeWorkerGroupNames=true
+    create_endpoint: /v1/flow-roles/
+    create_method: POST
+    update_endpoint: /v1/flow-roles/{name}
+    update_method: PUT
+    delete_endpoint: /v1/flow-roles/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: "Flow-role name — the natural key (id_field: name, {name} path segment). Immutable."
+      - name: description
+        type: string
+        required: false
+        description: Free-text flow-role description.
+      - name: user_names
+        type: array
+        item_type: string
+        required: false
+        api_field: userNames
+        description: Pliant usernames granted this role (plain strings; not a wxctl-managed kind).
+      - name: worker_group_names
+        type: array
+        item_type: string
+        required: false
+        api_field: workerGroupNames
+        description: >
+          Worker groups this role can use. Plain string array with NO reference edge — a nested/
+          scalar-array reference makes no graph edge (spec Data Flow), so the cell config orders
+          concert_worker_group before the role explicitly.
+      - name: application_policies
+        type: array
+        item_type: object
+        required: false
+        api_field: applicationPolicies
+        description: ApplicationPolicyDto[] — application-scope grants (server-shaped; passed through).
+      - name: auth_storage_policies
+        type: array
+        item_type: object
+        required: false
+        api_field: authStoragePolicies
+        description: AuthStoragePolicyDto[] — auth-storage-scope grants.
+      - name: automation_panel_policies
+        type: array
+        item_type: object
+        required: false
+        api_field: automationPanelPolicies
+        description: AutomationPanelPolicyDto[] — automation-console panel grants.
+      - name: flow_policies
+        type: array
+        item_type: object
+        required: false
+        api_field: flowPolicies
+        description: FlowPolicyDto[] — flow-scope grants.
+      - name: flow_schedule_policies
+        type: array
+        item_type: object
+        required: false
+        api_field: flowSchedulePolicies
+        description: FlowSchedulePolicyDto[] — schedule-scope grants.
+  reconciliation:
+    # GET /v1/flow-roles/ returns a BARE ARRAY of FlowRoleDto → no list_field. FlowRoleDto has
+    # `name` → default identity match on "name" (no name_field). id_source: name.
+    discovery:
+      method: list_and_get
+      id_source: name
+    # Only the description scalar is a safe round-trip field; the policy/name arrays are
+    # server-normalized on read (and shaped by the include* query flags), so they are excluded
+    # to avoid phantom Update{} drift. Phase 3 (I4) confirms live and may widen.
+    state_fields:
+      - description
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields:
+      - name

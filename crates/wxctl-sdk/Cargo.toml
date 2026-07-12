@@ -1,0 +1,44 @@
+[package]
+name = "wxctl-sdk"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SDK for programmatic access to wxctl"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-engine = { path = "../wxctl-engine", version = "0.1" }
+wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+heck = "0.5"
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true, optional = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+
+[features]
+live-tests = []
+schema = ["dep:schemars", "wxctl-engine/schema"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+dirs = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+chrono = { workspace = true }
+insta = "1"
+
+[lints]
+workspace = true

@@ -1,0 +1,277 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: # dry-run the build matrix without tagging (no release is created)
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Check tag matches workspace version
+        # step-level guard, not job-level: a skipped verify job would cascade-skip build via needs:
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "wxctl") | .version')
+          if [ "$tag" != "$version" ]; then
+            echo "Tag v$tag does not match workspace version $version" >&2
+            exit 1
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            runner: macos-latest
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+          # ubuntu-22.04 keeps the glibc floor at 2.35 (Ubuntu 22.04+, Debian 12+, RHEL 9+)
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+          - target: aarch64-pc-windows-msvc
+            runner: windows-latest
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable branch
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      # aws-lc-sys (rustls crypto provider) assembles x86_64 asm with NASM.
+      # Installed via Chocolatey (preinstalled on windows runners) rather than
+      # ilammy/setup-nasm, whose latest release still runs on the deprecated
+      # Node 20 action runtime. nasm.exe location is resolved dynamically and
+      # appended to PATH so cargo/aws-lc-sys can find it.
+      - name: Install NASM
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          choco install nasm -y --no-progress
+          $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramData, $env:LOCALAPPDATA) | Where-Object { $_ -and (Test-Path $_) }
+          $nasm = Get-ChildItem -Path $roots -Filter nasm.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $nasm) { throw "nasm.exe not found after install" }
+          Split-Path $nasm.FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $nasm.FullName -v
+
+      - name: Build
+        run: cargo build --release --locked -p wxctl --target ${{ matrix.target }}
+
+      - name: Compute archive name
+        # workflow_dispatch makes GITHUB_REF_NAME a branch name — flatten any / so it stays a single path component
+        shell: bash
+        run: echo "ARCHIVE=wxctl-${GITHUB_REF_NAME//\//-}-${{ matrix.target }}" >> "$GITHUB_ENV"
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir "$ARCHIVE"
+          cp "target/${{ matrix.target }}/release/wxctl" LICENSE README.md "$ARCHIVE/"
+          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path $env:ARCHIVE | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/wxctl.exe", LICENSE, README.md $env:ARCHIVE/
+          Compress-Archive -Path $env:ARCHIVE -DestinationPath "$env:ARCHIVE.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wxctl-${{ matrix.target }}
+          path: ${{ env.ARCHIVE }}.*
+          if-no-files-found: error
+
+  release:
+    name: Create release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      # required for SLSA build provenance attestations
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: wxctl-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum wxctl-* > SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: wxctl-*
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          generate_release_notes: true
+          files: |
+            wxctl-*
+            SHA256SUMS
+
+      - name: Prune older releases and tags (keep only the latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KEEP: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Retention policy: keep ONLY the just-published release. Every prior
+          # release and its tag are deleted, so the Releases page shows a single
+          # entry. HAZARD: binaries + checksums for old versions vanish, so any
+          # pinned/old-version install 404s. The wxctl-updates Worker tracks only
+          # LATEST, so auto-update is unaffected. Runs after the new release +
+          # binaries exist, so there is no availability gap.
+          #
+          # Guard: only prune when THIS tag is the newest — prevents a manual
+          # re-run of an old tag's workflow from deleting a newer release.
+          # All ${{ github.* }} inputs are passed via env and quoted below.
+          newest=$(gh api --paginate "repos/$GH_REPO/tags" -q '.[].name' | sort -V | tail -1)
+          if [ "$KEEP" != "$newest" ]; then
+            echo "::warning::$KEEP is not the newest tag ($newest) — skipping prune."
+            exit 0
+          fi
+          # 1. Delete every release except $KEEP (also removes its git tag).
+          for tag in $(gh release list --limit 200 --json tagName -q '.[].tagName' || true); do
+            [ "$tag" = "$KEEP" ] && continue
+            echo "deleting release $tag (+ tag)"
+            gh release delete "$tag" --yes --cleanup-tag
+          done
+          # 2. Sweep any leftover tags that had no release, so only $KEEP remains.
+          for tag in $(gh api --paginate "repos/$GH_REPO/tags" -q '.[].name' || true); do
+            [ "$tag" = "$KEEP" ] && continue
+            echo "deleting orphan tag $tag"
+            gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$tag" || true
+          done
+          echo "Done — only $KEEP remains."
+
+  # ---------------------------------------------------------------------------
+  # npm-publish: DISABLED until the one-time npm/OIDC bootstrap is complete.
+  # Re-enable (uncomment this whole job) after: (1) the six @randyphoa/wxctl-<slug>
+  # sub-package names are reserved as bare 0.1.0 stubs by hand with a token, (2) a
+  # trusted publisher (repo wxctl, workflow release.yml) is configured on all seven
+  # packages on npmjs.com, and (3) the first functional 0.1.1 is hand-published with
+  # a token. OIDC covers every release after. See wxctl/npm/README.md. Note the
+  # crate is still 0.1.0, so generate.mjs would refuse to build until Cargo.toml is
+  # bumped to >= 0.1.1.
+  # ---------------------------------------------------------------------------
+  # npm-publish:
+  #   name: Publish to npm
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 15
+  #   permissions:
+  #     contents: read
+  #     # OIDC trusted publishing: id-token mints the short-lived npm auth token
+  #     # (no NPM_TOKEN) and signs Sigstore provenance for `npm publish --provenance`.
+  #     # Requires each of the seven package names to already exist on npm with a
+  #     # trusted publisher configured (repo + this workflow filename); see npm/README.md.
+  #     id-token: write
+  #   steps:
+  #     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+  #
+  #     # ubuntu-latest ships Node 20+; OIDC trusted publishing needs npm >= 11.5.1,
+  #     # so upgrade npm in place rather than adding a new pinned action.
+  #     - name: Ensure npm supports OIDC trusted publishing
+  #       run: npm install -g npm@^11.5.1
+  #
+  #     - name: Download build artifacts
+  #       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+  #       with:
+  #         pattern: wxctl-*
+  #         path: artifacts-dl
+  #
+  #     - name: Extract binaries by target
+  #       shell: bash
+  #       run: |
+  #         set -euo pipefail
+  #         mkdir -p npm-artifacts
+  #         for d in artifacts-dl/wxctl-*/; do
+  #           target=$(basename "$d"); target=${target#wxctl-}
+  #           mkdir -p "npm-artifacts/$target"
+  #           archive=$(find "$d" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print -quit)
+  #           case "$archive" in
+  #             *.tar.gz) tar -xzf "$archive" -C "$d" ;;
+  #             *.zip)    unzip -oq "$archive" -d "$d" ;;
+  #           esac
+  #           bin=$(find "$d" -type f \( -name wxctl -o -name wxctl.exe \) -print -quit)
+  #           cp "$bin" "npm-artifacts/$target/$(basename "$bin")"
+  #         done
+  #
+  #     - name: Resolve publish version
+  #       id: ver
+  #       shell: bash
+  #       run: |
+  #         set -euo pipefail
+  #         # On a tag the version is the tag (already verified == crate by `verify`).
+  #         # On workflow_dispatch GITHUB_REF_NAME is a branch, so derive from cargo.
+  #         if [ "${{ github.ref_type }}" = "tag" ]; then
+  #           v="${GITHUB_REF_NAME#v}"
+  #         else
+  #           v=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="wxctl") | .version')
+  #         fi
+  #         echo "version=$v" >> "$GITHUB_OUTPUT"
+  #
+  #     - name: Generate npm packages
+  #       run: node npm/generate.mjs --version "${{ steps.ver.outputs.version }}" --artifacts npm-artifacts --out npm-dist
+  #
+  #     - name: Publish (sub-packages, then meta)
+  #       shell: bash
+  #       env:
+  #         VERSION: ${{ steps.ver.outputs.version }}
+  #         # `github.ref_type == 'tag'` gates the real publish; a branch
+  #         # (workflow_dispatch) dry-runs with no registry writes.
+  #         DRY_RUN: ${{ github.ref_type == 'tag' && 'false' || 'true' }}
+  #       run: |
+  #         set -euo pipefail
+  #         publish() {
+  #           local dir="$1" name="$2"
+  #           # Existence check: a version already live is skipped as success and
+  #           # logged loudly, so a re-run after a partial failure is idempotent and
+  #           # a skip is never mistaken for a fresh publish.
+  #           if npm view "$name@$VERSION" version >/dev/null 2>&1; then
+  #             echo "::warning::$name@$VERSION already published, NOT updated"
+  #             return 0
+  #           fi
+  #           local flags=(--access public --provenance)
+  #           if [ "$DRY_RUN" = "true" ]; then
+  #             flags+=(--dry-run)
+  #             echo "dry-run: $name@$VERSION"
+  #           fi
+  #           npm publish "$dir" "${flags[@]}"
+  #         }
+  #         for slug in darwin-x64 darwin-arm64 linux-x64-gnu linux-arm64-gnu win32-x64 win32-arm64; do
+  #           publish "npm-dist/$slug" "@randyphoa/wxctl-$slug"
+  #         done
+  #         publish "npm-dist/meta" "wxctl"

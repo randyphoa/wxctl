@@ -1,0 +1,96 @@
+resource:
+  name: vault_identity_group
+  service: vault
+  kind: vault_identity_group
+  version: v1
+  description: >
+    A Vault external identity group (identity/group) that maps an external IdP group
+    (via a vault_group_alias) to Vault policies. Created by POST /v1/identity/group with
+    the group in the body; read/deleted by name at identity/group/name/{name}. The
+    create response wraps the server-assigned canonical id at data.id, which the handler
+    unwraps to a top-level `id` so `${vault_identity_group.<ref>.id}` resolves for a
+    vault_group_alias. `policies[]` references vault_policy by name. Vault is
+    deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/identity/group
+    id_field: name
+    list_endpoint: /v1/identity/group/name?list=true
+    get_endpoint: /v1/identity/group/name/{name}
+    create_endpoint: /v1/identity/group
+    create_method: POST
+    update_endpoint: /v1/identity/group
+    update_method: POST
+    delete_endpoint: /v1/identity/group/name/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: >
+          Group name — the id. Rides the create body (POST /v1/identity/group) and fills
+          the {name} segment on the name-scoped get/delete endpoints via id-source
+          substitution. Immutable.
+      - name: type
+        type: string
+        required: false
+        description: Group type — use `external` for IdP-mapped groups.
+      - name: policies
+        type: array
+        item_type: string
+        required: false
+        description: >
+          Vault policy names granted to members. Each element references vault_policy by
+          name (DAG edge vault_policy -> vault_identity_group).
+        references:
+          resource: vault_policy
+          field: name
+      - name: metadata
+        type: object
+        required: false
+        description: Arbitrary string metadata attached to the group.
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Server-assigned canonical group id (returned at data.id on create; surfaced to
+          top level by the handler). Referenced by vault_group_alias.canonical_id.
+  reconciliation:
+    # get_by_id on name: GET /v1/identity/group/name/{name} returns the full group
+    # (200, data-unwrapped by IdentityGroupHandler) INCLUDING the server-assigned
+    # canonical `id`, and 404s when absent. list_and_get is wrong here: it lists only
+    # group NAMES, so a rediscovered group would carry no `id`, and the downstream
+    # ${vault_identity_group.<ref>.id} reference on a vault_group_alias would fail on
+    # re-apply (live-pinned 2026-07-10). get_by_id keeps the computed `id` in the store.
+    discovery:
+      method: get_by_id
+      id_source: name
+    # Present/absent by name drives create-vs-noop (vault_policy precedent).
+    state_fields: []
+    update_strategy: replace
+    immutable_fields: []
+  prompt:
+    notes:
+      - "`name` is the group name and id; set `type: external` for IdP-mapped groups."
+      - "`policies` lists Vault policy names — reference them as `${vault_policy.<ref>.name}`."
+      - "`id` is the computed canonical id; reference it as `${vault_identity_group.<ref>.id}` from a vault_group_alias."
+    examples:
+      minimal: |
+        kind: vault_identity_group
+        ref_name: hr_basic
+        name: hr-basic-group
+        type: external
+        policies:
+          - ${vault_policy.hr_basic.name}
+      full: |
+        kind: vault_identity_group
+        ref_name: hr_basic
+        name: hr-basic-group
+        type: external
+        policies:
+          - ${vault_policy.hr_basic.name}
+        metadata:
+          description: Basic HR staff
+          source: IBM Verify groupIds claim

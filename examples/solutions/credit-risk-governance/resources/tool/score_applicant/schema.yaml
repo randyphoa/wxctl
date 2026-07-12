@@ -1,0 +1,18 @@
+input_schema:
+  type: object
+  properties:
+    annual_income:
+      type: number
+      description: The applicant's gross annual income in USD (e.g., 120000).
+    debt_to_income:
+      type: number
+      description: The applicant's debt-to-income ratio as a decimal (e.g., 0.25 for 25%).
+    credit_score:
+      type: number
+      description: The applicant's credit score, 300–850 (e.g., 720).
+  required:
+    - annual_income
+    - debt_to_income
+    - credit_score
+output_schema:
+  type: object

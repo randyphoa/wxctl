@@ -1,0 +1,5 @@
+# score_applicant uses only the Python standard library (urllib, json).
+# The watsonx Orchestrate connection is read through the runtime-injected
+# WXO_CONNECTION_* environment variables — via the ibm_watsonx_orchestrate.run
+# connections API when it is importable, with a stdlib env-var fallback — so no
+# third-party dependency is required at tool-build time.

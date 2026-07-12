@@ -1,0 +1,7 @@
+---
+source: crates/wxctl/src/output/runs_snapshots_test.rs
+expression: "render_list(&panel(80, ColorMode::Plain, GlyphSet::Ascii), &[]).join(\"\\n\")"
+---
+
+  | Runs
+    No run records found. Run a command (apply/plan/destroy/test) to produce one.

@@ -1,0 +1,97 @@
+resource:
+    name: software_specification
+    service: common_core
+    kind: software_specification
+    version: v1
+    description: >
+        A Software Specification defines a runtime environment for deploying AI services and functions. Derived
+        specifications extend a base specification (e.g., runtime-24.1-py3.11) with custom package extensions.
+        Software specifications are scoped to a space or project.
+    api:
+        base_path: /v2/software_specifications
+        id_field: asset_id
+        list_endpoint: /v2/software_specifications
+        get_endpoint: /v2/software_specifications/{asset_id}
+        create_method: POST
+        update_method: PATCH
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Name of the software specification.
+              validation:
+                  min_length: 1
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description of the software specification.
+            - name: base_software_specification
+              type: string
+              required: true
+              description: >
+                  Name of the base software specification to derive from (e.g., runtime-25.1-py3.12).
+                  Resolved to a GUID by the pre_create handler.
+            - name: package_extensions
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  List of package extension references. Each entry is a ${package_extension.ref_name}
+                  reference resolved to a GUID by the pre_create handler.
+              references:
+                  resource: package_extension
+                  field: asset_id
+            - name: space_id
+              type: string
+              required: false
+              location: Query
+              description: The space ID scope.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: asset_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique ID of the software specification.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: asset_id
+            list_field: resources
+        state_fields:
+            - name
+            - description
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: true
+        json_patch_path_prefix: "/metadata"
+
+    deployments:
+        "software-5.3":
+            # SaaS and Software 5.3.x share /v2/software_specifications (confirmed in
+            # Software 5.3.0 spec). Empty overlay declares the kind is supported on
+            # this deployment without altering the base block.
+            api: {}
+    unsupported_on: []

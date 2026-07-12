@@ -1,0 +1,90 @@
+resource:
+  name: other_engine
+  service: watsonx_data
+  kind: other_engine
+  version: v1
+  description: >
+      An Other Engine registers a generic external query engine (anything not
+      covered by the typed presto/spark/db2 kinds) with watsonx.data, identified by
+      a display name plus a `connection_string` and an engine `type`. Registration
+      is metadata-only with no pause/resume. The v3 API exposes no PATCH on
+      `other_engines`, so field changes recreate the engine.
+
+  api:
+    base_path: /v3/other_engines
+    id_field: id
+    list_endpoint: /v3/other_engines?limit=100
+    get_endpoint: /v3/other_engines/{id}
+    create_endpoint: /v3/other_engines
+    create_method: POST
+    delete_endpoint: /v3/other_engines/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+      - name: display_name
+        type: string
+        required: true
+        description: >
+            Human-readable engine name; unique within the instance.
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: origin
+        type: string
+        required: true
+        default: external
+        allowed_values: [external]
+
+      - name: description
+        type: string
+        required: false
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+
+      - name: configuration
+        type: object
+        required: true
+        immutable: true
+        description: >
+            External engine connection details. Sent on create only; excluded from
+            drift detection.
+        schema:
+          fields:
+            - name: connection_string
+              type: string
+              required: true
+              description: External engine connection string.
+            - name: type
+              type: string
+              required: true
+              description: Actual external engine type (e.g. `presto`, `flink`).
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: other_engines
+      id_source: id
+      name_field: display_name
+    state_fields:
+      - display_name
+      - description
+      - tags
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  unsupported_on: []

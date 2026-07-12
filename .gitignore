@@ -1,0 +1,8 @@
+/target
+
+# macOS
+.DS_Store
+
+# Python — examples ship source, not bytecode
+__pycache__/
+*.py[cod]

@@ -1,0 +1,95 @@
+resource:
+  name: vault_group_alias
+  service: vault
+  kind: vault_group_alias
+  version: v1
+  description: >
+    A Vault group alias (identity/group-alias) that binds an external IdP group name to a
+    Vault external identity group through an auth mount accessor. Created by
+    POST /v1/identity/group-alias; item operations address the alias by its
+    server-assigned id. `mount_accessor` references the computed accessor of a
+    vault_auth_method; `canonical_id` references the computed id of a
+    vault_identity_group. Vault is deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/identity/group-alias
+    id_field: id
+    list_endpoint: /v1/identity/group-alias/id?list=true
+    # Discovery-only endpoint: the alias has no lookup-by-name, so get_by_id reads the
+    # PARENT group (whose data.alias embeds this alias) via id_source: canonical_id.
+    # read/update/delete still address the alias by its own id below.
+    get_endpoint: /v1/identity/group/id/{canonical_id}
+    create_endpoint: /v1/identity/group-alias
+    create_method: POST
+    update_endpoint: /v1/identity/group-alias/id/{id}
+    update_method: POST
+    delete_endpoint: /v1/identity/group-alias/id/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Server-assigned alias id (returned at data.id on create; surfaced by the
+          data-unwrap). The id_field: fills the {id} segment on item endpoints.
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: >
+          External IdP group name (must match the value in the token's groups claim).
+          Rides the create body. Used as name_field for list matching.
+      - name: mount_accessor
+        type: string
+        required: true
+        description: >
+          Accessor of the auth mount this alias is scoped to. References the computed
+          accessor of a vault_auth_method (DAG edge vault_auth_method -> vault_group_alias).
+        references:
+          resource: vault_auth_method
+          field: accessor
+      - name: canonical_id
+        type: string
+        required: true
+        description: >
+          Canonical id of the target identity group. References the computed id of a
+          vault_identity_group (DAG edge vault_identity_group -> vault_group_alias).
+        references:
+          resource: vault_identity_group
+          field: id
+  reconciliation:
+    # Vault has no lookup-of-an-alias-by-name (aliases are addressed only by their
+    # server id), so a naive re-create 400s "combination of mount and group alias name
+    # is already in use". Discover through the PARENT identity group instead: get_by_id
+    # on `canonical_id` GETs /v1/identity/group/id/{canonical_id} (get_endpoint above),
+    # whose `data.alias` embeds this alias. absent_when {data.alias.id: null} treats a
+    # group with no alias yet as "create"; GroupAliasHandler.post_discover lifts
+    # data.alias to the top level. (Live-pinned 2026-07-10; resolves the Phase-4 risk.)
+    discovery:
+      method: get_by_id
+      id_source: canonical_id
+      absent_when:
+        field: data.alias.id
+        equals: null
+    state_fields: []
+    update_strategy: replace
+    immutable_fields: []
+  prompt:
+    notes:
+      - "`name` is the external IdP group name (must match the token's groups-claim value)."
+      - "`mount_accessor` = `${vault_auth_method.<ref>.accessor}`; `canonical_id` = `${vault_identity_group.<ref>.id}` — both computed."
+      - "The alias is addressed by its server-assigned id on read/update/delete."
+    examples:
+      minimal: |
+        kind: vault_group_alias
+        ref_name: hr_basic
+        name: hr-basic
+        mount_accessor: ${vault_auth_method.ibm_verify.accessor}
+        canonical_id: ${vault_identity_group.hr_basic.id}
+      full: |
+        kind: vault_group_alias
+        ref_name: hr_basic
+        name: hr-basic
+        mount_accessor: ${vault_auth_method.ibm_verify.accessor}
+        canonical_id: ${vault_identity_group.hr_basic.id}

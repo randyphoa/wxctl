@@ -1,0 +1,25 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&validate).unwrap()"
+---
+{
+  "valid": false,
+  "errors": [
+    {
+      "code": "V001",
+      "field": "name",
+      "message": "missing",
+      "resource": "agent/a",
+      "suggestion": "add name"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "WXCTL-V505",
+      "resource": "common_core_connection/db",
+      "message": "orphan resource; bridge to orchestrate_connection not wired",
+      "suggestion": "add an orchestrate_connection or see wxctl compose paths"
+    }
+  ],
+  "fix_prompt": "fix this"
+}

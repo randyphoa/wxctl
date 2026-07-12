@@ -1,0 +1,131 @@
+resource:
+  name: database_registration
+  service: watsonx_data
+  kind: database_registration
+  version: v1
+  description: >
+      Registers an external database (Db2, PostgreSQL, MySQL, Kafka, etc.)
+      with watsonx.data and atomically creates its associated catalog.
+      The `connection:` reference points at a `database_connection`; the
+      handler walks the edge at apply time, derives `type:` from the
+      connection's discriminator, and assembles the v3
+      `DatabaseDetailsPrototype` wire body from the connection's variant
+      fields. Users never restate a connection's credentials or structural
+      fields here — the registration is the identity, the connection is
+      the creds. SaaS only.
+
+  api:
+    base_path: /v3/database_registrations
+    id_field: id
+    list_endpoint: /v3/database_registrations
+    get_endpoint: /v3/database_registrations/{id}
+    create_endpoint: /v3/database_registrations
+    create_method: POST
+    update_endpoint: /v3/database_registrations/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/database_registrations/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+
+      - name: catalog_name
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Top-level catalog name surfaced by the create response and
+            GET. Populated server-side from
+            `associated_catalog.catalog_name`.
+
+      - name: display_name
+        type: string
+        required: true
+        validation:
+          min_length: 1
+          max_length: 128
+
+      - name: description
+        type: string
+        required: false
+        validation:
+          min_length: 1
+          max_length: 50
+
+      - name: connection
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Reference to a `database_connection`. The handler derives the
+            `type:` and every `connection.*` wire-body field from the
+            linked connection's active variant. Immutable — rotating
+            credentials happens on the connection; changing which
+            connection backs a registration changes the registration's
+            identity.
+        references:
+          resource: database_connection
+          field: ref_name
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+
+      - name: associated_catalog
+        type: object
+        required: true
+        description: Catalog created atomically with the registration.
+        schema:
+          fields:
+            - name: catalog_name
+              type: string
+              required: true
+              immutable: true
+              validation:
+                pattern: "^[a-zA-Z0-9_-]+$"
+                min_length: 1
+                max_length: 64
+            - name: catalog_type
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Connector-specific catalog type (e.g. `db2`, `mysql`,
+                  `kafka`). Open string — legal values depend on the
+                  backing DB.
+            - name: catalog_tags
+              type: array
+              required: false
+              item_type: string
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: database_registrations
+      id_source: id
+      identity_match:
+        local_path: associated_catalog.catalog_name
+        remote_path: associated_catalog.catalog_name
+    state_fields:
+      - display_name
+      - description
+      - tags
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - connection
+      - associated_catalog.catalog_name
+      - associated_catalog.catalog_type
+    reject_on_immutable_drift: true
+
+  deployments:
+    "software-5.3":
+      api: {}
+  unsupported_on: []

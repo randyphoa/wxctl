@@ -1,0 +1,97 @@
+resource:
+  name: instana_synthetic_test
+  service: instana
+  kind: instana_synthetic_test
+  version: v1
+  description: >
+    An Instana synthetic test (SyntheticTest) runs a scripted or HTTP probe from
+    one or more PoP locations on a schedule. Created via the Synthetics settings
+    API (/api/synthetics/settings/tests) and identified by a server-assigned
+    string id; the human identifier is `label`. Update is a full-body PUT
+    (update_strategy: replace); PATCH / bulk / ci-cd endpoints are out of scope.
+    The live prerequisite (a deployed PoP location id) is a Phase 5 concern.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/synthetics/settings/tests
+    id_field: id
+    list_endpoint: /api/synthetics/settings/tests
+    get_endpoint: /api/synthetics/settings/tests/{id}
+    create_endpoint: /api/synthetics/settings/tests
+    create_method: POST
+    update_endpoint: /api/synthetics/settings/tests/{id}
+    update_method: PUT
+    delete_endpoint: /api/synthetics/settings/tests/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned (read-only) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned synthetic-test id (top-level `id` on create/list/get).
+      # -- Writable (SyntheticTest required: active, configuration, label, locations, testFrequency) --
+      - name: label
+        type: string
+        required: true
+        description: Synthetic-test display name; Instana's human identifier (matched on during discovery).
+      - name: active
+        type: boolean
+        required: true
+        description: Whether the test is enabled.
+      - name: testFrequency
+        type: integer
+        required: true
+        description: Run frequency in minutes.
+      - name: locations
+        type: array
+        item_type: string
+        required: true
+        description: >
+          PoP location ids the test runs from. Server-normalized on read, so
+          excluded from state_fields to avoid phantom drift. On self-hosted
+          Standard Edition a deployed PoP id is required (Phase 5 prerequisite).
+      - name: configuration
+        type: object
+        required: true
+        description: >
+          SyntheticTypeConfiguration — e.g. {syntheticType: HTTPAction, url, ...}.
+          Server-normalized on read, so excluded from state_fields to avoid
+          phantom drift.
+      - name: description
+        type: string
+        required: false
+        description: Free-text description.
+      - name: applicationId
+        type: string
+        required: false
+        description: Application perspective to associate results with.
+      - name: playbackMode
+        type: string
+        required: false
+        allowed_values: [Simultaneous, Staggered]
+        description: How multi-location runs are scheduled.
+      - name: customProperties
+        type: object
+        required: false
+        description: >
+          User-defined key/value metadata. Server-normalized on read, so excluded
+          from state_fields to avoid phantom drift.
+  reconciliation:
+    # GET /api/synthetics/settings/tests returns a BARE ARRAY of SyntheticTest
+    # (no envelope) -> no list_field. SyntheticTest has no `name` field, so
+    # identity match MUST use `label` (as Phase 1's perspective does).
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: label
+    # state_fields = writable scalars that round-trip cleanly. The array/object
+    # fields (locations, configuration, customProperties) are server-normalized
+    # on read, so excluded to avoid phantom Update{} drift. Phase 5 may widen.
+    state_fields:
+      - label
+      - active
+      - testFrequency
+    update_strategy: replace
+    immutable_fields: []

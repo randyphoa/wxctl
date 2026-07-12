@@ -1,0 +1,9 @@
+---
+source: crates/wxctl/src/output/runs_snapshots_test.rs
+expression: "render_list(&panel(80, ColorMode::Dark, GlyphSet::Unicode),\n&runs()).join(\"\\n\")"
+---
+
+  [38;2;120;169;255m▌[0m [1mRuns[0m
+    [38;2;125;133;144mRUN ID                           COMMAND   STARTED                OUTCOME   ERRORS[0m
+    20260711-101500-apply-abc123     [38;2;120;169;255mapply    [0m [38;2;125;133;144m2026-07-11 10:15:00   [0m [38;2;63;185;80msuccess  [0m [38;2;125;133;144m0[0m
+    20260711-100000-plan-def456      [38;2;120;169;255mplan     [0m [38;2;125;133;144m2026-07-11 10:00:00   [0m [38;2;248;81;73mfailed   [0m [38;2;248;81;73m2[0m

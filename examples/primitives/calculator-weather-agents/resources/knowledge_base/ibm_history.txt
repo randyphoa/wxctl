@@ -1,0 +1,51 @@
+IBM: COMPANY HISTORY REFERENCE
+==============================
+
+Section 1: Founding
+-------------------
+IBM was founded on June 16, 1911, in Endicott, New York, as the
+Computing-Tabulating-Recording Company (CTR). CTR was formed by financier
+Charles Ranlett Flint as a merger of three existing firms: the Tabulating
+Machine Company (founded by Herman Hollerith, inventor of the punched-card
+tabulating machine), the International Time Recording Company, and the
+Computing Scale Company of America.
+
+Section 2: The IBM Name
+-----------------------
+Thomas J. Watson Sr. joined CTR in 1914 as general manager and became
+president the following year. Under his leadership the company adopted the
+name International Business Machines Corporation (IBM) on February 14, 1924.
+The name had already been in use by the company's Canadian subsidiary.
+
+Section 3: Early Products
+-------------------------
+CTR's early product lines came directly from its three founding firms:
+punched-card tabulating machines and sorters, employee time clocks and time
+recorders, and commercial weighing scales. Punched-card data processing
+became the company's core business and remained so into the era of
+electronic computing.
+
+Section 4: Major Milestones
+---------------------------
+1944: The Automatic Sequence Controlled Calculator (Harvard Mark I),
+built by IBM, is presented to Harvard University.
+1956: Thomas J. Watson Jr. succeeds his father as chief executive.
+1964: IBM announces System/360, the first family of compatible mainframe
+computers, one of the largest privately financed commercial projects of
+its time.
+1981: IBM releases the IBM Personal Computer (model 5150), which sets the
+standard for the PC industry.
+1997: IBM's Deep Blue chess computer defeats world champion Garry Kasparov
+in a six-game match.
+2011: IBM's Watson system wins the Jeopardy! quiz show against the two
+best human champions, in the company's centennial year.
+2019: IBM completes its acquisition of Red Hat, its largest acquisition,
+anchoring its hybrid-cloud strategy.
+2023: IBM launches watsonx, its enterprise AI and data platform.
+
+Section 5: IBM Today
+--------------------
+IBM is headquartered in Armonk, New York, and focuses on hybrid cloud and
+artificial intelligence, spanning software, consulting, and infrastructure.
+Research has been a constant thread: IBM employees have earned Nobel Prizes
+and IBM has been among the top recipients of U.S. patents for decades.

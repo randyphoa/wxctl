@@ -1,0 +1,94 @@
+resource:
+  name: pa_subset
+  service: planning_analytics
+  kind: pa_subset
+  version: v1
+  description: >
+    A named subset of a Planning Analytics (TM1 Database 12) hierarchy — either a static list
+    of members (`elements`) or a dynamic MDX `expression`. Created under its parent
+    dimension+hierarchy (POST /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets) and
+    identified by its `name` within that hierarchy. A static subset binds its members via
+    `Elements@odata.bind` (built by the SubsetHandler pre_create); an MDX subset carries
+    `expression` and passes through the default materializer.
+  api:
+    base_path: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets
+    id_field: name
+    list_endpoint: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets
+    get_endpoint: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets('{name}')
+    create_endpoint: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets
+    create_method: POST
+    update_endpoint: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets('{name}')
+    update_method: PATCH
+    delete_endpoint: /Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Subsets('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"
+        description: Subset name — the OData entity key within the hierarchy. Immutable identity.
+      - name: dimension
+        type: string
+        required: true
+        location: Path
+        validation:
+          pattern: "^[^']+$"
+        description: >
+          Parent dimension name. Interpolated into every endpoint's `{dimension}` segment
+          (location: Path — never rides the body). Its `references` block yields the DAG edge
+          pa_dimension -> pa_subset.
+        references:
+          resource: pa_dimension
+          field: name
+      - name: hierarchy
+        type: string
+        required: true
+        location: Path
+        validation:
+          pattern: "^[^']+$"
+        description: >
+          Parent hierarchy name, interpolated into every endpoint's `{hierarchy}` segment
+          (location: Path). No `references` block: a subset commonly targets the auto-created
+          same-named hierarchy TM1 makes for every dimension, which is NOT a pa_hierarchy
+          resource — so `hierarchy` is a plain path string that may point at an auto-created
+          (unmanaged) hierarchy. Apply-ordering when it does name a pa_hierarchy is a Phase-4
+          live concern; no build-time edge is asserted here.
+      - name: elements
+        type: array
+        item_type: string
+        required: false
+        # No api_field: SubsetHandler.pre_create consumes these plain element names to build the
+        # `Elements@odata.bind` create body (a dotted, undeclared OData key the default
+        # materializer would drop — docs/troubleshoot/pre-create-body-reshape-dropped-fix.md).
+        # Elements are members of the parent hierarchy, not wxctl resources (spec Q3), so there
+        # is no `references` block. Mutually exclusive with `expression`.
+        description: >
+          Static member list. When present (non-empty), the subset is static and SubsetHandler
+          binds each name as Dimensions('{dimension}')/Hierarchies('{hierarchy}')/Elements('{e}').
+      - name: expression
+        type: string
+        required: false
+        api_field: Expression
+        description: >
+          MDX set expression defining a dynamic subset. When present (and `elements` absent), the
+          SubsetHandler falls through (HookOutcome::Continue) and the default materializer POSTs
+          `Name` + `Expression`. Mutually exclusive with `elements`.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    # elements/expression excluded from state_fields: TM1 expands Elements to full member objects
+    # on read and may normalize the MDX Expression, so neither round-trips offline — subset-body
+    # drift is a Phase-4 (live) concern.
+    state_fields:
+      - name
+    update_strategy: patch
+    use_json_patch: false
+    # Path parents are NOT in immutable_fields: the server never echoes Path fields back,
+    # so declared-vs-missing would phantom-Recreate on every re-plan (concert_workflow_schedule
+    # precedent). Parent immutability is structural: a different parent = a different identity.
+    immutable_fields:
+      - name

@@ -1,0 +1,15 @@
+---
+source: crates/wxctl/src/output/exec_snapshots_test.rs
+expression: "apply_failure_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mExecution[0m
+[38;2;125;133;144m          Type   Name           Action   Time[0m
+    [38;2;125;133;144m├─[0m [38;2;63;185;80m+[0m  tool   httpbin_tools  [38;2;63;185;80mcreated[0m  [38;2;125;133;144m1.5s[0m
+    [38;2;125;133;144m└─[0m [38;2;248;81;73m✗[0m  agent  httpbin_agent  [38;2;248;81;73mfailed[0m   [38;2;125;133;144m0.9s[0m
+  [38;2;120;169;255m▌[0m [1mErrors[0m
+
+    [38;2;248;81;73m✗[0m [1magent/httpbin_agent[0m  [38;2;125;133;144mWXCTL-E001[0m
+      HTTP 422 unprocessable entity: tool reference unresolved
+      [38;2;120;169;255mfix[0m Check the error message and fix the resource configuration
+
+[38;2;248;81;73m✗[0m [1mapply failed[0m [38;2;125;133;144m·[0m run 20260612-000000-apply-def456 [38;2;125;133;144m—[0m wxctl debug

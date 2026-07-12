@@ -1,0 +1,79 @@
+ACME CORPORATION EMPLOYEE HANDBOOK
+===================================
+
+Section 1: Paid Time Off (PTO)
+------------------------------
+All full-time employees accrue 20 days of paid time off (PTO) per calendar
+year, accrued at a rate of 1.67 days per month. After five years of service,
+the annual PTO allowance increases to 25 days. Up to 5 unused PTO days may be
+carried over into the next calendar year; carried-over days expire on March 31.
+PTO requests must be submitted in the HR portal at least two weeks in advance
+for absences of three or more consecutive days.
+
+Section 2: Remote Work Policy
+-----------------------------
+ACME operates a hybrid work model. Employees may work remotely up to three
+days per week, with Tuesdays and Thursdays designated as in-office anchor
+days. Fully remote arrangements require written approval from both the
+employee's manager and HR, and are reviewed annually. Remote employees must
+be reachable during core hours (10:00-16:00 local time) and maintain a secure
+home workspace that complies with the IT Security Standard (Section 7).
+
+Section 3: Parental Leave
+-------------------------
+Birth parents are entitled to 16 weeks of fully paid parental leave.
+Non-birth parents and adoptive parents are entitled to 8 weeks of fully paid
+leave. Parental leave may be taken continuously or split into two blocks
+within the first 12 months. To request parental leave, submit the Parental
+Leave form in the HR portal at least 30 days before the expected start date.
+
+Section 4: Sick Leave
+---------------------
+Employees receive 10 paid sick days per year, separate from PTO. Absences of
+more than three consecutive sick days require a doctor's note. Unused sick
+days do not carry over and are not paid out.
+
+Section 5: Benefits Overview
+----------------------------
+ACME provides medical, dental, and vision insurance effective on the first
+day of employment. The company matches 401(k) contributions up to 5% of base
+salary, vesting immediately. An annual wellness stipend of $500 may be spent
+on gym memberships, fitness equipment, or mental-health apps. Open enrollment
+runs every November.
+
+Section 6: Code of Conduct
+--------------------------
+Employees must treat colleagues, customers, and partners with respect.
+Harassment or discrimination of any kind is grounds for disciplinary action
+up to and including termination. Conflicts of interest must be disclosed to
+HR. Confidential company information may not be shared outside the company
+without written authorization.
+
+Section 7: IT Security Standard
+-------------------------------
+All work devices must use full-disk encryption and the company-managed VPN
+when accessing internal systems, including the employee records database.
+Multi-factor authentication is mandatory for all corporate accounts.
+Report suspected security incidents to security@acme.example.com within
+24 hours.
+
+Section 8: Performance Reviews
+------------------------------
+Performance reviews are held twice a year, in June and December. Each review
+covers goal attainment, competencies, and career development. Merit-based
+salary adjustments take effect in January following the December review
+cycle.
+
+Section 9: Expense Reimbursement
+--------------------------------
+Business expenses must be submitted in the expense system within 30 days of
+being incurred, with itemized receipts for any expense over $25. Approved
+expenses are reimbursed in the next payroll cycle. Daily meal allowance for
+business travel is $75 domestic and $100 international.
+
+Section 10: Contacting HR
+-------------------------
+The HR service desk is available Monday through Friday, 09:00-17:00, via the
+HR portal or hr@acme.example.com. For payroll questions, contact
+payroll@acme.example.com. Employee records corrections (address, banking,
+emergency contacts) are made in the HR portal under "My Profile".

@@ -1,0 +1,15 @@
+# Resources for this use case. Each document is one resource; reference others with
+# ${kind.ref_name} (or ${kind.ref_name.field}). Keep secrets as ${env:VAR}.
+# Relative file paths resolve against this file's directory.
+#
+# kind: <resource_kind>
+# ref_name: <stable_ref>
+# name: <display name>
+# ...fields...
+# ---
+# kind: test
+# ref_name: test_01
+# agent: ${agent.<ref>}
+# turns:
+#   - message: "<a question>"
+#     expect_answer: "<what a correct answer should contain>"

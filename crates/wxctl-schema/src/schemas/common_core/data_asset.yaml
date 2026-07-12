@@ -1,0 +1,96 @@
+resource:
+    name: data_asset
+    service: common_core
+    kind: data_asset
+    version: v1
+    description: >
+        A Data Asset uploads a local file such as a CSV into a space or project as a CAMS
+        data asset and exposes its asset id for downstream consumers such as an AutoAI
+        experiment's training_data_references. Create is a presigned-upload sequence:
+        POST /v2/assets creates the asset shell, POST .../attachments returns a presigned
+        target, the bytes are PUT to it, and POST .../complete finalizes the attachment.
+        Discovery enumerates the scope's data assets via the CAMS search POST
+        (/v2/asset_types/data_asset/search) and matches by name, so re-apply is
+        idempotent (no stored id needed) and destroy can resolve the asset id.
+    api:
+        base_path: /v2/assets
+        id_field: asset_id
+        list_endpoint: /v2/asset_types/data_asset/search
+        get_endpoint: /v2/assets/{asset_id}
+        create_method: POST
+        delete_method: DELETE
+        delete_endpoint: /v2/assets/{asset_id}
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Asset name (shown in the space catalog).
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: description
+              type: string
+              required: false
+              description: Human-readable description.
+            - name: mime_type
+              type: string
+              required: false
+              default: text/csv
+              description: MIME type of the uploaded file. Defaults to text/csv.
+            - name: source_path
+              type: string
+              required: true
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Local path to the file to upload. Resolved against the config file's directory.
+            - name: space_id
+              type: string
+              required: false
+              location: Query
+              description: The space ID scope.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: asset_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique id of the data asset.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: asset_id
+            list_field: results
+            list_method: post
+            list_body:
+                query: "asset.asset_type:data_asset"
+        state_fields:
+            - name
+            - description
+        update_strategy: recreate
+        immutable_fields: []
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

@@ -1,0 +1,33 @@
+kind: space
+ref_name: wxctl_test_wml_space___TEST_ID__
+name: wxctl-test-wml-space-__TEST_ID__
+type: wx
+---
+kind: software_specification
+ref_name: wxctl_test_wml_swspec___TEST_ID__
+name: wxctl-test-wml-swspec-__TEST_ID__
+base_software_specification: runtime-25.1-py3.12
+space_id: ${space.wxctl_test_wml_space___TEST_ID__}
+---
+kind: ai_service
+ref_name: wxctl_test_wml_aisvc___TEST_ID__
+name: wxctl-test-wml-aisvc-__TEST_ID__
+software_spec: ${software_specification.wxctl_test_wml_swspec___TEST_ID__}
+space_id: ${space.wxctl_test_wml_space___TEST_ID__}
+source_path: __MANIFEST_DIR__/tests/fixtures/wml_score/ai_service.py
+---
+kind: wml_deployment
+ref_name: wxctl_test_wml_deploy___TEST_ID__
+name: wxctl-test-wml-deploy-__TEST_ID__
+asset: ${ai_service.wxctl_test_wml_aisvc___TEST_ID__}
+space_id: ${space.wxctl_test_wml_space___TEST_ID__}
+online: {}
+---
+kind: test
+ref_name: test_ai_service
+deployment: ${wml_deployment.wxctl_test_wml_deploy___TEST_ID__}
+turns:
+    - payload:
+          hello: world
+      expect_response:
+          hello: world

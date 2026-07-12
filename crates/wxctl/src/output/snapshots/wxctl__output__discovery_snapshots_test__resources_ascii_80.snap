@@ -1,0 +1,15 @@
+---
+source: crates/wxctl/src/output/discovery_snapshots_test.rs
+expression: "print_grouped(&sample_rows(),\n&panel(80, ColorMode::Plain, GlyphSet::Ascii)).join(\"\\n\")"
+---
+
+  resource catalog   2 kinds - 2 products
+
+  | watsonx.data   (watsonx_data - 1 kind)
+    presto_engine   saas, software   Interactive federated SQL query engine for
+                                     the lakehouse: queries across catalogs with
+                                     autoscaling worker pods and per-tenant
+                                     t-shirt sizing.
+
+  | Cloud Object Storage   (cloud_object_storage - 1 kind)
+    s3_bucket       saas             An object-storage bucket.

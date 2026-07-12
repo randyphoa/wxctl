@@ -1,0 +1,134 @@
+resource:
+  name: concert_resilience_posture
+  service: concert
+  kind: concert_resilience_posture
+  version: v1
+  description: >
+    A Concert resilience assessment posture (GraderPostureRequest) binds a
+    concert_resilience_profile to a target (application/deployment) and schedules its
+    resilience assessment. Created via the resilience assessment API
+    (POST /resilience/assessment/api/v1/posture); create returns a bare `posture_id` while
+    read/list return the canonical `id` (used by GET/PATCH/DELETE /posture/{id}), so the
+    custom ResiliencePostureHandler maps posture_id -> id in post_create and recovers an
+    existing posture by name on a create conflict. It references its profile BY NAME
+    (profile_name -> concert_resilience_profile.name, spec Q3). Only assessment_period and
+    comments are updatable (PATCH UpdatePostureRequest); every other writable field is
+    immutable, so drift on it reconciles by replace (destroy + recreate).
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /resilience/assessment/api/v1/posture
+    id_field: id
+    list_endpoint: /resilience/assessment/api/v1/posture
+    get_endpoint: /resilience/assessment/api/v1/posture/{id}
+    create_endpoint: /resilience/assessment/api/v1/posture
+    create_method: POST
+    update_endpoint: /resilience/assessment/api/v1/posture/{id}
+    update_method: PATCH
+    delete_endpoint: /resilience/assessment/api/v1/posture/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Canonical posture id used by GET/PATCH/DELETE /posture/{id}. Create returns it under
+          the key `posture_id`; ResiliencePostureHandler.post_create injects it here as `id`.
+      - name: is_primary
+        type: boolean
+        location: Computed
+        immutable: true
+        description: Whether this is the primary posture for the deployment (server-derived, read-only).
+      - name: app_name
+        type: string
+        location: Computed
+        immutable: true
+        description: Resolved application name set by the API (audit; excluded from comparison).
+      - name: env_name
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Resolved environment name on read — the server echoes the create-body `environment`
+          here under a different key, so `environment` is excluded from comparison.
+      # ── Writable (GraderPostureRequest = Posture + environment) ──
+      - name: name
+        type: string
+        required: true
+        description: Posture name (matched on during discovery; immutable — PATCH cannot change it).
+      - name: profile_name
+        type: string
+        required: true
+        references:
+          resource: concert_resilience_profile
+          field: name
+        description: >
+          Name of the concert_resilience_profile this posture assesses against. Bound BY NAME
+          (not id) — the API's PostureRequest keys the profile by name (spec Q3). This top-level
+          reference produces the DAG edge -> the profile is ordered before the posture and
+          ${concert_resilience_profile.<ref>.name} resolves to the profile's name. Immutable
+          (create-only); on the discovered path it resolves to the literal profile name and
+          round-trips, on the deferred path the unresolved template is skipped.
+      - name: target_type
+        type: string
+        required: true
+        description: >
+          Target kind the posture scopes to (e.g. app_deployment). Server-enforced; not
+          constrained here (concert convention — no allowed_values). Immutable (create-only).
+      - name: target_name
+        type: string
+        required: true
+        description: Target name (e.g. the application) the posture assesses. Immutable (create-only).
+      - name: environment
+        type: string
+        required: false
+        description: >
+          Environment name — required by the API when target_type is 'app_deployment'. Echoed
+          on read under the server key `env_name` (different key), so excluded from comparison
+          to avoid phantom drift.
+      - name: assessment_period
+        type: string
+        required: false
+        description: >
+          Assessment period (e.g. "week", "day", "latest"). One of only two fields the PATCH
+          update verb (UpdatePostureRequest) can change -> a state_field.
+      - name: comments
+        type: string
+        required: false
+        description: >
+          Free-text comments. One of only two fields the PATCH update verb (UpdatePostureRequest)
+          can change -> a state_field.
+  reconciliation:
+    # GET /resilience/assessment/api/v1/posture returns a PaginatedPostureResponse envelope
+    # { items: [PostureResponse], pagination } -> list_field: items. The `items` key is ALREADY
+    # registered in wxctl-core ENVELOPE_KEYS / ListEnvelope, so NO core change is needed. Read
+    # carries the canonical top-level `id` (id_source: id) — the 3.0.0.0 read model is NOT
+    # id-less (spec Q6 re-resolved), so standard name-match discovery + posture_id->id remap
+    # replaces the composite-key discovery the 2.3.1.1 spec assumed. Discovery lists by name,
+    # then GETs by id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: items
+    # Only assessment_period + comments are updatable (PATCH UpdatePostureRequest) -> state_fields.
+    # Every other writable field is create-only -> immutable_fields, so drift on it reconciles by
+    # Recreate (destroy + recreate) per spec Q6. environment (echoed as env_name on read) and the
+    # Computed read-only fields are excluded from comparison to avoid phantom drift. profile_name
+    # is immutable but round-trips post-resolution (unresolved ${} is skipped on the deferred path
+    # — schema_reconciler value_has_unresolved_template).
+    state_fields:
+      - assessment_period
+      - comments
+    # PATCH /posture/{id} takes UpdatePostureRequest { assessment_period, comments } — a plain
+    # merge body pruned to state_fields. update_strategy: replace (with PATCH) sidesteps the
+    # json-patch validation guard and sends no use_json_patch, mirroring concert_automation_rule.
+    # Live content-type/body confirmation is Phase 5.
+    update_strategy: replace
+    immutable_fields:
+      - name
+      - profile_name
+      - target_type
+      - target_name

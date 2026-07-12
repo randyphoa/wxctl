@@ -1,0 +1,63 @@
+resource:
+  name: rules
+  service: common_core
+  kind: rules
+  version: v1
+  description: >
+      Rules provides bulk creation functionality for multiple governance rules
+      in a single API call. The API accepts an array of rule definitions and creates them
+      as a batch. This enables efficient loading of rule configurations from external sources
+      or migration from other governance systems.
+
+  api:
+    base_path: /v3/enforcement/rules
+    id_field: name
+    list_endpoint: /v3/enforcement/rules
+    get_endpoint: /v3/enforcement/rules/{name}
+    create_endpoint: /v3/enforcement/rules
+    create_method: POST
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        description: >
+            Name identifier for this rules operation. Used as a reference
+            within configuration files to identify the batch.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_\\s-]+$"
+
+      - name: rules
+        type: array
+        required: false
+        item_type: object
+        description: >
+            Array of rule definitions to create. Each rule object should include
+            name, description, governance_type_id, trigger, action, and optionally state.
+            The trigger should be an array representing a condition expression, and
+            the action should be an object defining the enforcement behavior.
+            Required if import_file is not specified.
+
+      - name: import_file
+        type: string
+        required: false
+        location: LocalOnly
+        is_path: true
+        description: >
+            Path to a JSON file containing rules to import. The JSON should have
+            a "rules" array with rule objects matching the rule schema.
+            Required if rules is not specified.
+
+  reconciliation:
+    discovery:
+      method: skip
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}

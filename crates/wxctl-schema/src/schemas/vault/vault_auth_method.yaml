@@ -1,0 +1,119 @@
+resource:
+  name: vault_auth_method
+  service: vault
+  kind: vault_auth_method
+  version: v1
+  description: >
+    A HashiCorp Vault auth method mount (sys/auth/{path}), enabled with type `jwt`
+    for IBM Verify / OIDC federation. Enabling the mount (POST /v1/sys/auth/{path},
+    body {"type":"jwt"}) is followed by a JWT-config sub-write
+    (POST /v1/auth/{path}/config) issued in the handler's post_create — the OIDC
+    fields ride that sub-write, not the enable body. The handler then reads back the
+    mount's `accessor` (GET /v1/sys/auth/{path}, data-unwrapped) so downstream
+    `${vault_auth_method.<ref>.accessor}` references (e.g. vault_group_alias) resolve.
+    Vault is deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/sys/auth
+    id_field: path
+    list_endpoint: /v1/sys/auth
+    get_endpoint: /v1/sys/auth/{path}
+    create_endpoint: /v1/sys/auth/{path}
+    create_method: POST
+    update_endpoint: /v1/sys/auth/{path}
+    update_method: POST
+    delete_endpoint: /v1/sys/auth/{path}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: path
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Mount path (the id) and the {path} segment on every endpoint. location: Path
+          so it fills the placeholder and never rides the enable body. Immutable: a
+          different path is a different mount.
+      - name: type
+        type: string
+        required: true
+        description: >
+          Auth method type. The ONLY field sent on the enable body
+          (POST /v1/sys/auth/{path} → {"type": <this>}). Use `jwt`.
+      - name: description
+        type: string
+        required: false
+        description: Optional human description sent on the enable body.
+      - name: oidc_discovery_url
+        type: string
+        required: true
+        location: LocalOnly
+        description: >
+          OIDC issuer BASE URL, with NO /.well-known/openid-configuration suffix —
+          Vault appends that itself and requires the fetched document's `issuer` to
+          equal this value (a full .well-known URL fails: "error checking oidc
+          discovery URL"). LocalOnly: excluded from the enable body; the handler sends
+          it on the JWT-config sub-write (POST /v1/auth/{path}/config).
+      - name: bound_issuer
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+          Expected token issuer. LocalOnly: rides the JWT-config sub-write, not the
+          enable body.
+      - name: default_role
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+          Default role for logins that omit a role. LocalOnly: rides the JWT-config
+          sub-write, not the enable body.
+      - name: accessor
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Server-assigned mount accessor, read back in post_create and surfaced by the
+          data-unwrap on discovery. Referenced by vault_group_alias.mount_accessor.
+  reconciliation:
+    # list_map discovery against GET /v1/sys/auth, which returns an object map
+    # {"data": {"jwt/": {...}}} keyed by mount path. get_by_id is unusable here: an
+    # absent auth mount 400s (GET /v1/sys/auth/{path} -> "No auth engine at jwt/"),
+    # not 404. list_map reads the map keys (trailing "/" stripped) and matches `path`.
+    # (The accessor read-back in post_create still uses GET /v1/sys/auth/{path}, which
+    # DOES return data.accessor once the mount exists — live-pinned 2026-07-10.)
+    discovery:
+      method: list_and_get
+      id_source: path
+      name_field: path
+      list_map: true
+    # Empty for the same reason as vault_policy: present/absent by mount path fully
+    # drives create-vs-noop; the JWT config lives at a different endpoint and is not
+    # round-tripped here (Phase-4 live may widen).
+    state_fields: []
+    update_strategy: replace
+    # path is not echoed by GET /v1/sys/auth/{path}; listing it would phantom-Recreate
+    # (pa_hierarchy precedent). Identity is structural via the mount path.
+    immutable_fields: []
+  prompt:
+    notes:
+      - "`path` is the mount path and the id (e.g. `jwt`); it fills every endpoint's {path} segment and is immutable."
+      - "Set `type: jwt`. The OIDC fields (`oidc_discovery_url`, `bound_issuer`, `default_role`) are written to the JWT config sub-write by the handler, not the enable call."
+      - "`oidc_discovery_url` is the issuer BASE URL (e.g. `https://verify.example.com/oidc`) — NOT the `/.well-known/openid-configuration` URL, which Vault appends itself."
+      - "`accessor` is computed (read back after enable); reference it as `${vault_auth_method.<ref>.accessor}` from a vault_group_alias."
+    examples:
+      minimal: |
+        kind: vault_auth_method
+        ref_name: ibm_verify
+        path: jwt
+        type: jwt
+        oidc_discovery_url: https://verify.example.com/oidc
+      full: |
+        kind: vault_auth_method
+        ref_name: ibm_verify
+        path: jwt
+        type: jwt
+        description: JWT auth backend for IBM Verify
+        oidc_discovery_url: https://verify.example.com/oidc
+        bound_issuer: https://verify.example.com/oidc
+        default_role: agent-role

@@ -1,0 +1,29 @@
+kind: toolkit
+ref_name: wxctl_test_mcp_python___TEST_ID__
+name: wxctl-test-mcp-python-__TEST_ID__
+description: A simple MCP hello world toolkit
+server_path: __MANIFEST_DIR__/tests/fixtures/mcp_hello_server
+mcp:
+    source: files
+    command: python
+    args: ["server.py"]
+    tools: ["*"]
+---
+kind: agent
+ref_name: wxctl_test_mcp_python_agent___TEST_ID__
+name: wxctl_test_mcp_python_agent___TEST_ID__
+display_name: Hello Agent
+description: An AI assistant that can greet people by name
+style: default
+llm: groq/openai/gpt-oss-120b
+tools:
+    - ${toolkit.wxctl_test_mcp_python___TEST_ID__.tools.hello}
+---
+kind: test
+ref_name: test_hello
+agent: ${agent.wxctl_test_mcp_python_agent___TEST_ID__}
+turns:
+    - message: "Use the hello tool to greet Alice"
+      expect_tools:
+          - hello
+      expect_answer: "The response should contain Hello, Alice"

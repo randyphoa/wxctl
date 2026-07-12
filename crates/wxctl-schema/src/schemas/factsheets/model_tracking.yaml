@@ -1,0 +1,136 @@
+resource:
+  name: model_tracking
+  service: factsheets
+  kind: model_tracking
+  version: v1
+  description: >
+      Associates a trained Watson Machine Learning model (incl. AutoAI) with a
+      governance model_entry (AI use case) so the model is tracked in a model
+      inventory. Tracking is a distinct REST sub-resource
+      (POST /v1/aigov/model_inventory/models/{model}/model_entry), not a field on
+      the model — it gets its own DAG node and apply/destroy lifecycle.
+  api:
+    base_path: /v1/aigov/model_inventory/models
+    id_field: id
+    # discovery.method: skip → get_endpoint is never called, but the schema
+    # contract test requires it non-empty, so it points at the tracking path.
+    get_endpoint: /v1/aigov/model_inventory/models/{model}/model_entry
+    create_endpoint: /v1/aigov/model_inventory/models/{model}/model_entry
+    create_method: POST
+    delete_endpoint: /v1/aigov/model_inventory/models/{model}/model_entry
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: model
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+            WML model asset id to track. Fills the {model} path segment.
+            References wml_model.id → DAG edge so tracking runs after the model.
+            also_allows wml_function (a stored deployable function) and asset_promotion
+            (track the project-side model via ${asset_promotion.x.source_asset_id} in the
+            develop stage; mirrors wml_deployment.asset).
+        references:
+          resource: wml_model
+          field: id
+          also_allows:
+            - wml_function
+            - asset_promotion
+      - name: model_entry
+        type: string
+        required: true
+        immutable: true
+        api_field: model_entry_asset_id
+        description: >
+            Target model_entry (AI use case) asset id. Sent in the create body as
+            model_entry_asset_id. References model_entry.asset_id → DAG edge.
+        references:
+          resource: model_entry
+          field: asset_id
+      - name: model_entry_catalog_id
+        type: string
+        required: true
+        description: >
+            Catalog/inventory the model_entry lives in. Sent in the create body
+            and used as the required catalog_id query on the existence-check GET.
+            References inventory.guid; reference is optional so SaaS can pass
+            ${env:WXCTL_INVENTORY_ID} (no inventory resource).
+        references:
+          resource: inventory
+          field: guid
+          optional: true
+      - name: space_id
+        type: string
+        required: false
+        immutable: true
+        location: Query
+        description: Deployment space the MODEL lives in (one of space_id/project_id/catalog_id).
+        references:
+          resource: space
+          field: id
+      - name: project_id
+        type: string
+        required: false
+        immutable: true
+        location: Query
+        description: Project the MODEL lives in (alt scope).
+        references:
+          resource: project
+          field: guid
+          optional: true
+      - name: catalog_id
+        type: string
+        required: false
+        immutable: true
+        location: Query
+        description: >
+            Catalog the MODEL lives in (alt scope). Distinct from
+            model_entry_catalog_id (where the use case lives).
+        references:
+          resource: inventory
+          field: guid
+          optional: true
+      - name: version_number
+        type: string
+        required: false
+        default: "1.0.0"
+        api_field: version_details.number
+        description: Tracked version number. The API requires a number; defaults to 1.0.0.
+      - name: version_comment
+        type: string
+        required: false
+        api_field: version_details.comment
+        description: Optional version comment.
+      - name: approach_id
+        type: string
+        required: false
+        api_field: version_details.approach_id
+        description: Optional approach id; omit to use the use case's default approach.
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Synthesized stable association id ({model}:{model_entry}); the track
+            response carries no association id of its own.
+  reconciliation:
+    # No server-assigned association id and no GET-by-id for the association, so
+    # discovery is skip: the handler does a manual existence check (GET the
+    # entry's tracked models, scan physical_models[]) in pre_create to keep apply
+    # idempotent (no duplicate tracking POST). Re-apply re-evaluates as Create
+    # (skip discovery), but the existence check makes the apply a verified no-op.
+    discovery:
+      method: skip
+      id_source: id
+    state_fields:
+      - model
+      - model_entry
+      - version_number
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields:
+      - model
+      - model_entry

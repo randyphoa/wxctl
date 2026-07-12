@@ -1,0 +1,199 @@
+resource:
+  name: instana_alerting_channel
+  service: instana
+  kind: instana_alerting_channel
+  version: v1
+  description: >
+    An Instana alerting channel (AbstractIntegration) is a notification target
+    — email, Slack, generic webhook, PagerDuty, Opsgenie, Splunk, and more —
+    that smart-alert configs route events to. Created via the Events settings
+    API (/api/events/settings/alertingChannels) and identified by a
+    client-supplied string id (3.319 rejects id-less creates); the human identifier is `name`. The `channel_type`
+    field is the polymorphic discriminator (EMAIL, SLACK, WEB_HOOK, ...; sent on
+    the wire as `kind`) selecting which per-type fields apply; the per-type fields below are a superset across
+    the mainstream channel types, all optional, so a single body shape expresses
+    any of them. Credential-shaped fields (webhookUrl, tokens, keys, secrets)
+    are marked sensitive so they are redacted at emission.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/alertingChannels
+    id_field: id
+    list_endpoint: /api/events/settings/alertingChannels
+    get_endpoint: /api/events/settings/alertingChannels/{id}
+    create_endpoint: /api/events/settings/alertingChannels
+    create_method: POST
+    update_endpoint: /api/events/settings/alertingChannels/{id}
+    update_method: PUT
+    delete_endpoint: /api/events/settings/alertingChannels/{id}
+    delete_method: DELETE
+  schema:
+    # `channel_type` is the discriminator, but declared as a plain soft_allowed_values
+    # field (NOT schema.discriminator, which would require a populated variants
+    # map). soft = warn-not-block, so future/unlisted channel kinds don't hard-fail.
+    fields:
+      # -- Client-supplied identity (3.319: POST without id -> 500) --
+      # CLIENT-SUPPLIED id (3.319 quirk): the OpenAPI models the channel id as
+      # server-assigned, but POST without an id -> HTTP 500 (the backend's
+      # upsertAlertingChannel path-escapes the body id and NPEs on null). A
+      # client-supplied id makes create deterministic and idempotent (200, the
+      # id round-trips on list/get).
+      - name: id
+        type: string
+        required: true
+        immutable: true
+        description: >
+          CLIENT-SUPPLIED alerting-channel id (Instana 3.319 rejects id-less
+          creates with a 500). Immutable — a different id is a different channel.
+      # -- Base (AbstractIntegration required: id, kind, name) --
+      # `channel_type` is the polymorphic discriminator (AbstractIntegration.kind on
+      # the wire). The wxctl field CANNOT be named `kind` — that collides with the
+      # reserved top-level `kind:` resource selector (RawResource.kind), so a config
+      # `kind: EMAIL` line errors `duplicate entry with key "kind"`. Named `channel_type`
+      # here and mapped to the wire key `kind` via api_field (requests + discovery
+      # denormalization), the proven wire-name mechanism (common_core/category.yaml
+      # parent_category → parent_category_id). soft_allowed_values = warn-not-block so
+      # future/unlisted channel kinds don't hard-fail.
+      - name: channel_type
+        type: string
+        required: true
+        api_field: kind
+        description: >
+          Channel-type discriminator selecting which per-type fields apply (sent as
+          the wire field `kind`).
+        validation:
+          soft_allowed_values:
+            - BIDIRECTIONAL_MS_TEAMS
+            - BIDIRECTIONAL_SLACK
+            - EMAIL
+            - GOOGLE_CHAT
+            - OFFICE_365
+            - OPS_GENIE
+            - PAGER_DUTY
+            - PROMETHEUS_WEBHOOK
+            - SALESFORCE
+            - SERVICE_NOW_APPLICATION
+            - SERVICE_NOW_WEBHOOK
+            - SLACK
+            - SPLUNK
+            - VICTOR_OPS
+            - WATSON_AIOPS_WEBHOOK
+            - WEBEX_TEAMS_WEBHOOK
+            - WEB_HOOK
+            - Z_CHATOPS
+      - name: name
+        type: string
+        required: true
+        description: Channel display name; Instana's human identifier (matched on during discovery).
+      # -- Per-type field superset (all optional; the active `kind` selects which apply) --
+      - name: emails
+        type: array
+        item_type: string
+        required: false
+        description: EMAIL — recipient addresses.
+      - name: webhookUrl
+        type: string
+        required: false
+        sensitive: true
+        description: SLACK / single-URL webhook — incoming webhook URL (credential; redacted at emission).
+      - name: webhookUrls
+        type: array
+        item_type: string
+        required: false
+        sensitive: true
+        description: WEB_HOOK — generic webhook target URLs (credentials; redacted at emission).
+      - name: channel
+        type: string
+        required: false
+        description: SLACK — target channel name.
+      - name: iconUrl
+        type: string
+        required: false
+        description: SLACK — message icon URL.
+      - name: headers
+        type: array
+        item_type: string
+        required: false
+        description: WEB_HOOK — extra HTTP headers sent with the webhook call.
+      - name: url
+        type: string
+        required: false
+        description: SPLUNK / generic — endpoint URL.
+      - name: token
+        type: string
+        required: false
+        sensitive: true
+        description: SPLUNK — HEC token (credential; redacted at emission).
+      - name: apiKey
+        type: string
+        required: false
+        sensitive: true
+        description: OPS_GENIE / VICTOR_OPS — API key (credential; redacted at emission).
+      - name: region
+        type: string
+        required: false
+        description: OPS_GENIE — API region.
+      - name: tags
+        type: string
+        required: false
+        description: OPS_GENIE — comma-separated alert tags.
+      - name: serviceIntegrationKey
+        type: string
+        required: false
+        sensitive: true
+        description: PAGER_DUTY — service integration key (credential; redacted at emission).
+      - name: routingKey
+        type: string
+        required: false
+        sensitive: true
+        description: VICTOR_OPS — routing key (credential; redacted at emission).
+      - name: appId
+        type: string
+        required: false
+        description: BIDIRECTIONAL_MS_TEAMS — Teams app id.
+      - name: tenantId
+        type: string
+        required: false
+        description: BIDIRECTIONAL_MS_TEAMS — Teams tenant id.
+      - name: clientId
+        type: string
+        required: false
+        description: OAuth-based channels (Teams / Salesforce) — client id.
+      - name: clientSecret
+        type: string
+        required: false
+        sensitive: true
+        description: OAuth-based channels — client secret (credential; redacted at emission).
+      - name: username
+        type: string
+        required: false
+        description: SALESFORCE / SERVICE_NOW — account username.
+      - name: password
+        type: string
+        required: false
+        sensitive: true
+        description: SALESFORCE / SERVICE_NOW — account password (credential; redacted at emission).
+      - name: salesforceUrl
+        type: string
+        required: false
+        description: SALESFORCE — instance URL.
+      - name: serviceNowUrl
+        type: string
+        required: false
+        description: SERVICE_NOW — instance URL.
+  reconciliation:
+    # GET /api/events/settings/alertingChannels returns a BARE ARRAY of
+    # AbstractIntegration (no envelope) -> no list_field. Identity match is on
+    # `name` (the schema_reconciler default), set explicitly for clarity.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars that round-trip cleanly on list/get. Per-type
+    # fields are excluded (sensitive and/or server-normalized) to avoid phantom
+    # Update{} drift; Phase 5 may widen once live round-trips are verified clean.
+    state_fields:
+      - name
+      - channel_type
+    update_strategy: replace
+    immutable_fields: []

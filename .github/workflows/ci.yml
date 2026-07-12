@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # run CI on demand (PRs are handled manually)
+
+# never cancel a run so its cache save always completes; queue superseded runs instead
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # tests don't need debug info; skipping it cuts compile time and halves the rust-cache size
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable branch
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable branch
+        with:
+          toolchain: stable
+
+      # aws-lc-sys (rustls crypto provider) assembles x86_64 asm with NASM
+      - name: Install NASM
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Test
+        # --no-fail-fast: run every crate's tests even if one fails, so a single
+        # run surfaces all failures (e.g. all platform-specific ones at once).
+        run: cargo test --locked --no-fail-fast
+
+  msrv:
+    name: MSRV (1.88)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # verifies the rust-version declared in Cargo.toml actually compiles
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable branch
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Check
+        run: cargo check --locked
+
+  scripts:
+    name: Installer scripts
+    runs-on: ubuntu-latest # pwsh and shellcheck are preinstalled on the GitHub-hosted runner
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Shellcheck install.sh
+        run: shellcheck install.sh
+
+      - name: Parse-check install.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          $path = (Resolve-Path -LiteralPath ./install.ps1).Path
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber):$($_.Extent.StartColumnNumber) $($_.Message)" }
+            throw "install.ps1 has $($errors.Count) parse error(s)"
+          }
+          Write-Host "install.ps1 parsed clean"
+
+      - name: Lint install.ps1 (PSScriptAnalyzer)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
+          # Fail on Errors; print Warnings/Info for visibility. Write-Host is
+          # intentional in an installer, so its warning is expected and non-fatal.
+          $findings = Invoke-ScriptAnalyzer -Path ./install.ps1
+          if ($findings) { $findings | Format-Table -AutoSize | Out-String | Write-Host }
+          $errs = @($findings | Where-Object { $_.Severity -eq 'Error' })
+          if ($errs.Count -gt 0) { throw "PSScriptAnalyzer reported $($errs.Count) error(s) in install.ps1" }
+          Write-Host "install.ps1 lint clean (no errors)"

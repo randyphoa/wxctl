@@ -1,0 +1,130 @@
+resource:
+  name: s3_bucket
+  service: cloud_object_storage
+  kind: s3_bucket
+  version: v1
+  description: >
+      S3-compatible bucket (IBM COS, AWS S3, MinIO, Ceph). All CRUD runs
+      inside handler `pre_*` hooks (S3 speaks XML; the engine's default
+      path is JSON). Authentication flows from the linked
+      `storage_connection` — this resource carries no creds. The
+      `LocationConstraint` on CREATE varies by the connection's `type`:
+      `{region}-{storage_class}` for `ibm_cos`, just `{region}` for AWS,
+      backend-specific for MinIO / Ceph.
+
+  api:
+    base_path: /cos/{name}
+    id_field: name
+    get_endpoint: /cos/{name}
+    create_endpoint: /cos/{name}
+    create_method: PUT
+    update_endpoint: /cos/{name}
+    update_method: PUT
+    delete_endpoint: /cos/{name}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: connection
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Reference to a `storage_connection` supplying credentials.
+            The connection's `type:` drives bucket behaviour
+            (`LocationConstraint`, storage-class validation, endpoint
+            derivation). Immutable — credential rotation happens on the
+            connection; changing which connection backs a bucket would
+            move its ownership.
+        references:
+          resource: storage_connection
+          field: ref_name
+
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        validation:
+          pattern: "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+          min_length: 3
+          max_length: 63
+          extra_rules:
+            - no_consecutive_dots
+            - not_ip_address
+            - no_reserved_prefix
+            - no_reserved_suffix
+        description: >
+            Bucket name — globally unique in the backing account's
+            namespace. Immutable.
+
+      - name: region
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Backing region. Used to derive the regional S3 endpoint and
+            the `LocationConstraint` value on bucket CREATE.
+
+      - name: storage_class
+        type: string
+        required: false
+        default: smart
+        immutable: true
+        description: >
+            Storage class. Enum validation varies by the linked
+            `storage_connection.type` — cross-resource validator
+            `WXCTL-V503`. For `ibm_cos`:
+            [standard, vault, cold, smart, onerate_active]. For
+            `aws_s3`/`amazon_s3`/`s3`: AWS classes (STANDARD,
+            STANDARD_IA, ONEZONE_IA, GLACIER, DEEP_ARCHIVE,
+            INTELLIGENT_TIERING). For `minio`/`ibm_ceph`: free-form.
+
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        validation:
+          max_items: 10
+        description: >
+            Bucket tags (max 10, per S3 limit). Mutable via PUT
+            `?tagging`; other fields are immutable.
+
+      - name: force_destroy
+        type: boolean
+        required: false
+        default: false
+        description: >
+            When true, DELETE paginates ListObjectsV2 + DeleteObjects
+            before removing the bucket. Safety cap at 10,000 objects.
+
+      - name: endpoint
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Regional endpoint derived from `region` and the linked
+            connection's type. Referenceable downstream.
+
+      - name: bucket_location
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Full `LocationConstraint` sent to S3 on CREATE — useful for
+            diagnosing region/class mismatches.
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: name
+    state_fields:
+      - tags
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - name
+      - region
+      - storage_class
+      - connection

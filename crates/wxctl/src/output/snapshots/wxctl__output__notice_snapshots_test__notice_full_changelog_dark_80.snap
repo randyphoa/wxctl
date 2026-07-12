@@ -1,0 +1,12 @@
+---
+source: crates/wxctl/src/output/notice_snapshots_test.rs
+expression: "render_changelog(ColorMode::Dark)"
+---
+
+[38;2;210;153;34mupdate[0m A new release of wxctl is available: 0.1.0 → [1m0.2.0[0m
+[38;2;125;133;144m  Run `wxctl update` to upgrade[0m
+[1mWhat's new in v0.2.0[0m
+[38;2;125;133;144m  • wxctl update: upgrade in place from the CLI[0m
+[38;2;125;133;144m  • What's new block in the post-command notice[0m
+[38;2;125;133;144m  • Disable update checks with WXCTL_NO_UPDATE_CHECK[0m
+[38;2;125;133;144m  run `wxctl update --notes` for all[0m

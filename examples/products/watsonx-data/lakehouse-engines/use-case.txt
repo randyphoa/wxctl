@@ -1,0 +1,1 @@
+Stand up a retail sales lakehouse on Software watsonx.data: register a Cloud Object Storage bucket as an Iceberg catalog with a Db2 federated catalog alongside, run the full engine zoo (Presto, Prestissimo, external Db2, and a generic external engine), and load a CSV into the lakehouse with a Spark ingestion job.

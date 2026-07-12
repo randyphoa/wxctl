@@ -1,0 +1,88 @@
+resource:
+  name: vault_audit_device
+  service: vault
+  kind: vault_audit_device
+  version: v1
+  description: >
+    A HashiCorp Vault audit device (sys/audit/{path}) — enables audit logging of every
+    request/response to a backend (type `file` writes to a log path). Enabling is an
+    idempotent upsert (PUT /v1/sys/audit/{path}) carrying `type`, `description`, and the
+    device `options`. Vault is deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/sys/audit
+    id_field: path
+    list_endpoint: /v1/sys/audit
+    # create.rs always issues POST; Vault accepts PUT and POST identically for sys/audit
+    # enable (idempotent upsert), so PUT here documents intent (vault_policy precedent).
+    get_endpoint: /v1/sys/audit/{path}
+    create_endpoint: /v1/sys/audit/{path}
+    create_method: PUT
+    update_endpoint: /v1/sys/audit/{path}
+    update_method: PUT
+    delete_endpoint: /v1/sys/audit/{path}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: path
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Audit device path (the id) and the {path} segment on every endpoint. location:
+          Path so it fills the placeholder and never rides the enable body. Immutable.
+      - name: type
+        type: string
+        required: true
+        description: >
+          Audit device type. Sent on the enable body (PUT /v1/sys/audit/{path}). Use
+          `file`.
+      - name: description
+        type: string
+        required: false
+        description: Optional human description sent on the enable body.
+      - name: options
+        type: object
+        required: false
+        description: >
+          Device-specific options (for `file`: {"file_path": "/vault/logs/audit.log"}).
+          Sent on the enable body.
+  reconciliation:
+    # list_map discovery against GET /v1/sys/audit, which returns an object map
+    # {"data": {"file/": {...}}} keyed by device path. Vault has NO per-path GET for
+    # audit devices (GET /v1/sys/audit/{path} -> 405 unsupported operation, present or
+    # not), so get_by_id can never discover one; list_map reads the map keys (trailing
+    # "/" stripped) and matches `path`. Empty map -> not present -> create. (Live-pinned
+    # 2026-07-10 against Vault/OpenBao 2.0.3; resolves the Phase-4-flagged risk.)
+    discovery:
+      method: list_and_get
+      id_source: path
+      name_field: path
+      list_map: true
+    # Present/absent by path drives create-vs-noop (vault_policy / vault_auth_method
+    # precedent); device options are not round-tripped here.
+    state_fields: []
+    update_strategy: replace
+    immutable_fields: []
+  prompt:
+    notes:
+      - "`path` is the audit device path and the id (e.g. `file`); it fills the {path} segment and is immutable."
+      - "Set `type: file` and `options.file_path` to the log destination on the Vault host."
+      - "Vault upserts by path: apply enables or replaces the device; destroy disables it."
+    examples:
+      minimal: |
+        kind: vault_audit_device
+        ref_name: file_audit
+        path: file
+        type: file
+        options:
+          file_path: /vault/logs/audit.log
+      full: |
+        kind: vault_audit_device
+        ref_name: file_audit
+        path: file
+        type: file
+        description: File audit device for the agent posture
+        options:
+          file_path: /vault/logs/audit.log
+          log_raw: "false"

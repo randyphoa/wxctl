@@ -1,0 +1,13 @@
+{
+  "name": "hello-server",
+  "version": "1.0.0",
+  "description": "Minimal MCP hello world server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.0"
+  }
+}

@@ -1,0 +1,10 @@
+---
+source: crates/wxctl/src/output/error_snapshots_test.rs
+expression: "render_top_level_error(&panel(80, ColorMode::Plain, GlyphSet::Ascii),\nPROFILE_MISSING_MSG).join(\"\\n\")"
+---
+  | Errors
+
+    x command stage  
+      failed to load profile file /nonexistent/profiles.yaml: No such file or
+      directory (os error 2)
+      fix re-run with --full-trace for the full error chain (wxctl debug)

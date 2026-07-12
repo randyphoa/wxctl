@@ -1,0 +1,37 @@
+[package]
+name = "wxctl-engine"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Pipeline orchestration engine for wxctl"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true, optional = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+dashmap = "6.2"
+regex = { workspace = true }
+tokio-util = { workspace = true }
+
+[features]
+schema = ["dep:schemars"]
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

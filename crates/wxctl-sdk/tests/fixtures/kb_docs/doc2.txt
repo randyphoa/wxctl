@@ -1,0 +1,2 @@
+This is test document two for knowledge base integration testing.
+It contains sample content about climate analysis.

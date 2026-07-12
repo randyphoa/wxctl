@@ -1,0 +1,107 @@
+resource:
+  name: sal_integration
+  service: watsonx_data
+  kind: sal_integration
+  version: v1
+  description: >
+      Enables the Semantic Automation Layer (SAL) on watsonx.data — the
+      metadata-enrichment / auto-cataloging integration that backs IKC
+      governance. SAL is a per-instance SINGLETON: get / create / delete all
+      hit `/v3/sal_integration` (SINGULAR) with no `{id}` (discovery.method:
+      singleton). Create = enable, delete = disable. `apikey` is `${env:}`-sourced
+      and excluded from drift; `engine_id` binds the query engine SAL drives.
+      No custom handler — the schema + singleton discovery + secret exclusion
+      cover the lifecycle (same pattern as db2_engine / other_engine).
+      (v3 contract: `SalIntegrationPrototype` body = apikey + engine_id +
+      storage_resource_crn/storage_type/trial_plan, required apikey+engine_id —
+      live-verified on CP4D: GET /v3/sal_integration → 200. The old v2 plural
+      `/sal_integrations` path 404s "not in the supported APIs list"; SAL was not
+      dropped, it moved to v3 singular with a restructured `/enrichment/*` tree.)
+      NOTE: an earlier handover reported POST 400 "SAL0031E: hms_connection.
+      properties.host must be supplied" — that did NOT reproduce on CP4D
+      (2026-06-05). The minimal `{apikey, engine_id, storage_type}` body enables
+      SAL with HTTP 201 against a qhmm-backed presto engine, so NO `hms_connection`
+      field is carried. (It is presumably required only for a non-qhmm / external
+      metastore path; add it as an optional nested object if that case surfaces.)
+      ⚠ The v3-singular paths + bodies here are LIVE-DISCOVERED (CP4D),
+      not derived from the OpenAPI spec — do NOT let a spec/OpenAPI refresh revert
+      them to the v2 plural `/sal_integrations` shape (which 404s "not in the
+      supported APIs list").
+
+  api:
+    base_path: /v3/sal_integration
+    id_field: engine_id
+    get_endpoint: /v3/sal_integration
+    create_endpoint: /v3/sal_integration
+    create_method: POST
+    update_endpoint: /v3/sal_integration
+    update_method: PATCH
+    delete_endpoint: /v3/sal_integration
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: apikey
+        type: string
+        required: true
+        sensitive: true
+        description: IAM apikey SAL uses to drive enrichment. `${env:}`-sourced; excluded from drift.
+
+      - name: engine_id
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Query engine SAL runs against. Accepts a ${presto_engine.<ref>.id}
+            ref (also spark_engine / prestissimo_engine) or a plain engine id.
+        references:
+          resource: presto_engine
+          field: id
+          also_allows:
+            - spark_engine
+            - prestissimo_engine
+
+      - name: storage_resource_crn
+        type: string
+        required: false
+        description: COS storage resource CRN backing SAL metadata.
+
+      - name: storage_type
+        type: string
+        required: false
+        description: >
+            Storage type, e.g. `bmcos_object_storage`. Required in practice on
+            2.3.x Software: omitting it enables SAL but leaves it in an error
+            state (SAL0050E), whereas sending `bmcos_object_storage` yields a
+            clean `status: active`. NOTE the backend REWRITES the stored value
+            (`bmcos_object_storage` → `assetfiles` on CP4D), so it is deliberately
+            excluded from `state_fields` below to avoid spurious drift on re-plan.
+            Live-discovered on CP4D 2026-06-05.
+
+      - name: trial_plan
+        type: boolean
+        required: false
+        description: Whether SAL runs under a trial plan.
+
+  reconciliation:
+    discovery:
+      method: singleton
+      # GET /v3/sal_integration returns 200 with `{"status":"missing"}` until SAL
+      # is enabled — treat that sentinel as absent so plan = Create (enable),
+      # not Update. Live-verified on CP4D 2026-06-05
+      # (full enable: POST {apikey, engine_id, storage_type} → 201 then
+      # GET → status:active; DELETE → back to status:missing).
+      absent_when:
+        field: status
+        equals: missing
+    # Intentionally EMPTY. The only candidate state field, `storage_type`, is
+    # rewritten by the backend (bmcos_object_storage → assetfiles), so comparing
+    # it would flag a phantom Update on every re-plan. SAL is an enable/disable
+    # singleton — Create / NoChange / Delete is the whole lifecycle; there is no
+    # meaningful in-place update, so no state field is compared.
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  unsupported_on: []

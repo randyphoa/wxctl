@@ -1,0 +1,165 @@
+resource:
+    name: wml_deployment
+    service: watsonx_ai
+    kind: wml_deployment
+    version: v1
+    description: >
+        A WML Deployment creates a live online endpoint from an AI service or model. Deployments expose
+        scoring and inference APIs that can be called in real time. Each deployment is scoped to a space
+        or project and references an asset (AI service) by ID.
+    api:
+        base_path: /ml/v4/deployments
+        id_field: id
+        list_endpoint: /ml/v4/deployments?version=2024-01-01
+        get_endpoint: /ml/v4/deployments/{id}?version=2024-01-01
+        create_endpoint: /ml/v4/deployments?version=2024-01-01
+        create_method: POST
+        update_endpoint: /ml/v4/deployments/{id}?version=2024-01-01
+        update_method: PATCH
+        delete_endpoint: /ml/v4/deployments/{id}?version=2024-01-01
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Deployment name.
+              validation:
+                  min_length: 1
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description.
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  Tags for categorization.
+            - name: asset
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  ID of the asset to deploy. Can reference an ai_service, wml_function, wml_script,
+                  wml_model, or a promoted asset_promotion (${asset_promotion.x.id}) resource.
+                  Immutable — pointing a deployment at a different asset requires destroy + recreate.
+              references:
+                  resource: ai_service
+                  field: id
+                  also_allows:
+                      - wml_function
+                      - wml_script
+                      - wml_model
+                      - asset_promotion
+            - name: space_id
+              type: string
+              required: false
+              also_query: true
+              description: The space ID scope. Sent in body on create, used as query param on list/get/delete.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              also_query: true
+              description: The project ID scope. Sent in body on create, used as query param on list/get/delete.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: online
+              type: object
+              required: false
+              description: >
+                  Online deployment configuration. Can be empty ({}) for defaults.
+              schema:
+                  fields:
+                      - name: serving_name
+                        type: string
+                        required: false
+                        description: >
+                            Serving name for the deployment endpoint. Must be 3-36 characters,
+                            lowercase alphanumeric and underscores only.
+                        validation:
+                            min_length: 3
+                            max_length: 36
+                            pattern: "^[a-z0-9_]+$"
+            - name: batch
+              type: object
+              required: false
+              description: >
+                  Batch deployment configuration. Can be empty ({}) for defaults.
+                  Mutually exclusive with online — a deployment is either online or batch.
+            - name: hardware_spec
+              type: object
+              required: false
+              description: >
+                  Hardware specification for the deployment.
+              schema:
+                  fields:
+                      - name: name
+                        type: string
+                        required: false
+                        description: Hardware spec name (e.g., 1l40s-48g).
+                      - name: num_nodes
+                        type: integer
+                        required: false
+                        description: Number of compute nodes.
+            - name: custom
+              type: object
+              required: false
+              description: >
+                  Arbitrary key-value metadata.
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Deployment ID.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+            - name: status
+              type: object
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Deployment status containing state and message.
+            - name: scoring_url
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  The deployment's online scoring endpoint, surfaced once the
+                  deployment reaches `ready`. Sourced from the GET response
+                  `entity.status.online_url.url` (assigned asynchronously, so absent
+                  from the create response — the `post_create` hook captures it after
+                  the readiness poll). Referenceable for an OpenScale subscription's
+                  `asset.url`, e.g. `${wml_deployment.churn_deployment.scoring_url}`.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+            list_field: resources
+        state_fields:
+            - name
+            - description
+            - tags
+            - custom
+            - online
+            - batch
+            - hardware_spec
+        update_strategy: patch
+        immutable_fields:
+            - asset
+        use_json_patch: false

@@ -1,0 +1,1 @@
+Provision the HashiCorp Vault identity-and-secrets posture that governs an AI agent's access to employee data: JWT auth for IBM Verify, an ACL policy pair, a PostgreSQL database secrets engine and dynamic-credential role, and the external identity group and alias that map an IdP group to a policy.

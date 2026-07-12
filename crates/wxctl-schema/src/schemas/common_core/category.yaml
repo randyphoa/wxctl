@@ -1,0 +1,100 @@
+resource:
+  name: category
+  service: common_core
+  kind: category
+  version: v1
+  description: >
+      A Category is a hierarchical classification structure used to organize and group data assets,
+      business terms, and other governance artifacts in Watsonx Data. Categories enable taxonomy-based
+      organization, allowing users to build multi-level hierarchies that reflect their business structure
+      and data domains. Categories can have parent-child relationships, creating a tree structure for
+      faceted navigation and discovery of data assets across the organization.
+
+  api:
+    base_path: /v3/categories
+    id_field: artifact_id
+    list_endpoint: /v3/categories
+    get_endpoint: /v3/categories/{artifact_id}
+    create_endpoint: /v3/categories
+    create_method: POST
+    update_endpoint: /v3/categories/{artifact_id}
+    update_method: PATCH
+    delete_endpoint: /v3/categories/{artifact_id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: artifact_id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Unique identifier assigned by the API during category creation. This artifact_id is used to
+            reference the category in other resources such as business terms, data assets, and child
+            categories, serving as the primary key for category management operations.
+
+      - name: name
+        type: string
+        required: true
+        description: >
+            Unique name identifier for the category within its parent scope. This name is used as the
+            primary human-readable reference and appears in governance catalogs, taxonomy browsers, and
+            asset classification interfaces. The name should clearly represent the classification concept
+            or organizational dimension this category represents.
+        validation:
+          min_length: 1
+          max_length: 255
+          pattern: "^[a-zA-Z0-9_\\s-]+$"
+
+      - name: long_description
+        type: string
+        required: false
+        description: >
+            Detailed description explaining the category's purpose, scope, and what types of assets or
+            terms should be classified under it. This description helps users understand when to apply
+            this category and provides governance context for data classification decisions. Supports
+            rich text for comprehensive documentation.
+
+      - name: parent_category
+        type: string
+        required: false
+        api_field: parent_category_id
+        description: >
+            Reference to the parent category in the hierarchy. When specified, this category becomes a
+            subcategory of the parent, enabling multi-level taxonomy structures. Categories without a
+            parent are root-level categories. This creates a soft dependency on another category resource
+            for hierarchical organization. The live `/v3/categories` create API names this field
+            `parent_category_id` on the wire (a bare `parent_category` → 400 "not allowed in request"),
+            so it is sent via `api_field`.
+        references:
+          resource: category
+          field: artifact_id
+
+      - name: created_at
+        type: timestamp
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            ISO 8601 timestamp indicating when the category was created. Automatically set by the system
+            during category creation and cannot be modified. Used for audit trails, governance tracking,
+            and lifecycle management.
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: resources
+      id_source: artifact_id
+    state_fields:
+      - name
+      - long_description
+      - parent_category
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  hooks:
+    post_create: CategoryHandler::post_create
+
+  deployments: {}
