@@ -257,6 +257,10 @@ jobs:
           set -euo pipefail
           publish() {
             local dir="$1" name="$2"
+            # npm parses a bare `a/b` publish target as a `github:a/b` spec
+            # (EALLOWGIT: "Refusing to fetch github:npm-dist/..."); force a
+            # filesystem path with a ./ prefix so it publishes the local dir.
+            case "$dir" in /*|./*|../*) ;; *) dir="./$dir" ;; esac
             # Existence check: a version already live is skipped as success and
             # logged loudly, so a re-run after a partial failure is idempotent and
             # a skip is never mistaken for a fresh publish.
