@@ -198,9 +198,13 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # ubuntu-latest ships Node 20+; OIDC trusted publishing needs npm >= 11.5.1,
-      # so upgrade npm in place rather than adding a new pinned action.
+      # so upgrade to npm@latest in place rather than adding a new pinned action.
+      # The global prefix (/usr/local) is root-owned on GitHub-hosted runners, so
+      # npm's man-page symlink step needs sudo (bare `npm i -g npm` → EACCES on
+      # /usr/local/share/man). The upgraded npm at /usr/local/bin/npm is then used
+      # by the publish step; publish runs as the runner user with its own ~/.npm.
       - name: Ensure npm supports OIDC trusted publishing
-        run: npm install -g npm@^11.5.1
+        run: sudo npm install -g npm@latest
 
       - name: Download build artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
