@@ -1,0 +1,83 @@
+resource:
+  name: monitor_definition
+  service: openscale
+  kind: monitor_definition
+  version: v1
+  description: >
+    A monitor definition registers a custom monitor type in OpenScale, declaring its metrics, thresholds, and tags.
+    Built-in monitors (quality, fairness, drift) are predefined; this kind adds user-defined ones.
+  api:
+    base_path: /v2/monitor_definitions
+    id_field: id
+    list_endpoint: /v2/monitor_definitions
+    get_endpoint: /v2/monitor_definitions/{id}
+    create_endpoint: /v2/monitor_definitions
+    create_method: POST
+    update_endpoint: /v2/monitor_definitions/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/monitor_definitions/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: name
+      type: string
+      required: true
+      description: Monitor UI label (must be unique)
+    - name: description
+      type: string
+      description: Long monitoring description presented in monitoring catalog
+    - name: metrics
+      type: array
+      required: true
+      item_type: object
+      description: A list of metric definitions
+    - name: tags
+      type: array
+      required: true
+      item_type: object
+      description: Available tags
+    - name: applies_to
+      type: object
+      description: Applicability selection for this monitor definition
+    - name: parameters_schema
+      type: object
+      description: JSON schema used to validate monitoring parameters when enabled
+    - name: managed_by
+      type: string
+    - name: schedule
+      type: object
+      description: The schedule used to control how frequently monitoring runs
+    - name: schedules
+      type: object
+      description: A set of schedules for online and batch deployment types. If set, the schedule field is ignored.
+    - name: monitor_runtime
+      type: object
+      description: Monitor runtime configuration
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: monitor_definitions
+      id_source: id
+      identity_match:
+        local_path: name
+        remote_path: entity.name
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    state_fields:
+      - name
+      - description
+      - metrics
+      - tags
+      - applies_to
+      - parameters_schema
+      - managed_by
+      - schedule
+      - schedules

@@ -1,0 +1,279 @@
+resource:
+  name: database_connection
+  service: watsonx_data
+  kind: database_connection
+  version: v1
+  description: >
+      Credential-holding kind for external database connections consumed
+      by `database_registration`. The `type:` discriminator groups
+      connectors by shape: `jdbc_relational` (Db2/Postgres/MySQL/Oracle/…),
+      `mongodb`, `kafka`, `snowflake`, `bigquery`, `redis`, `elastic`.
+      Local only — no remote API; `database_registration` walks the DAG
+      edge at apply time and assembles the v3 `DatabaseDetailsPrototype`
+      wire body from the active variant's fields.
+
+  api:
+    base_path: /local/database_connections
+    id_field: ref_name
+    get_endpoint: /local/database_connections/{ref_name}
+    create_endpoint: /local/database_connections
+    create_method: POST
+    delete_endpoint: /local/database_connections/{ref_name}
+    delete_method: DELETE
+
+  schema:
+    discriminator: type
+    fields:
+      - name: type
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Connector type. Drives the active variant — fields outside
+            the active variant emit WXCTL-V401 (warn); unknown types
+            likewise warn rather than block.
+        validation:
+          soft_allowed_values:
+            - db2
+            - postgresql
+            - mysql
+            - oracle
+            - mssql
+            - informix
+            - netezza
+            - sap_hana
+            - teradata
+            - mongodb
+            - kafka
+            - snowflake
+            - bigquery
+            - redis
+            - elastic
+
+    variants:
+      jdbc_relational:
+        applies_to:
+          - db2
+          - postgresql
+          - mysql
+          - oracle
+          - mssql
+          - informix
+          - netezza
+          - sap_hana
+          - teradata
+        fields:
+          - name: hostname
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: name
+            type: string
+            required: true
+            description: Database name on the remote server (e.g. `BLUDB`).
+          - name: username
+            type: string
+            required: true
+          - name: password
+            type: string
+            required: true
+            sensitive: true
+          - name: ssl
+            type: boolean
+            required: false
+          - name: certificate
+            type: string
+            required: false
+          - name: certificate_extension
+            type: string
+            required: false
+          - name: hostname_in_certificate
+            type: string
+            required: false
+          - name: validate_server_certificate
+            type: boolean
+            required: false
+
+      mongodb:
+        applies_to:
+          - mongodb
+        fields:
+          - name: hosts
+            type: string
+            required: true
+          - name: username
+            type: string
+            required: false
+          - name: password
+            type: string
+            required: false
+            sensitive: true
+          - name: authentication_type
+            type: string
+            required: false
+          - name: authentication_value
+            type: string
+            required: false
+            sensitive: true
+          - name: connection_mode
+            type: string
+            required: false
+          - name: connection_mode_value
+            type: string
+            required: false
+          - name: ssl
+            type: boolean
+            required: false
+
+      kafka:
+        applies_to:
+          - kafka
+        fields:
+          - name: broker_host
+            type: string
+            required: true
+          - name: broker_port
+            type: integer
+            required: true
+          - name: broker_authentication_type
+            type: string
+            required: false
+          - name: broker_authentication_user
+            type: string
+            required: false
+          - name: broker_authentication_password
+            type: string
+            required: false
+            sensitive: true
+          - name: sasl
+            type: boolean
+            required: false
+          - name: sasl_mechanism
+            type: string
+            required: false
+          - name: service_hostname
+            type: string
+            required: false
+          - name: service_port
+            type: integer
+            required: false
+          - name: service_ssl
+            type: boolean
+            required: false
+          - name: service_api_key
+            type: string
+            required: false
+            sensitive: true
+          - name: service_username
+            type: string
+            required: false
+          - name: service_password
+            type: string
+            required: false
+            sensitive: true
+          - name: service_token_url
+            type: string
+            required: false
+
+      snowflake:
+        applies_to:
+          - snowflake
+        fields:
+          - name: hostname
+            type: string
+            required: true
+          - name: username
+            type: string
+            required: true
+          - name: password
+            type: string
+            required: false
+            sensitive: true
+          - name: warehouse_name
+            type: string
+            required: true
+          - name: authentication_type
+            type: string
+            required: false
+          - name: authentication_value
+            type: string
+            required: false
+            sensitive: true
+
+      bigquery:
+        applies_to:
+          - bigquery
+        fields:
+          - name: project_id
+            type: string
+            required: true
+          - name: credentials_key
+            type: string
+            required: true
+            sensitive: true
+
+      redis:
+        applies_to:
+          - redis
+        fields:
+          - name: hostname
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: password
+            type: string
+            required: false
+            sensitive: true
+          - name: ssl
+            type: boolean
+            required: false
+
+      elastic:
+        applies_to:
+          - elastic
+        fields:
+          - name: hostname
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: username
+            type: string
+            required: false
+          - name: password
+            type: string
+            required: false
+            sensitive: true
+          - name: ssl
+            type: boolean
+            required: false
+          - name: controller_authentication_type
+            type: string
+            required: false
+          - name: controller_authentication_user
+            type: string
+            required: false
+          - name: controller_authentication_password
+            type: string
+            required: false
+            sensitive: true
+
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: ref_name
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - type
+
+  deployments:
+    "software-5.3":
+      api: {}
+  unsupported_on: []

@@ -1,0 +1,89 @@
+# Agent identity posture — the intra-Vault posture that governs an AI agent's
+# access to employee data: a file audit device, JWT auth for IBM Verify and its
+# role, an ACL policy pair, a PostgreSQL database secrets engine + dynamic-
+# credential role, and the external identity group + alias that map an IdP group
+# to a policy. All eight vault_* kinds, wired by the ${vault.*} reference DAG.
+# Credential-free: the DB password comes from ${env:EMPLOYEE_DB_PASSWORD} and
+# verify_connection is false, so it applies without a reachable database.
+kind: vault_audit_device
+ref_name: file_audit
+path: file
+type: file
+options:
+  file_path: /vault/logs/audit.log
+---
+kind: vault_auth_method
+ref_name: ibm_verify
+path: jwt
+type: jwt
+description: JWT auth backend for IBM Verify
+# oidc_discovery_url is the OIDC issuer BASE URL with NO /.well-known/openid-configuration
+# suffix (Vault appends it, then requires the doc's `issuer` to equal this value).
+oidc_discovery_url: https://verify.example.com/oidc
+bound_issuer: https://verify.example.com/oidc
+default_role: agent-role
+---
+kind: vault_jwt_role
+ref_name: agent_role
+name: agent-role
+backend: ${vault_auth_method.ibm_verify.path}
+role_type: jwt
+bound_audiences:
+  - vault
+user_claim: sub
+groups_claim: groupIds
+token_ttl: 3600
+token_max_ttl: 86400
+token_policies:
+  - default
+---
+kind: vault_policy
+ref_name: hr_basic
+name: hr-basic-policy
+policy_file: resources/hr-basic-policy.hcl
+---
+kind: vault_policy
+ref_name: hr_admin
+name: hr-admin-policy
+policy_file: resources/hr-admin-policy.hcl
+---
+kind: vault_secret_engine
+ref_name: employee_db
+path: database
+type: database
+description: Employee database dynamic-credentials engine
+db_name: employee-db
+plugin_name: postgresql-database-plugin
+connection_url: postgresql://{{username}}:{{password}}@postgres:5432/employees?sslmode=disable
+username: vault_admin
+password: ${env:EMPLOYEE_DB_PASSWORD}
+allowed_roles:
+  - hr-basic-reader
+verify_connection: false
+---
+kind: vault_database_role
+ref_name: hr_basic_reader
+name: hr-basic-reader
+mount: ${vault_secret_engine.employee_db.path}
+db_name: employee-db
+creation_statements:
+  - "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
+  - "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
+default_ttl: 3600
+max_ttl: 86400
+---
+kind: vault_identity_group
+ref_name: hr_basic
+name: hr-basic-group
+type: external
+policies:
+  - ${vault_policy.hr_basic.name}
+metadata:
+  description: Basic HR staff mapped from the IBM Verify groupIds claim
+  source: IBM Verify groupIds claim
+---
+kind: vault_group_alias
+ref_name: hr_basic
+name: hr-basic
+mount_accessor: ${vault_auth_method.ibm_verify.accessor}
+canonical_id: ${vault_identity_group.hr_basic.id}

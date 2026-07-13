@@ -1,0 +1,47 @@
+# Collaborator chain E2E test — verifies agent-to-agent delegation.
+# Mirrors ADK customer_care example (primary agent delegates to specialist).
+# Placeholders: __TEST_ID__ (uuid), __MANIFEST_DIR__ (crate root)
+kind: tool
+ref_name: wxctl_test_tool___TEST_ID__
+name: wxctl_test_tool___TEST_ID__
+display_name: wxctl_test_tool___TEST_ID__
+description: A calculator tool that can add and multiply numbers
+permission: read_write
+is_async: false
+source_path: __MANIFEST_DIR__/tests/fixtures/calculator_tool
+binding:
+    python:
+        function: calculator:main
+---
+kind: agent
+ref_name: wxctl_test_math_agent___TEST_ID__
+name: wxctl_test_math_agent___TEST_ID__
+display_name: wxctl_test_math_agent___TEST_ID__
+description: >
+  You are a math specialist agent. Use the calculator tool to perform all calculations.
+  Always use the tool rather than calculating yourself.
+llm: groq/openai/gpt-oss-120b
+style: react
+tools:
+  - ${tool.wxctl_test_tool___TEST_ID__}
+collaborators: []
+---
+kind: agent
+ref_name: wxctl_test_primary_agent___TEST_ID__
+name: wxctl_test_primary_agent___TEST_ID__
+display_name: wxctl_test_primary_agent___TEST_ID__
+description: >
+  You are a general assistant. You do not have direct access to any tools.
+  When the user asks a math question, delegate to your math specialist collaborator.
+llm: groq/openai/gpt-oss-120b
+style: react
+tools: []
+collaborators:
+  - ${agent.wxctl_test_math_agent___TEST_ID__}
+---
+kind: test
+ref_name: test_delegation
+agent: ${agent.wxctl_test_primary_agent___TEST_ID__}
+turns:
+  - message: "What is 42 multiplied by 17?"
+    expect_answer: "The result should be 714"

@@ -1,0 +1,93 @@
+resource:
+  name: vault_policy
+  service: vault
+  kind: vault_policy
+  version: v1
+  description: >
+    A HashiCorp Vault ACL policy (sys/policies/acl/{name}). The policy body is HCL
+    granting path-scoped capabilities. Vault writes are idempotent upserts keyed by
+    name (the name IS the id), so create and update target the same endpoint and there
+    is no server create/update distinction. Read returns the policy wrapped in a
+    top-level `data` object, which the shared vault envelope handler unwraps. The
+    `policy_file` field (LocalOnly, is_path) points at a local .hcl file resolved
+    against the config file's directory; the vault PolicyHandler reads its contents
+    into `policy` before the write. Vault is deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/sys/policies/acl
+    id_field: name
+    list_endpoint: /v1/sys/policies/acl
+    get_endpoint: /v1/sys/policies/acl/{name}
+    # create.rs always issues POST; Vault accepts PUT and POST identically for policy
+    # writes (idempotent upsert). update_method is honored on update, which the empty
+    # state_fields below never triggers in the Phase-1 skeleton.
+    create_endpoint: /v1/sys/policies/acl/{name}
+    create_method: PUT
+    update_endpoint: /v1/sys/policies/acl/{name}
+    update_method: PUT
+    delete_endpoint: /v1/sys/policies/acl/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          ACL policy name — the id and the {name} path segment on every endpoint.
+          location: Path so it fills the endpoint placeholder and never rides the
+          request body (Vault's write body is {"policy": "<hcl>"} only). Immutable:
+          a different name is a different policy.
+      - name: policy
+        type: string
+        required: false
+        description: >
+          ACL policy body as HCL. Sent as {"policy": <this>} on write. Normally
+          supplied indirectly via `policy_file` (PolicyHandler reads the file into this
+          field in pre_create/pre_update); may also be set inline.
+      - name: policy_file
+        type: string
+        required: false
+        location: LocalOnly
+        is_path: true
+        description: >
+          Local path to a .hcl policy file, resolved against the config file's
+          directory. PolicyHandler reads its contents into `policy`. LocalOnly: never
+          sent to Vault.
+  reconciliation:
+    # get_by_id off the client-supplied name: GET /v1/sys/policies/acl/{name} ->
+    # 200 (present, state-compare) / 404 (absent, create). id_source is `name`,
+    # which build_get_by_id_spec substitutes into {name}.
+    discovery:
+      method: get_by_id
+      id_source: name
+    # state_fields is intentionally EMPTY for the walking skeleton: name-based
+    # discovery (present/absent) fully drives create-vs-noop, guaranteeing an
+    # idempotent re-plan WITHOUT depending on Vault round-tripping the HCL `policy`
+    # body verbatim. Widening to [policy] (drift-on-edit) is deferred until a live
+    # round-trip confirms clean HCL normalization — same reasoning as
+    # concert_credential / instana_maintenance_window and
+    # docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md.
+    state_fields: []
+    update_strategy: replace
+    immutable_fields:
+      - name
+  prompt:
+    notes:
+      - "`name` is the policy name and the id; it fills the {name} path segment and is immutable (a different name is a different policy)."
+      - "Supply the HCL body via `policy_file` (a path to a local .hcl file, resolved against the config file's directory) — the handler reads it into `policy`. You may instead set `policy` inline."
+      - "Vault upserts by name: apply creates or replaces the policy; re-apply of an unchanged config is a no-op; destroy deletes it by name."
+    examples:
+      minimal: |
+        kind: vault_policy
+        ref_name: hr_basic
+        name: hr-basic
+        policy_file: hr-basic-policy.hcl
+      full: |
+        kind: vault_policy
+        ref_name: hr_admin
+        name: hr-admin
+        policy: |
+          path "secret/data/hr/*" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+          }

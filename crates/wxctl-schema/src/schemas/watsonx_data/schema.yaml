@@ -1,0 +1,110 @@
+resource:
+  name: schema
+  service: watsonx_data
+  kind: schema
+  version: v1
+  description: >
+      A Schema is a logical grouping of tables within a watsonx.data catalog. Schemas are
+      created on a specific Presto engine, rooted at a custom path within the catalog's
+      backing bucket. The API offers no GET-by-id and no PATCH — schemas are immutable
+      after creation, so any field change triggers recreate (delete + create). Discovery
+      is list-based: the list endpoint returns a flat array of schema names, which the
+      handler matches against the local `name` to determine presence.
+
+  api:
+    base_path: /v3/catalogs/{catalog_id}/schemas
+    id_field: name
+    list_endpoint: /v3/catalogs/{catalog_id}/schemas
+    get_endpoint: /v3/catalogs/{catalog_id}/schemas
+    create_endpoint: /v3/catalogs/{catalog_id}/schemas
+    create_method: POST
+    delete_endpoint: /v3/catalogs/{catalog_id}/schemas/{name}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Schema name (unique within the catalog). Also used as the `{name}` path segment
+            on delete.
+        validation:
+          min_length: 1
+          max_length: 1024
+
+      - name: custom_path
+        type: string
+        required: true
+        immutable: true
+        description: >
+            Path within the catalog's backing bucket where the schema will be created
+            (e.g., `sales/raw`). Must not collide with other schemas in the same bucket.
+        validation:
+          min_length: 0
+          max_length: 2000
+
+      - name: storage_name
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Name of the bucket associated with the catalog. Defaults to the catalog's
+            primary bucket when omitted.
+        validation:
+          min_length: 0
+          max_length: 128
+
+      - name: catalog_id
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+            Id of the parent catalog. Interpolated into the create, list, and delete paths.
+        references:
+          resource: catalog
+          field: id
+          also_allows: [storage_registration]
+
+      - name: engine_id
+        type: string
+        required: true
+        immutable: true
+        location: Query
+        description: >
+            Id of the Presto engine to run the schema DDL against. Sent as `?engine_id=...`
+            on both create and delete. References a `presto_engine` resource.
+        references:
+          resource: presto_engine
+          field: id
+
+  reconciliation:
+    # The list endpoint returns a bare array of schema name strings
+    # (`{"schemas": ["e2e_sample"]}`) — no custom_path/storage_name/
+    # catalog_id/engine_id, and there is no per-item GET to fill them in.
+    # Comparing those fields against a remote that can never carry them
+    # guaranteed a permanent phantom-diff -> Recreate on every single apply
+    # (live-confirmed 2026-07-02: a schema with real ingested data hit this
+    # and failed destroy with Presto's "Database is not empty"). Only `name`
+    # is discoverable, so only `name` belongs in state_fields, and
+    # immutable_fields must be empty — `compare()` checks immutable_fields
+    # independently of state_fields (see schema_reconciler.rs `compare()`),
+    # so leaving the other fields there still phantom-Recreated even after
+    # trimming state_fields alone. Same empty-immutable_fields shape as
+    # ingestion_job under the accumulate model.
+    discovery:
+      method: list_and_get
+      list_field: schemas
+      id_source: name
+    state_fields:
+      - name
+    update_strategy: recreate
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments:
+    "software-5.3":
+      api: {}
+  unsupported_on: []

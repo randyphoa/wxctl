@@ -1,0 +1,151 @@
+resource:
+    name: toolkit
+    service: watsonx_orchestrate
+    kind: toolkit
+    version: v1
+    description: >
+        An MCP (Model Context Protocol) toolkit backed by a local or remote MCP server.
+        wxctl packages the server source into a ZIP artifact and uploads it to the
+        /v1/toolkits API. Supports local servers (file-based with command) and remote
+        servers (URL with transport).
+
+    api:
+        base_path: /v1/orchestrate/toolkits
+        id_field: id
+        list_endpoint: /v1/orchestrate/toolkits
+        get_endpoint: /v1/orchestrate/toolkits/{id}
+        create_method: POST
+        delete_method: DELETE
+
+    schema:
+        fields:
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Server-generated UUID for the toolkit.
+            - name: name
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Display name of the toolkit. Used for discovery matching
+                  and must be unique within the tenant.
+            - name: description
+              type: string
+              required: true
+              description: Human-readable description of the toolkit.
+            - name: mcp
+              type: object
+              required: false
+              description: >
+                  MCP server configuration. Defines how the runtime connects
+                  to or starts the MCP server.
+              properties:
+                  source:
+                      type: string
+                      description: Source type for the MCP server.
+                      allowed_values: [files, public-registry]
+                  server_url:
+                      type: string
+                      description: URL of remote MCP server.
+                  transport:
+                      type: string
+                      description: Transport protocol for remote MCP server.
+                      allowed_values: [streamable_http, sse]
+                  command:
+                      type: string
+                      description: Command to start the local MCP server (e.g., node, python).
+                  args:
+                      type: array
+                      description: Arguments for the start command.
+                  env:
+                      type: object
+                      description: Environment variables for the MCP server.
+                  tools:
+                      type: array
+                      description: >
+                          Tool filter. Use ["*"] to import all tools. Specific tool names
+                          to import a subset.
+                  connections:
+                      type: object
+                      description: >
+                          Connection mappings for MCP server authentication. Maps runtime
+                          app_id to connection_id UUID.
+                      references:
+                          resource: orchestrate_connection
+                          field: connection_id
+                          optional: true
+            - name: server_path
+              type: string
+              required: false
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Path to an MCP server source directory. Used with source: files.
+                  The directory is packaged as a ZIP and uploaded to the toolkits API.
+            - name: artifact
+              type: object
+              required: false
+              location: LocalOnly
+              description: Internal reference to the generated ZIP artifact.
+              properties:
+                  path:
+                      type: string
+                      description: Local filesystem path to the ZIP artifact.
+            - name: tags
+              type: array
+              required: false
+              location: LocalOnly
+              item_type: string
+              description: >
+                  Local-only tags used internally by the artifact build pipeline.
+                  The toolkit API does not support tags — these are not
+                  persisted remotely or used in reconciliation.
+
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+        state_fields:
+            - name
+            - description
+            - mcp
+        update_strategy: recreate
+        immutable_fields:
+            - name
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "MCP toolkits route to /v1/toolkits (not /v1/tools)."
+            - "Local toolkits (source: files) require server_path pointing to the MCP server directory."
+            - "Prefer a single-file Python entrypoint for local toolkits: command: python, args: [server.py]. This runs as-is with no build step. Do NOT use a compiled entrypoint like node + dist/index.js — that requires a separate build the pipeline does not run, so the upload fails."
+            - "Remote toolkits require server_url and transport instead of server_path."
+            - "The connections field maps runtime IDs to orchestrate_connection app_ids."
+        examples:
+            minimal: |
+                kind: toolkit
+                ref_name: banking
+                name: banking
+                description: MCP banking server
+                server_path: ./resources/server/banking
+                mcp:
+                    source: files
+                    command: python
+                    args: ["server.py"]
+                    tools: ["*"]
+            full: |
+                kind: toolkit
+                ref_name: banking
+                name: banking
+                description: An MCP server for banking operations
+                server_path: ./resources/server/banking
+                mcp:
+                    source: files
+                    command: python
+                    args: ["server.py"]
+                    tools: ["getBalance", "transfer"]
+                    connections:
+                        bank_api: ${orchestrate_connection.bank_conn}

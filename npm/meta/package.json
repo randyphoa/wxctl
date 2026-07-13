@@ -1,0 +1,19 @@
+{
+  "name": "wxctl",
+  "version": "0.0.0-managed-by-generate.mjs",
+  "description": "Declarative CLI for managing IBM product resources",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/randyphoa/wxctl",
+  "repository": { "type": "git", "url": "git+https://github.com/randyphoa/wxctl.git" },
+  "bin": { "wxctl": "bin/wxctl.mjs" },
+  "files": ["bin"],
+  "engines": { "node": ">=18" },
+  "optionalDependencies": {
+    "@randyphoa/wxctl-darwin-x64": "0.0.0-managed-by-generate.mjs",
+    "@randyphoa/wxctl-darwin-arm64": "0.0.0-managed-by-generate.mjs",
+    "@randyphoa/wxctl-linux-x64-gnu": "0.0.0-managed-by-generate.mjs",
+    "@randyphoa/wxctl-linux-arm64-gnu": "0.0.0-managed-by-generate.mjs",
+    "@randyphoa/wxctl-win32-x64": "0.0.0-managed-by-generate.mjs",
+    "@randyphoa/wxctl-win32-arm64": "0.0.0-managed-by-generate.mjs"
+  }
+}

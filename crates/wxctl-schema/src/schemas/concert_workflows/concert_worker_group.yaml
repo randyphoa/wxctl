@@ -1,0 +1,77 @@
+resource:
+  name: concert_worker_group
+  service: concert_workflows
+  kind: concert_worker_group
+  version: v1
+  description: >
+    A Concert Workflows (Pliant) worker group — a named pool that flow runs and schedules
+    execute on. Name-keyed CRUD in the worker-group API: create POST /v1/worker-group (name in
+    body), read/update/delete at /v1/worker-group/{name}, discovery lists GET /v1/worker-group
+    (a bare array). Create and update return NO body, so WorkerGroupHandler GETs the group after
+    each write to capture server state (worker statistics; echoes the join `secret`). Software-only.
+  unsupported_on: [saas]
+  api:
+    base_path: /v1/worker-group
+    id_field: name
+    list_endpoint: /v1/worker-group
+    get_endpoint: /v1/worker-group/{name}
+    create_endpoint: /v1/worker-group
+    create_method: POST
+    update_endpoint: /v1/worker-group/{name}
+    update_method: PUT
+    delete_endpoint: /v1/worker-group/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        description: "Worker-group name — the natural key (id_field: name, {name} path segment). Immutable."
+      - name: description
+        type: string
+        required: false
+        description: Free-text worker-group description.
+      - name: validate_certificates
+        type: boolean
+        required: false
+        api_field: validateCertificates
+        description: Whether workers validate TLS certificates when connecting.
+      - name: meta
+        type: object
+        required: false
+        description: WorkerGroupMeta — free-form worker-group metadata (server-shaped; passed through).
+      - name: proxy_settings
+        type: object
+        required: false
+        api_field: proxySettings
+        description: WorkerGroupProxySettings — optional proxy config (server-shaped; passed through).
+      # ── Server state captured by WorkerGroupHandler GET-after-write ──
+      - name: secret
+        type: string
+        required: false
+        description: >
+          Worker-group join secret. The API rejects a null secret on create (server-side
+          validation the OpenAPI DTO does not document — live-observed HTTP 400 "secret: must
+          not be null"), so WorkerGroupHandler.pre_create generates a random one when the config
+          omits it. Auto-redacted (the "secret" key is in wxctl-core redaction SENSITIVE_FIELDS).
+      - name: worker_statistics
+        type: object
+        required: false
+        location: Computed
+        immutable: true
+        api_field: workerStatistics
+        description: Server-reported worker statistics; read-only, captured on GET-after-write.
+  reconciliation:
+    # GET /v1/worker-group returns a BARE ARRAY of WorkerGroupDto → no list_field. WorkerGroupDto
+    # has `name` → default identity match on "name" is correct (no name_field). id_source: name.
+    discovery:
+      method: list_and_get
+      id_source: name
+    state_fields:
+      - description
+      - validate_certificates
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields:
+      - name

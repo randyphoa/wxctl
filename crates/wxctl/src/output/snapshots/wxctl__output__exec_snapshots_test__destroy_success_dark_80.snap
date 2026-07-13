@@ -1,0 +1,11 @@
+---
+source: crates/wxctl/src/output/exec_snapshots_test.rs
+expression: "destroy_success_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mExecution[0m
+[38;2;125;133;144m          Type                    Name            Action   Time[0m
+    [38;2;125;133;144m├─[0m [38;2;248;81;73m-[0m  agent                   httpbin_agent   [38;2;248;81;73mdeleted[0m  [38;2;125;133;144m0.4s[0m
+    [38;2;125;133;144m├─[0m [38;2;248;81;73m-[0m  tool                    httpbin_tools   [38;2;248;81;73mdeleted[0m  [38;2;125;133;144m0.4s[0m
+    [38;2;125;133;144m└─[0m [38;2;248;81;73m-[0m  orchestrate_connection  httpbin_bearer  [38;2;248;81;73mdeleted[0m  [38;2;125;133;144m0.3s[0m
+
+[38;2;63;185;80m✓[0m [1mdestroy:[0m [38;2;248;81;73m-3 deleted[0m [38;2;125;133;144m·[0m [38;2;125;133;144m1.1s[0m

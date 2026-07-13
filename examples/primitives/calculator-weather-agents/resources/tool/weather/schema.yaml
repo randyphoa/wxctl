@@ -1,0 +1,29 @@
+input_schema:
+    type: object
+    properties:
+        city:
+            type: string
+            description: The name of the city to get the weather forecast for (e.g. "New York", "London", "Tokyo").
+    required:
+        - city
+output_schema:
+    type: object
+    description: Weather forecast result for the requested city
+    properties:
+        city:
+            type: string
+        temperature_f:
+            type: number
+            description: Temperature in Fahrenheit
+        condition:
+            type: string
+            description: Current weather condition
+        humidity:
+            type: number
+            description: Humidity percentage
+        wind_mph:
+            type: number
+            description: Wind speed in miles per hour
+        forecast:
+            type: string
+            description: Human-readable weather forecast summary

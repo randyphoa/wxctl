@@ -1,0 +1,13 @@
+input_schema:
+    type: object
+    properties:
+        message:
+            type: string
+            description: The user's message to echo back
+output_schema:
+    type: object
+    properties:
+        status:
+            type: string
+        message:
+            type: string

@@ -1,0 +1,107 @@
+resource:
+    name: wml_function
+    service: watsonx_ai
+    kind: wml_function
+    version: v1
+    description: >
+        A Python function asset stored in Watson Machine Learning. Functions are deployable code
+        artifacts that accept input data and return predictions. The function code is uploaded as
+        a gzipped Python file after creation. Functions use a closure pattern: an outer function
+        sets up the environment and returns an inner `score(payload)` function that handles requests.
+    api:
+        base_path: /ml/v4/functions
+        id_field: id
+        list_endpoint: /ml/v4/functions?version=2024-01-01
+        get_endpoint: /ml/v4/functions/{id}?version=2024-01-01
+        create_endpoint: /ml/v4/functions?version=2024-01-01
+        create_method: POST
+        update_endpoint: /ml/v4/functions/{id}?version=2024-01-01
+        update_method: PATCH
+        delete_endpoint: /ml/v4/functions/{id}?version=2024-01-01
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Function name.
+              validation:
+                  min_length: 1
+                  max_length: 250
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description.
+              validation:
+                  max_length: 1000
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  Tags for categorization.
+            - name: software_spec
+              type: string
+              required: true
+              description: >
+                  Software specification ID. References a software_specification asset.
+              references:
+                  resource: software_specification
+                  field: asset_id
+            - name: space_id
+              type: string
+              required: false
+              also_query: true
+              description: The space ID scope. Sent in body on create, used as query param on list/get/delete.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              also_query: true
+              description: The project ID scope. Sent in body on create, used as query param on list/get/delete.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: custom
+              type: object
+              required: false
+              description: >
+                  Arbitrary key-value metadata.
+            - name: source_path
+              type: string
+              required: false
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Local path to Python source file. Used by the post_create hook to upload code.
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Function ID.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+            list_field: resources
+        state_fields:
+            - name
+            - description
+            - tags
+            - custom
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: false

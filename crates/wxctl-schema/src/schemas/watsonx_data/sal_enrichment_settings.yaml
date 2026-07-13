@@ -1,0 +1,71 @@
+resource:
+  name: sal_enrichment_settings
+  service: watsonx_data
+  kind: sal_enrichment_settings
+  version: v1
+  description: >
+      Per-project metadata-enrichment settings for the Semantic Automation Layer
+      (SAL) on watsonx.data. A per-instance SINGLETON scoped by a required
+      `project_id` query param: get and set both hit
+      `/v3/sal_integration/enrichment/project_settings?project_id=<id>`
+      (discovery.method: singleton). Set = PUT (v3 uses PUT, not the v2 POST).
+      `project_id` is a `location: Query` field — it reaches the discovery GET via
+      the materialized Singleton arm and the create PUT via the request
+      materializer. No DELETE endpoint — destroy is a no-op via
+      `on_destroy: retain` (the fixture sets it). No custom handler; the body is
+      the same two pass-through objects as `sal_global_settings`. Requires SAL
+      enabled first (`sal_integration`). Identical on SaaS and Software.
+      ⚠ The v3 path + PUT method + `project_id` query scope are LIVE-DISCOVERED
+      (CP4D) — do NOT let a spec/OpenAPI refresh revert this to the v2
+      `POST /sal_integrations/...` shape.
+
+  api:
+    base_path: /v3/sal_integration/enrichment/project_settings
+    id_field: id
+    get_endpoint: /v3/sal_integration/enrichment/project_settings
+    create_endpoint: /v3/sal_integration/enrichment/project_settings
+    create_method: PUT
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Unused id slot (the settings endpoint returns no id); satisfies id_field.
+
+      - name: project_id
+        type: string
+        required: true
+        immutable: true
+        location: Query
+        description: >
+            Project these enrichment settings apply to. Sent as the `project_id`
+            query param on GET (discovery) and POST (create). Source via `${env:}`.
+
+      - name: semantic_expansion
+        type: object
+        required: false
+        description: >
+            Semantic-expansion config — description/name generation toggles and
+            assignment/suggestion thresholds. Pass-through object per the SAL spec.
+
+      - name: term_assignment
+        type: object
+        required: false
+        description: >
+            Term-assignment config — class/LLM/ML-based assignment toggles and
+            term assignment/suggestion thresholds. Pass-through object per the SAL spec.
+
+  reconciliation:
+    discovery:
+      method: singleton
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

@@ -1,0 +1,74 @@
+[package]
+name = "wxctl"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Declarative CLI for managing IBM product resources"
+
+[[bin]]
+name = "wxctl"
+path = "src/main.rs"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-engine = { path = "../wxctl-engine", version = "0.1" }
+wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+wxctl-compose = { path = "../wxctl-compose", version = "0.1" }
+wxctl-sdk = { path = "../wxctl-sdk", version = "0.1" }
+wxctl-mcp = { path = "../wxctl-mcp", version = "0.1" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+parking_lot = { workspace = true }
+dirs = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+indicatif = "0.18"
+console = "0.16"
+terminal-colorsaurus = "1.0.3"
+update-informer = { version = "1.3", default-features = false, features = ["ureq", "rustls-tls"] }
+semver = { workspace = true }
+ureq = "3"
+sha2 = { workspace = true }
+self-replace = "1"
+
+[features]
+otel = ["wxctl-core/otel"]
+
+[dev-dependencies]
+tempfile = { workspace = true }
+insta = "1"
+wxctl-compose = { path = "../wxctl-compose", version = "0.1" }
+wxctl-compose-core = { path = "../wxctl-compose-core", version = "0.1" }
+rmcp = { workspace = true, features = ["client", "transport-child-process"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-util", "process"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+
+[lints]
+workspace = true
+
+[target.'cfg(unix)'.dependencies]
+flate2 = { workspace = true }
+tar = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
+
+[target.'cfg(unix)'.dev-dependencies]
+flate2 = { workspace = true }
+tar = "0.4"
+
+[target.'cfg(windows)'.dev-dependencies]
+zip = { version = "8.6", default-features = false, features = ["deflate"] }

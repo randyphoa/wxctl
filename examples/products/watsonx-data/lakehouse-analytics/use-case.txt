@@ -1,0 +1,1 @@
+Build a retail sales lakehouse: land daily sales CSVs in a Cloud Object Storage bucket, register it as an Iceberg catalog alongside a Db2 federated catalog, query both with Presto and Spark, and run a Spark ingestion job that loads the CSV into an Iceberg table for analytics.

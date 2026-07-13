@@ -1,0 +1,88 @@
+resource:
+  name: concert_environment
+  service: concert
+  kind: concert_environment
+  version: v1
+  description: >
+    A Concert environment is a deployment target (e.g. a cluster, region, or
+    stage) tracked in IBM Concert's inventory. Created via the Concert core API
+    (/core/api/v1/environments) and identified by a server-assigned UUID.
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /core/api/v1/environments
+    id_field: id
+    list_endpoint: /core/api/v1/environments
+    get_endpoint: /core/api/v1/environments/{id}
+    create_endpoint: /core/api/v1/environments
+    create_method: POST
+    update_endpoint: /core/api/v1/environments/{id}
+    update_method: PATCH
+    delete_endpoint: /core/api/v1/environments/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned environment UUID (returned at top-level `id` on create).
+      - name: last_updated_on
+        type: integer
+        location: Computed
+        immutable: true
+        description: Epoch-millis last-update timestamp set by the API.
+      # ── Writable (EnvironmentPrototype — all optional) ──
+      - name: name
+        type: string
+        required: false
+        description: Environment display name.
+      - name: description
+        type: string
+        required: false
+        description: Free-text environment description.
+      - name: type
+        type: string
+        required: false
+        description: >
+          Environment type. Server-enforced enum (Concert 3.0.0.0): one of
+          ec2, eks, rosa, iks, roks, zOS, kubernetes, ocp, concert_workflows, Other.
+      - name: region
+        type: string
+        required: false
+        description: Environment region.
+      - name: purpose
+        type: string
+        required: false
+        description: Environment purpose (e.g. production, staging, dev).
+      - name: tags
+        type: array
+        required: false
+        item_type: string
+        description: >
+          Environment tags. Writable on create but enriched/reshaped by the API on read
+          (EntityTags in, TagsPrototype out), so excluded from state_fields to avoid phantom drift.
+  reconciliation:
+    # GET /core/api/v1/environments returns { environments: [...], pagination }; the
+    # `environments` envelope key is registered in wxctl-core ENVELOPE_KEYS (Task 1.3).
+    # Discovery lists by name, then GETs by the server-assigned id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: environments
+    # state_fields = writable scalars that round-trip cleanly on GET. `tags` is a writable
+    # Body field but excluded because the API enriches it on read (EntityTags in, TagsPrototype
+    # out), causing phantom Update{} drift
+    # (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Concert 3.0.0.0's
+    # EnvironmentPrototype has no `associations` field (2.3.1.1 did) — dropped to match.
+    # Phase 4 may widen once live round-trips are verified clean (spec Invariant I4).
+    # Concert's LIST response (which discovery compares against) is a SUMMARY that omits
+    # `description` and `region` (verified live 3.0.0.0). They are still sent on create but
+    # excluded here to avoid a phantom Update every re-plan.
+    state_fields:
+      - name
+      - type
+      - purpose
+    update_strategy: replace
+    immutable_fields: []

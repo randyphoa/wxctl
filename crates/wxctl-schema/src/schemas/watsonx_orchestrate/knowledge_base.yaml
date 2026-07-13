@@ -1,0 +1,380 @@
+resource:
+    name: knowledge_base
+    service: watsonx_orchestrate
+    kind: knowledge_base
+    version: v1
+    description: >
+        A Knowledge Base provides document-based context and information retrieval capabilities for agents. Knowledge Bases
+        can be created by uploading documents or connecting to external vector indexes, enabling agents to perform conversational
+        search and retrieve relevant information to answer user queries with grounded, factual responses. Documents are processed
+        through configurable chunking strategies, embedded using models like ibm/slate-125m-english-rtrvr-v2, and indexed
+        for semantic search. The conversational search tool provides advanced features including query rewriting, confidence
+        thresholds, citation display, HAP (Hate/Abuse/Profanity) filtering, and configurable response generation.
+    api:
+        base_path: /v1/orchestrate/knowledge-bases
+        id_field: id
+        list_endpoint: /v1/orchestrate/knowledge-bases
+        get_endpoint: /v1/orchestrate/knowledge-bases/{id}
+        create_endpoint: /v1/orchestrate/knowledge-bases/documents
+        create_method: POST
+        update_endpoint: /v1/orchestrate/knowledge-bases/{id}/documents
+        update_method: PATCH
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Unique UUID identifier for the knowledge base, automatically assigned by the API during creation. Used for
+                  referencing and managing the knowledge base.
+            - name: tenant_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  UUID of the tenant that owns this knowledge base. Automatically assigned by the system for multi-tenancy
+                  isolation and access control.
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Unique name identifier for the knowledge base. Used as the primary reference for the knowledge base within
+                  the system and must be unique across all knowledge bases in the tenant.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: display_name
+              type: string
+              required: false
+              description: >
+                  Human-readable display name shown in the UI. This is the friendly name that users will see when browsing
+                  or selecting knowledge bases for their agents.
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Textual description explaining what content and information this knowledge base contains. Helps users understand
+                  the scope and subject matter of the knowledge base.
+            - name: prioritize_built_in_index
+              type: boolean
+              required: false
+              description: >
+                  When both a built-in vector index and external index are available, this flag determines which to prioritize
+                  for search queries. True (default) prioritizes the built-in index managed by Watsonx Orchestrate.
+              default: true
+            - name: created_by
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  User ID of the person who created this knowledge base. Automatically captured during creation for audit
+                  trail and ownership tracking.
+            - name: updated_at
+              type: timestamp
+              required: false
+              location: Computed
+              description: >
+                  ISO 8601 timestamp of the most recent update to this knowledge base. Automatically maintained by the system
+                  to track modification history.
+            - name: representation
+              type: string
+              required: false
+              description: >
+                  Defines how the knowledge base is represented and accessed by agents. The 'tool' representation exposes
+                  the knowledge base as a callable tool that agents can invoke for information retrieval.
+              default: tool
+              allowed_values: [tool]
+            - name: vector_index
+              type: object
+              required: false
+              description: >
+                  Configuration for the built-in vector index that enables semantic search over ingested documents. Defines
+                  how documents are processed, chunked, embedded, and retrieved during conversational search operations.
+              schema:
+                  fields:
+                      - name: embeddings_model_name
+                        type: string
+                        required: false
+                      - name: chunk_size
+                        type: integer
+                        required: false
+                      - name: chunk_overlap
+                        type: integer
+                        required: false
+                      - name: status
+                        type: string
+                        required: false
+                        allowed_values: [ready, not_ready, rebuilding, error, update_pending]
+                      - name: status_msg
+                        type: string
+                        required: false
+                      - name: top_k
+                        type: integer
+                        required: false
+                        default: 10
+                      - name: extraction_strategy
+                        type: string
+                        required: false
+                        allowed_values: [express, standard, high_quality]
+            - name: conversational_search_tool
+              type: object
+              required: false
+              description: >
+                  Comprehensive configuration for the conversational search tool that enables natural language querying over
+                  the knowledge base. Controls retrieval behavior, response generation, confidence thresholds, citations,
+                  and other advanced search features.
+              schema:
+                  fields:
+                      - name: language
+                        type: string
+                        required: false
+                        default: en
+                      - name: index_config
+                        type: array
+                        required: false
+                        item_type: object
+                      - name: generation
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+                            {
+                                "model_id": "meta-llama/llama-3-1-70b-instruct",
+                                "prompt_instruction": "When the documents are in different languages, you should respond in
+                            english.",
+                                "max_docs_passed_to_llm": 5,
+                                "retrieval_confidence_threshold": "Lowest",
+                                "generated_response_length": "Moderate",
+                                "response_confidence_threshold": "Low",
+                                "display_text_no_results_found": "no docs found",
+                                "display_text_connectivity_issue": "conn failed",
+                            }
+                        schema:
+                            fields:
+                                - name: model_id
+                                  type: string
+                                  required: false
+                                - name: prompt_instruction
+                                  type: string
+                                  required: false
+                                  default: ''
+                                - name: max_docs_passed_to_llm
+                                  type: integer
+                                  required: false
+                                  default: 5
+                                - name: generated_response_length
+                                  type: string
+                                  required: false
+                                  allowed_values: [Concise, Moderate, Verbose]
+                                - name: display_text_no_results_found
+                                  type: string
+                                  required: false
+                                  default: I searched my knowledge base, but did not find anything related to your query
+                                - name: display_text_connectivity_issue
+                                  type: string
+                                  required: false
+                                  default: I might have information related to your query to share, but am unable to connect
+                                      to my knowledge base at the moment
+                                - name: idk_message
+                                  type: string
+                                  required: false
+                                  default: I'm afraid I don't understand. Please rephrase your question.
+                                - name: enabled
+                                  type: boolean
+                                  required: false
+                                  default: false
+                      - name: query_rewrite
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+
+                            {
+                                "enabled": True,
+                                "model_id": "meta-llama/llama-3-1-70b-instruct"
+                            }
+                        schema:
+                            fields:
+                                - name: enabled
+                                  type: boolean
+                                  required: false
+                                  default: true
+                                - name: model_id
+                                  type: string
+                                  required: false
+                      - name: confidence_thresholds
+                        type: object
+                        required: false
+                        schema:
+                            fields:
+                                - name: retrieval_confidence_threshold
+                                  type: string
+                                  required: false
+                                  allowed_values: [Off, Lowest, Low, High, Highest]
+                                - name: response_confidence_threshold
+                                  type: string
+                                  required: false
+                                  allowed_values: [Off, Lowest, Low, High, Highest]
+                      - name: citations
+                        type: object
+                        required: false
+                        description: "example:\n{\n    \"citation_title\": \"how do i know\",\n    \"citations_shown\": 5,\n\
+                            }"
+                        schema:
+                            fields:
+                                - name: citation_title
+                                  type: string
+                                  required: false
+                                  default: How do we know?
+                                - name: citations_shown
+                                  type: integer
+                                  required: false
+                                  default: -1
+                      - name: hap_filtering
+                        type: object
+                        required: false
+                        description: >
+                            example
+
+                            {
+                                "output": {
+                                    "enabled": True,
+                                    "threshold": 0.7,
+                                }
+                            }
+                        schema:
+                            fields:
+                                - name: output
+                                  type: object
+                                  required: false
+                                  schema:
+                                      fields:
+                                          - name: enabled
+                                            type: boolean
+                                            required: false
+                                            default: false
+                                          - name: threshold
+                                            type: float
+                                            required: false
+                                            default: 0.5
+                      - name: query_source
+                        type: string
+                        required: false
+                        allowed_values: [SessionHistory, Agent]
+                      - name: agent_query_description
+                        type: string
+                        required: false
+                        default: The query to search for in the knowledge base
+                      - name: supports_full_document
+                        type: boolean
+                        required: false
+                        default: false
+            - name: documents
+              type: array
+              required: false
+              location: LocalOnly
+              item_type: object
+              description: >
+                  Array of document objects to ingest into the knowledge base via multipart form upload. Each document specifies
+                  a local file path to upload and optionally a source URL for metadata tracking. Documents are processed,
+                  chunked, and indexed for semantic search.
+              properties:
+                  path:
+                      type: string
+                      is_path: true
+                      description: >
+                          Local filesystem path to the document file to upload. Supported formats typically include PDF, text,
+                          and other document types that can be processed for indexing.
+                  url:
+                      type: string
+                      description: >
+                          Optional source URL for the document. Stored as metadata to track the original location or reference
+                          for the uploaded document.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+        state_fields:
+            - name
+            - display_name
+            - description
+            - prioritize_built_in_index
+            - representation
+            - vector_index
+            - conversational_search_tool
+        update_strategy: patch
+        immutable_fields: []
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "A minimal knowledge base requires only a `name`. In practice, always include `description` and `documents` so the knowledge base has content to search over."
+            - "Documents are uploaded via multipart form. Each document entry needs a `path` (local file) and optionally a `url` (source metadata)."
+            - "Knowledge bases are referenced from agents using `${knowledge_base.<ref_name>}` syntax."
+            - "The `vector_index` controls how documents are chunked and embedded. The `extraction_strategy` values (`express`, `standard`, `high_quality`) trade speed for accuracy."
+            - "The `conversational_search_tool` controls retrieval behavior, response generation, confidence thresholds, citations, and HAP filtering."
+        examples:
+            minimal: |
+                kind: knowledge_base
+                ref_name: ops_kb
+                name: ops_kb
+                description: Runbooks and incident history
+                documents:
+                  - path: ./knowledge/runbooks.txt
+            full: |
+                kind: knowledge_base
+                ref_name: datapower_ops_kb
+                name: datapower_ops_kb
+                display_name: DataPower Operations Knowledge Base
+                description: Historical DataPower incidents, root causes, resolutions, and operational runbooks
+                prioritize_built_in_index: true
+                representation: tool
+                vector_index:
+                  embeddings_model_name: ibm/slate-125m-english-rtrvr-v2
+                  chunk_size: 512
+                  chunk_overlap: 128
+                  top_k: 10
+                  extraction_strategy: standard
+                conversational_search_tool:
+                  language: en
+                  generation:
+                    model_id: meta-llama/llama-3-1-70b-instruct
+                    prompt_instruction: "When the documents are in different languages, respond in english."
+                    max_docs_passed_to_llm: 5
+                    generated_response_length: Moderate
+                    display_text_no_results_found: "No relevant documents found for your query."
+                    display_text_connectivity_issue: "Unable to connect to the knowledge base at this time."
+                    idk_message: "I'm not sure I understand. Could you rephrase your question?"
+                    enabled: true
+                  query_rewrite:
+                    enabled: true
+                    model_id: meta-llama/llama-3-1-70b-instruct
+                  confidence_thresholds:
+                    retrieval_confidence_threshold: Lowest
+                    response_confidence_threshold: Low
+                  citations:
+                    citation_title: "How do we know?"
+                    citations_shown: 5
+                  hap_filtering:
+                    output:
+                      enabled: false
+                      threshold: 0.5
+                  query_source: SessionHistory
+                  agent_query_description: The query to search for in the knowledge base
+                  supports_full_document: false
+                documents:
+                  - path: ./knowledge/incident_history.txt
+                  - path: ./knowledge/datapower_runbooks.txt
+                  - path: ./knowledge/troubleshooting_guide.pdf
+                    url: https://wiki.example.com/datapower/troubleshooting
+
+  # TODO: Add hooks if needed
+  # hooks:
+  #   post_create: service::handlers::kind::function_name

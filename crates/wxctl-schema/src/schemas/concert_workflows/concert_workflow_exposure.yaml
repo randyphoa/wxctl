@@ -1,0 +1,94 @@
+resource:
+  name: concert_workflow_exposure
+  service: concert_workflows
+  kind: concert_workflow_exposure
+  version: v1
+  description: >
+    A Concert Workflows (Pliant) flow exposure — publishes a flow at an HTTP path so it can be
+    triggered. Create POST /v1/flow-exposures/{user_name} (body ExposureDto: flowUri, path,
+    meta.authentication.authorizationPolicy, meta.sync). The API has NO GET-by-id → discovery
+    lists GET /v1/flow-exposures/{user_name} (a bare ExposureDto array) and matches on `path`
+    (precedent: concert_compliance_profile list-and-match). Update/delete take the exposure path
+    as an ?exposurePath= query param, filled from id_field: path via placeholder substitution.
+    Software-only; concert_workflows service (own host + Basic auth realm under /workflows/api).
+  unsupported_on: [saas]
+  api:
+    base_path: /v1/flow-exposures
+    id_field: path
+    list_endpoint: /v1/flow-exposures/{user_name}
+    get_endpoint: /v1/flow-exposures/{user_name}
+    create_endpoint: /v1/flow-exposures/{user_name}
+    create_method: POST
+    update_endpoint: /v1/flow-exposures/{user_name}?exposurePath={path}
+    update_method: PUT
+    delete_endpoint: /v1/flow-exposures/{user_name}?exposurePath={path}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: user_name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Pliant user namespace that owns the exposure. Fills {user_name} on every endpoint.
+          Immutable. Precedent for a non-id Path segment: factsheets/model_tracking.yaml {model}.
+      - name: path
+        type: string
+        required: true
+        immutable: true
+        description: >
+          Exposure HTTP path — the natural key within user_name (id_field: path). Sent in the
+          create/update body as `path` AND, on update/delete, substituted into ?exposurePath={path}
+          via id_field placeholder filling (the {path} placeholder MUST equal id_field — see
+          docs/troubleshoot/endpoint-placeholder-must-match-id-field-fix.md). Immutable (recreate).
+      - name: flow_uri
+        type: string
+        required: true
+        api_field: flowUri
+        description: >
+          URI of the flow to expose. References the computed flow_uri on concert_workflow (top-
+          level field ⇒ real graph edge → the flow applies first).
+        references:
+          resource: concert_workflow
+          field: flow_uri
+      - name: authorization_policy
+        type: string
+        required: true
+        api_field: meta.authentication.authorizationPolicy
+        allowed_values: [Myself, Admins, Everyone]
+        description: >
+          Who may trigger the exposed flow. Nested into meta.authentication.authorizationPolicy on
+          the body (materializer dotted api_field, arbitrary depth — see
+          wxctl-core/src/client/materializer.rs insert_nested). Admins keeps the trigger behind
+          Basic auth. Hard-enforced via top-level allowed_values (validation.enum is not a real
+          DSL key — ValidationRules has no `enum` field and lacks deny_unknown_fields, so it would
+          silently no-op; allowed_values is the mechanism validate_schema actually checks).
+      - name: sync
+        type: boolean
+        required: true
+        api_field: meta.sync
+        description: Whether the exposure runs the flow synchronously (meta.sync).
+  reconciliation:
+    # GET /v1/flow-exposures/{user_name} returns a BARE ExposureDto array (no envelope) → no
+    # list_field needed (ListEnvelope::from_value() auto-detects a bare array; precedent:
+    # watsonx_orchestrate/agent.yaml). The kind has NO `name` field → name_field: path (else
+    # discovery defaults to "name" and errors WXCTL-R001 — docs/troubleshoot/
+    # discovery-name-field-missing-for-nameless-kinds-fix.md).
+    discovery:
+      method: list_and_get
+      id_source: path
+      name_field: path
+    # Writable body fields that round-trip on read; flow_uri excluded (a resolved ${...} ref may
+    # not byte-match the server-normalized flowUri → phantom drift). Phase 3 (I4) confirms live.
+    state_fields:
+      - authorization_policy
+      - sync
+    update_strategy: replace
+    use_json_patch: false
+    # Path-located identity fields (user_name/folder) are deliberately NOT listed in
+    # immutable_fields: the API never echoes them in any response body, so a local-vs-remote
+    # compare would phantom-Recreate on every re-plan (live-proven). Changing them still
+    # recreates in practice - the new identity misses discovery => plans a Create.
+    immutable_fields:
+      - path

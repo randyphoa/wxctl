@@ -1,0 +1,35 @@
+---
+source: crates/wxctl/src/output/discovery_snapshots_test.rs
+expression: "explain_presto(&panel(100, ColorMode::Dark, GlyphSet::Unicode))"
+---
+
+  [1mpresto_engine[0m   [38;2;125;133;144mwatsonx.data[0m · [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m
+  [38;2;125;133;144mid field · id[0m
+
+  [38;2;120;169;255m▌[0m [1mEndpoints[0m
+    [38;2;125;133;144mcreate[0m   [38;2;125;133;144mPOST  [0m   /v3/presto_engines
+    [38;2;125;133;144mget   [0m   [38;2;125;133;144mGET   [0m   /v3/presto_engines/{id}
+    [38;2;125;133;144mlist  [0m   [38;2;125;133;144mGET   [0m   /v3/presto_engines?limit=100
+    [38;2;125;133;144mupdate[0m   [38;2;125;133;144mPATCH [0m   /v3/presto_engines/{id}
+    [38;2;125;133;144mdelete[0m   [38;2;125;133;144mDELETE[0m   /v3/presto_engines/{id}
+
+  [38;2;120;169;255m▌[0m [1mFields[0m   [38;2;125;133;144m(required first)[0m
+    display_name          [38;2;125;133;144mstring       [0m   [1mrequired[0m            [38;2;125;133;144mBody[0m
+    origin                [38;2;125;133;144mstring       [0m   [1mrequired[0m            [38;2;125;133;144mBody[0m
+    configuration         [38;2;125;133;144mobject       [0m   [1mrequired[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mBody[0m
+    description           [38;2;125;133;144mstring       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    associated_catalogs   [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    tags                  [38;2;125;133;144marray<string>[0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    status                [38;2;125;133;144mstring       [0m   [38;2;125;133;144moptional[0m            [38;2;125;133;144mBody[0m
+    id                    [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    external_host_name    [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+    host_name             [38;2;125;133;144mstring       [0m   [38;2;125;133;144mcomputed[0m   [38;2;125;133;144mlocked[0m   [38;2;125;133;144mComputed[0m
+
+  [38;2;120;169;255m▌[0m [1mDependencies[0m
+    associated_catalogs  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${storage_registration.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+    associated_catalogs  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${database_registration.<ref_name>}[0m   [38;2;125;133;144moptional[0m
+
+  [38;2;120;169;255m▌[0m [1mAuthoring[0m
+    [38;2;125;133;144menvelope  [0m [38;2;125;133;144mA config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).[0m
+    [38;2;125;133;144mref_name  [0m [38;2;125;133;144mUnique handle for this resource within the config. Used to reference it from other resources, then stripped before the API call (not a schema field).[0m
+    [38;2;125;133;144mreference [0m [38;2;125;133;144mReference another resource by its ref_name: `${<kind>.<ref_name>}` resolves to its id, `${<kind>.<ref_name>.<field>}` to a specific field. Values resolve late, at plan/apply time.[0m

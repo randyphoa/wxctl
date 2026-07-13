@@ -1,0 +1,99 @@
+resource:
+  name: vault_database_role
+  service: vault
+  kind: vault_database_role
+  version: v1
+  description: >
+    A role on a Vault database secrets engine ({mount}/roles/{name}) — binds the SQL
+    creation statements and lease TTLs Vault uses to mint dynamic database credentials.
+    Created via an idempotent upsert (POST /v1/{mount}/roles/{name}, 204). Listed with
+    ?list=true (the {"data":{"keys":[...]}} envelope, bare role names). The `mount` field
+    references the parent vault_secret_engine by its `path`; `db_name` must match the
+    engine's connection name. Vault is deployment-flavor-neutral (no unsupported_on).
+  api:
+    base_path: /v1/{mount}/roles
+    id_field: name
+    list_endpoint: /v1/{mount}/roles?list=true
+    get_endpoint: /v1/{mount}/roles/{name}
+    create_endpoint: /v1/{mount}/roles/{name}
+    create_method: POST
+    update_endpoint: /v1/{mount}/roles/{name}
+    update_method: POST
+    delete_endpoint: /v1/{mount}/roles/{name}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: Role name — the id and the {name} path segment. Immutable.
+      - name: mount
+        type: string
+        required: true
+        location: Path
+        description: >
+          Parent database secrets-engine mount path. location: Path — fills every
+          endpoint's {mount} segment, never rides the body. Its references block yields the
+          DAG edge vault_secret_engine -> vault_database_role.
+        references:
+          resource: vault_secret_engine
+          field: path
+      - name: db_name
+        type: string
+        required: true
+        description: >
+          Database connection name this role issues credentials against — must match the
+          parent vault_secret_engine's `db_name`. Rides the create body.
+      - name: creation_statements
+        type: array
+        item_type: string
+        required: true
+        description: >
+          SQL/plugin statements Vault runs to create a dynamic user (e.g. CREATE ROLE ...).
+          Rides the create body.
+      - name: default_ttl
+        type: integer
+        required: false
+        description: Default lease TTL (seconds) for credentials issued by this role.
+      - name: max_ttl
+        type: integer
+        required: false
+        description: Maximum lease TTL (seconds) for credentials issued by this role.
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: name
+    # Present/absent by name drives create-vs-noop (vault_jwt_role precedent); role config
+    # is not round-tripped here (Phase-4 live may widen).
+    state_fields: []
+    update_strategy: replace
+    # name/mount are structural (endpoint path); the role read does not echo them, so
+    # listing them would phantom-Recreate (pa_hierarchy / vault_jwt_role precedent).
+    immutable_fields: []
+  prompt:
+    notes:
+      - "`name` is the role name and id; `mount` is the parent database engine mount path — set it to `${vault_secret_engine.<ref>.path}`."
+      - "`db_name` must match the engine's connection name; `creation_statements` is the array of SQL Vault runs to mint a dynamic user."
+      - "`default_ttl` / `max_ttl` bound the credential lease lifetime (seconds)."
+    examples:
+      minimal: |
+        kind: vault_database_role
+        ref_name: employee_reader
+        name: employee-reader
+        mount: ${vault_secret_engine.employee_db.path}
+        db_name: employee-db
+        creation_statements:
+          - "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
+      full: |
+        kind: vault_database_role
+        ref_name: employee_reader
+        name: employee-reader
+        mount: ${vault_secret_engine.employee_db.path}
+        db_name: employee-db
+        creation_statements:
+          - "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
+          - "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"
+        default_ttl: 3600
+        max_ttl: 86400

@@ -1,0 +1,135 @@
+resource:
+  name: concert_workflow
+  service: concert_workflows
+  kind: concert_workflow
+  version: v1
+  description: >
+    A Concert Workflows (Pliant) flow, imported from a local zip. Pliant has no JSON create for
+    flows — WorkflowHandler multipart-imports the zip
+    (POST /v1/flows/{user_name}/import?folder=…&overwrite=…, folder carrying the user prefix:
+    /{user_name}{folder}) in pre_create (overwrite=ERROR) and re-imports in pre_update
+    (overwrite=OVERWRITE), owning the write (HookOutcome::Handled); per-file import status codes
+    are HTTP-style (2xx = success, 409 = already exists under ERROR mode, 424 = target user
+    unknown/addressing wrong — not the legacy 0=ok convention). The API has no surrogate id: a
+    flow is keyed by (user_name, folder, name) and its server content `hash` is the drift signal.
+    Discovery lists the flow's folder (GET /v1/folders/{user_name}?folder={folder}, list_field:
+    flows — the `flows` key is absent entirely when the folder is empty, so an absent key reads as
+    an empty list; a 404 means the folder itself doesn't exist) matched on name. A `POST
+    /v1/search/flows` was considered but abandoned: an empty search body matches nothing (it needs
+    name/folder criteria), so it can't enumerate a folder's contents. WorkflowHandler hoists a
+    computed flow_uri ("{user_name}{folder}{name}") for downstream refs
+    (concert_workflow_exposure.flow_uri, concert_workflow_schedule.flow_urn). Delete is a
+    folder+name query DELETE. Software-only; distinct concert_workflows service (own host + Basic
+    auth realm under the /workflows/api path prefix).
+  unsupported_on: [saas]
+  api:
+    base_path: /v1/flows
+    id_field: name
+    list_endpoint: /v1/folders/{user_name}?folder={folder}
+    get_endpoint: /v1/flows/{user_name}?folder={folder}&name={name}
+    create_endpoint: /v1/flows/{user_name}/import
+    create_method: POST
+    update_endpoint: /v1/flows/{user_name}/import
+    update_method: POST
+    delete_endpoint: /v1/flows/{user_name}?folder={folder}&name={name}&deleteRelated=false
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: user_name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Pliant user namespace that owns the flow. Fills {user_name} on the import/get/delete
+          endpoints; WorkflowHandler reads it to build the multipart import URL and the computed
+          flow_uri. Immutable (rename is a spec Non-Goal). Precedent for a non-id Path segment:
+          factsheets/model_tracking.yaml {model}.
+      - name: folder
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Folder path the flow lives under, in the API's canonical slash-wrapped form — the value
+          MUST be written "/segment/" (e.g. "/wxctl/"; a bare "wxctl" 400s against the folders and
+          flows APIs). Path-located so it materializes verbatim into ?folder= on the folders-GET
+          list and the flow get/delete endpoints. WorkflowHandler derives the import target
+          ("/{user_name}{folder}") and the computed flow_uri ("{user_name}{folder}{name}") from it
+          by straight concatenation — no separator insertion, since the slashes already live in
+          this value. On read the server returns the folder+name as `path` (no user prefix), e.g.
+          "/wxctl/wxctl-hello". Immutable.
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        location: Path
+        description: >
+          Flow name — the natural key within (user_name, folder). id_field: name; the folder-list
+          item (ItemDto.name) is matched on it. Materializes into ?name= on get/delete. Immutable.
+      - name: source_path
+        type: string
+        required: true
+        location: LocalOnly
+        is_path: true
+        description: >
+          Local path to the flow zip to import (relative to the config file or absolute).
+          is_path: true ⇒ build.rs adds it to PATH_FIELDS ⇒ resolved against the config dir by
+          resolve_file_paths; LocalOnly so it is never sent to the API. WorkflowHandler uploads it
+          multipart in pre_create/pre_update.
+      - name: flow_uri
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+          Computed flow reference "{user_name}{folder}{name}" (straight concatenation — folder is
+          already slash-wrapped), hoisted by WorkflowHandler (into the pre_create/pre_update
+          Handled response and onto the discovered folder-list item in post_discover). Referenced
+          by concert_workflow_exposure.flow_uri and concert_workflow_schedule.flow_urn (top-level
+          field ⇒ real graph edge).
+      - name: hash
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+          Server-computed flow content hash (ItemDto.hash) — the drift/version signal. State field
+          for drift; the local desired state carries no hash, so compare skips it (stable re-plan,
+          spec I4). Phase 3 confirms live and may add a local-content-hash drift path.
+      - name: platform
+        type: string
+        required: false
+        location: Computed
+        description: Server-reported flow platform (ItemDto.platform); read-only.
+      - name: language
+        type: string
+        required: false
+        location: Computed
+        description: Server-reported flow language (ItemDto.language); read-only.
+  reconciliation:
+    # Discovery lists the flow's folder: GET /v1/folders/{user_name}?folder={folder} returns
+    # {path, name, flows: [{name, path, platform, hash, …}]} — list_field: flows pulls that array,
+    # and the key is ABSENT ENTIRELY (not an empty array) when the folder is empty, so an absent
+    # key reads as an empty list (see wxctl-engine's declared-list_field GET path); a 404 means the
+    # folder itself doesn't exist. Matched on name (default identity match; no name_field needed).
+    # POST /v1/search/flows was tried and abandoned: an empty SearchDto body matches NOTHING (it
+    # needs name/folder criteria to filter on), so it cannot enumerate a folder's contents.
+    # Same-name-across-folders disambiguation is a live concern for a multi-folder cell (this cell
+    # is single-user/single-folder).
+    discovery:
+      method: list_and_get
+      id_source: name
+      list_field: flows
+    # hash is the sole drift signal; local desired carries none so compare is stability-safe.
+    # Phase 3 (I4) confirms the live round-trip set and may widen.
+    state_fields:
+      - hash
+    update_strategy: replace
+    use_json_patch: false
+    # Path-located identity fields (user_name/folder) are deliberately NOT listed in
+    # immutable_fields: the API never echoes them in any response body, so a local-vs-remote
+    # compare would phantom-Recreate on every re-plan (live-proven). Changing them still
+    # recreates in practice - the new identity misses discovery => plans a Create.
+    immutable_fields:
+      - name

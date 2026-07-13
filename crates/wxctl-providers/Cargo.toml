@@ -1,0 +1,39 @@
+[package]
+name = "wxctl-providers"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Resource type schemas and handler implementations for wxctl"
+
+[dependencies]
+wxctl-core = { path = "../wxctl-core", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+futures = { workspace = true }
+reqwest = { workspace = true, features = ["query"] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tempfile = { workspace = true }
+zip = "8.6"
+blake3 = "1.8"
+regex = { workspace = true }
+flate2 = { workspace = true }
+url = { workspace = true }
+# IBM COS / S3 signing
+hmac = "0.13"
+sha2 = { workspace = true }
+hex = "0.4"
+md-5 = "0.11"
+base64 = { workspace = true }
+chrono = { workspace = true }
+mime_guess = "2.0"
+uuid = { workspace = true }
+
+[lints]
+workspace = true

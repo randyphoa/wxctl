@@ -1,0 +1,225 @@
+resource:
+  name: ingestion_job
+  service: watsonx_data
+  kind: ingestion_job
+  version: v1
+  description: >
+      An Ingestion Job loads data from object storage (CSV, Parquet, JSON, ORC, Avro, or
+      txt) into a watsonx.data lakehouse table. Each job specifies a source (file paths,
+      format, bucket details) and a target (catalog, schema, table, write mode). Create
+      is asynchronous — the handler polls the job until it reaches a terminal state
+      (live-observed values: `finished` on success, `failed` on error). The watsonx.data API does not expose a DELETE for
+      ingestion jobs, so destroy is a client-side no-op: the `pre_delete` hook returns
+      `HookOutcome::Handled` and the delete operation is skipped. Identity is a
+      deterministic hash over the ingestion inputs (plus an optional `generation`
+      nonce), folded into the job id as `<id>-<hash8>`: a changed input or a bumped
+      `generation` launches a new run under a new id, and prior runs are retained
+      (accumulate).
+
+  api:
+    base_path: /v3/lhingestion/api/v1/ingestion/jobs
+    id_field: id
+    list_endpoint: /v3/lhingestion/api/v1/ingestion/jobs?limit=100
+    get_endpoint: /v3/lhingestion/api/v1/ingestion/jobs/{id}
+    create_endpoint: /v3/lhingestion/api/v1/ingestion/jobs
+    create_method: POST
+    delete_endpoint: /v3/lhingestion/api/v1/ingestion/jobs/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: true
+        immutable: true
+        # POST body expects `id`; GET/LIST responses echo it as `job_id`. The
+        # denormalizer uses `api_field` to lift the server's key back into the
+        # user-facing field so discovery + delete can find it.
+        api_field: job_id
+        description: >
+            User-supplied job identifier (unique per instance). Also used as the resource
+            id in get and delete paths.
+        validation:
+          min_length: 1
+          max_length: 128
+          pattern: "^[a-zA-Z0-9\\-_.]+$"
+
+      - name: engine_id
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Id of the Spark engine to run this ingestion on. Optional — when omitted the
+            instance default engine is used. References a `spark_engine` resource.
+        references:
+          resource: spark_engine
+          field: id
+
+      - name: source
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Source descriptor — file paths, format, and bucket details. See the OpenAPI
+            SourceDetails schema for the full shape.
+        schema:
+          fields:
+            - name: file_paths
+              type: string
+              required: false
+              synthesize: true
+              synth_shape: csv
+              description: >
+                  Comma-separated source file or directory path (e.g.,
+                  `s3://bucket/path/data.csv`). May interpolate both an
+                  `s3_bucket` (for the bucket name) and an `s3_object` (for
+                  the object key) via `${...}` templates.
+              references:
+                resource: s3_bucket
+                field: name
+                also_allows:
+                  - s3_object
+            - name: file_type
+              type: string
+              required: false
+              allowed_values: [csv, parquet, json, orc, avro, txt]
+              description: Source file format.
+            - name: source_type
+              type: string
+              required: true
+              default: storage
+              allowed_values: [iceberg, db, local, storage]
+              description: Ingestion source type.
+            - name: bucket_details
+              type: object
+              required: false
+              description: Bucket connection details (name, type, endpoint).
+            - name: file_format_properties
+              type: object
+              required: false
+              description: Format-specific options (delimiter, encoding, header).
+
+      - name: target
+        type: object
+        required: true
+        immutable: true
+        description: >
+            Target table descriptor — catalog, schema, table, and write mode.
+        schema:
+          fields:
+            - name: catalog
+              type: string
+              required: true
+              description: Target catalog name.
+              references:
+                resource: storage_registration
+                field: catalog_name
+                also_allows:
+                  - database_registration
+            - name: schema
+              type: string
+              required: true
+              description: Target schema name.
+              references:
+                resource: schema
+                field: name
+            - name: table
+              type: string
+              required: true
+              description: Target table name.
+            - name: write_mode
+              type: string
+              required: false
+              allowed_values: [append, overwrite]
+              description: How to handle existing data in the target table.
+            - name: schema_mode
+              type: string
+              required: false
+              allowed_values: [strict, sloppy]
+              description: Schema validation mode.
+            - name: schema_infer
+              type: boolean
+              required: false
+              default: true
+              description: Whether to infer column types from source data.
+            - name: merge_on_read
+              type: boolean
+              required: false
+              default: false
+              description: Enable merge-on-read for the target Iceberg table.
+
+      - name: partition_by
+        type: string
+        required: false
+        immutable: true
+        description: >
+            Comma-delimited list of target table columns to partition by (e.g.,
+            `date,region`).
+
+      - name: execute_config
+        type: object
+        required: false
+        immutable: true
+        description: >
+            Driver/executor resource configuration (cores, memory, instances). Defaults
+            are instance-wide; provide only to override.
+
+      - name: generation
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            Optional nonce folded into the identity hash. Set any new value to force
+            a fresh ingestion run with all other inputs unchanged; the prior run is
+            retained (accumulate). LocalOnly — never sent to the API body.
+
+      - name: status
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: >
+            Runtime job status reported by the API (`starting`, `running`, `completed`,
+            `failed`). Observed by the `post_create` poller.
+
+  reconciliation:
+    # Discovery uses get_by_id because the LIST endpoint drops completed /
+    # aged-out jobs while GET-by-id still returns them. Under the identity-hash
+    # model the effective job id is `<id>-<hash8>` (see identity_hash below):
+    # a changed input or bumped `generation` produces a new id → GET-by-id 404 →
+    # Create (a new, retained run); an unchanged config resolves to the same id →
+    # GET-by-id finds it → NoChange. `name_field: id` tells the generic
+    # `storage: name_suffix` validation step to fold the hash into `id` (the
+    # client-settable identifier) — ingestion_job has no `name` field.
+    discovery:
+      method: get_by_id
+      id_source: id
+      name_field: id
+    identity_hash:
+      # The real ingestion inputs. Any change re-hashes → new suffixed id → new
+      # run. `id` itself is the base prefix (NOT hashed — it carries the suffix).
+      fields:
+        - engine_id
+        - source
+        - target
+        - partition_by
+        - execute_config
+      nonce_field: generation
+      storage: name_suffix
+      length: 8
+    # Explicit state_fields: the suffixed `id` IS the identity, so compare only
+    # the id. Do NOT let the parser inject the synthetic `identity_hash` state
+    # field here — get_by_id discovery never runs normalize_identity_hash, so the
+    # remote would lack `identity_hash` and every re-apply would phantom-Update.
+    state_fields:
+      - id
+    update_strategy: recreate
+    use_json_patch: false
+    # Empty under the accumulate model: an identity change routes to a new id →
+    # Create, never Recreate. Leaving the input fields here would phantom-Recreate
+    # when the GET response does not echo them in the compared shape
+    # (openscale-monitor-instance-reapply lesson).
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

@@ -1,0 +1,33 @@
+input_schema:
+    type: object
+    properties:
+        operation:
+            type: string
+            description: The mathematical operation to perform. Supported operations are 'add' (addition), 'multiply' (multiplication), and 'divide' (division).
+            enum:
+                - add
+                - multiply
+                - divide
+        a:
+            type: number
+            description: The first numeric operand to use in the calculation. Can be any integer or decimal number.
+        b:
+            type: number
+            description: The second numeric operand to use in the calculation. Can be any integer or decimal number.
+    required:
+        - operation
+        - a
+        - b
+output_schema:
+    type: object
+    description: Result of the calculation
+    properties:
+        operation:
+            type: string
+        a:
+            type: number
+        b:
+            type: number
+        result:
+            type: number
+            description: The calculated result

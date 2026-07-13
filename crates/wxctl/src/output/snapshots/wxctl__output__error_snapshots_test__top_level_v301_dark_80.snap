@@ -1,0 +1,10 @@
+---
+source: crates/wxctl/src/output/error_snapshots_test.rs
+expression: "render_top_level_error(&panel(80, ColorMode::Dark, GlyphSet::Unicode),\nV301_MSG).join(\"\\n\")"
+---
+  [38;2;120;169;255m▌[0m [1mErrors[0m
+
+    [38;2;248;81;73m✗[0m [1mcommand stage[0m  [38;2;125;133;144mWXCTL-V301[0m
+      environment variable WATSONX_APIKEY referenced by ${env:WATSONX_APIKEY} is
+      not set
+      [38;2;120;169;255mfix[0m set the ${env:VAR} reference, or export it before running

@@ -1,0 +1,111 @@
+[workspace]
+members = [
+    "crates/wxctl-core",
+    "crates/wxctl-engine",
+    "crates/wxctl-graph",
+    "crates/wxctl-schema",
+    "crates/wxctl-compose",
+    "crates/wxctl-compose-core",
+    "crates/wxctl-providers",
+    "crates/wxctl-sdk",
+    "crates/wxctl",
+    "crates/wxctl-mcp",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.4"
+authors = ["Randy Phoa"]
+edition = "2024"
+rust-version = "1.88"
+license = "Apache-2.0"
+repository = "https://github.com/randyphoa/wxctl"
+
+# Shared lint policy. Members opt in with `[lints] workspace = true`.
+# CI enforces these via `cargo clippy --all-targets -- -D warnings`.
+[workspace.lints.clippy]
+# Baseline clippy::all stays active; priority = -1 lets the specific lints below
+# override the group level. Every lint here is verified at zero violations today,
+# so they guard against *new* regressions without churning existing code.
+all = { level = "warn", priority = -1 }
+
+# Debugging / placeholder leftovers must never ship.
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+
+# Memory / aliasing footguns.
+mem_forget = "warn"
+rc_mutex = "warn"
+rc_buffer = "warn"
+mut_mut = "warn"
+
+# Numeric correctness.
+lossy_float_literal = "warn"
+float_cmp_const = "warn"
+
+# Needless allocation / inefficiency (skill: avoid premature allocation).
+inefficient_to_string = "warn"
+cloned_instead_of_copied = "warn"
+manual_string_new = "warn"
+
+# Iterator idioms (skill: prefer iterators and idiomatic adapters).
+explicit_iter_loop = "warn"
+explicit_into_iter_loop = "warn"
+flat_map_option = "warn"
+filter_map_next = "warn"
+from_iter_instead_of_collect = "warn"
+
+# Misc clarity.
+empty_structs_with_brackets = "warn"
+unnecessary_self_imports = "warn"
+verbose_file_reads = "warn"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_norway = "0.9"
+serde_urlencoded = "0.7"
+semver = "1"
+url = "2.5"
+regex = "1.12"
+tempfile = "3.27"
+tokio-util = { version = "0.7", features = ["rt"] }
+base64 = "0.22"
+sha2 = "0.11"
+dirs = "6.0"
+parking_lot = "0.12"
+flate2 = "1.1.9"
+tokio = { version = "1.52", features = ["full"] }
+tracing = "0.1"
+thiserror = "2.0"
+anyhow = "1.0"
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+reqwest = { version = "0.13", features = ["json", "multipart"] }
+rayon = "1.12"
+futures = "0.3"
+toml = "1.1"
+clap = { version = "4.6", features = ["derive"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "registry", "json"] }
+colored = "3.1"
+chrono = "0.4"
+uuid = { version = "1.23", features = ["v4", "serde"] }
+opentelemetry = "0.32"
+opentelemetry_sdk = "0.32"
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.33"
+rmcp = { version = "1.8", features = ["server", "transport-io", "macros"] }
+schemars = "1.2"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
+
+[profile.dev]
+debug = "full"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+opt-level = 1

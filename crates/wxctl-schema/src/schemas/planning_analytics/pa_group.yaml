@@ -1,0 +1,39 @@
+resource:
+  name: pa_group
+  service: planning_analytics
+  kind: pa_group
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) security group — a named role that users belong to
+    and that cube/dimension security is granted against. Created via the TM1 REST OData API
+    (POST /Groups) and identified by its `name` (the OData entity key).
+  api:
+    base_path: /Groups
+    id_field: name
+    list_endpoint: /Groups
+    get_endpoint: /Groups('{name}')
+    create_endpoint: /Groups
+    create_method: POST
+    update_endpoint: /Groups('{name}')
+    update_method: PATCH
+    delete_endpoint: /Groups('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"   # OData single-quote delimits the entity key; reject it here
+        description: Group name — the OData entity key. Immutable identity.
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    state_fields:
+      - name
+    update_strategy: patch
+    use_json_patch: false   # TM1 OData PATCH is plain partial JSON, not RFC 6902 (Phase-1 learning; the registration validator rejects patch + default use_json_patch: true with no json_patch_path_prefix)
+    immutable_fields:
+      - name

@@ -1,0 +1,48 @@
+# Real resources — deployed first, then test resources run against them.
+# Uses the same simple_chain resources (knowledge_base + tool + agent).
+kind: knowledge_base
+ref_name: wxctl_test_kb___TEST_ID__
+name: wxctl_test_kb___TEST_ID__
+description: Integration test knowledge base
+---
+kind: tool
+ref_name: wxctl_test_tool___TEST_ID__
+name: wxctl_test_tool___TEST_ID__
+display_name: wxctl_test_tool___TEST_ID__
+description: Integration test tool
+permission: read_write
+is_async: false
+source_path: __MANIFEST_DIR__/tests/fixtures/calculator_tool
+binding:
+    python:
+        function: calculator:main
+---
+kind: agent
+ref_name: wxctl_test_agent___TEST_ID__
+name: wxctl_test_agent___TEST_ID__
+display_name: wxctl_test_agent___TEST_ID__
+description: Integration test agent with tool and knowledge base
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+    - ${tool.wxctl_test_tool___TEST_ID__}
+knowledge_base:
+    - ${knowledge_base.wxctl_test_kb___TEST_ID__}
+---
+kind: test
+ref_name: test_math_1
+agent: ${agent.wxctl_test_agent___TEST_ID__}
+turns:
+  - message: "What is 42 multiplied by 17?"
+---
+kind: test
+ref_name: test_math_2
+agent: ${agent.wxctl_test_agent___TEST_ID__}
+turns:
+  - message: "What is 100 divided by 4?"
+---
+kind: test
+ref_name: test_math_3
+agent: ${agent.wxctl_test_agent___TEST_ID__}
+turns:
+  - message: "What is 7 plus 8?"

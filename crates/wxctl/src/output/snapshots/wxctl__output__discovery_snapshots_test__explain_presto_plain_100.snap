@@ -1,0 +1,35 @@
+---
+source: crates/wxctl/src/output/discovery_snapshots_test.rs
+expression: "explain_presto(&panel(100, ColorMode::Plain, GlyphSet::Unicode))"
+---
+
+  presto_engine   watsonx.data · saas, software
+  id field · id
+
+  ▌ Endpoints
+    create   POST     /v3/presto_engines
+    get      GET      /v3/presto_engines/{id}
+    list     GET      /v3/presto_engines?limit=100
+    update   PATCH    /v3/presto_engines/{id}
+    delete   DELETE   /v3/presto_engines/{id}
+
+  ▌ Fields   (required first)
+    display_name          string          required            Body
+    origin                string          required            Body
+    configuration         object          required   locked   Body
+    description           string          optional            Body
+    associated_catalogs   array<string>   optional            Body
+    tags                  array<string>   optional            Body
+    status                string          optional            Body
+    id                    string          computed   locked   Computed
+    external_host_name    string          computed   locked   Computed
+    host_name             string          computed   locked   Computed
+
+  ▌ Dependencies
+    associated_catalogs  ──▶  ${storage_registration.<ref_name>}   optional
+    associated_catalogs  ──▶  ${database_registration.<ref_name>}   optional
+
+  ▌ Authoring
+    envelope   A config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).
+    ref_name   Unique handle for this resource within the config. Used to reference it from other resources, then stripped before the API call (not a schema field).
+    reference  Reference another resource by its ref_name: `${<kind>.<ref_name>}` resolves to its id, `${<kind>.<ref_name>.<field>}` to a specific field. Values resolve late, at plan/apply time.

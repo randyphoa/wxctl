@@ -1,0 +1,12 @@
+---
+source: crates/wxctl/src/output/notice_snapshots_test.rs
+expression: "render(ColorMode::Dark)"
+---
+
+[38;2;210;153;34mupdate[0m A new release of wxctl is available: 0.1.0 → [1m0.2.0[0m
+[38;2;125;133;144m  Run `wxctl update` to upgrade[0m
+[38;2;248;81;73m[security][0m Security fix in 0.2.0
+[38;2;125;133;144m  Upgrade recommended.[0m
+[38;2;125;133;144m  https://example.invalid/advisory[0m
+[38;2;120;169;255m[news][0m Welcome to wxctl
+[38;2;125;133;144m  Thanks for installing.[0m

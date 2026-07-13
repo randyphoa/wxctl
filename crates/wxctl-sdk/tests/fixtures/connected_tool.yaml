@@ -1,0 +1,47 @@
+# Connected tool E2E test — verifies connection → tool → agent wiring.
+# Mirrors ADK customer_care ServiceNow example (basic_auth connection).
+# Placeholders: __TEST_ID__ (uuid), __MANIFEST_DIR__ (crate root)
+kind: orchestrate_connection
+ref_name: wxctl_test_conn___TEST_ID__
+app_id: wxctl_test_service___TEST_ID__
+connection_type: basic_auth
+environment: [draft]
+preference: team
+config_security_scheme: basic_auth
+config_server_url: https://example.test-service.com
+credentials:
+    username: test_user
+    password: test_pass
+---
+kind: tool
+ref_name: wxctl_test_lookup___TEST_ID__
+name: wxctl_test_lookup___TEST_ID__
+display_name: wxctl_test_lookup___TEST_ID__
+description: A lookup tool that searches for company information using an external service
+permission: read_write
+is_async: false
+source_path: __MANIFEST_DIR__/tests/fixtures/connected_tool
+binding:
+    python:
+        function: lookup:main
+        connections:
+            wxctl_test_service: ${orchestrate_connection.wxctl_test_conn___TEST_ID__}
+---
+kind: agent
+ref_name: wxctl_test_agent___TEST_ID__
+name: wxctl_test_agent___TEST_ID__
+display_name: wxctl_test_agent___TEST_ID__
+description: >
+  You are a company lookup assistant. Use the lookup tool to search for company information.
+  Always use the tool when the user asks to look up or find a company.
+llm: groq/openai/gpt-oss-120b
+style: default
+tools:
+  - ${tool.wxctl_test_lookup___TEST_ID__}
+---
+kind: test
+ref_name: test_connected_lookup
+agent: ${agent.wxctl_test_agent___TEST_ID__}
+turns:
+  - message: "Look up information about Acme"
+    expect_answer: "Should return results including Acme Corp"

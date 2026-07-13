@@ -1,0 +1,96 @@
+resource:
+    name: package_extension
+    service: common_core
+    kind: package_extension
+    version: v1
+    description: >
+        A Package Extension defines additional Python packages to include in a software specification.
+        Supports requirements.txt (requirements_txt) and tar.gz custom libraries (custom_library).
+        conda_yml was discontinued by IBM Cloud in 2025 and is rejected server-side. After creation,
+        the file is uploaded to a presigned URL and finalized via upload_complete.
+    api:
+        base_path: /v2/package_extensions
+        id_field: asset_id
+        list_endpoint: /v2/package_extensions
+        get_endpoint: /v2/package_extensions/{asset_id}
+        create_method: POST
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: >
+                  Name of the package extension.
+              validation:
+                  min_length: 1
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Human-readable description.
+            - name: type
+              type: string
+              required: true
+              description: >
+                  Extension type. 'requirements_txt' accepts a plain pip requirements file,
+                  'custom_library' accepts a tar.gz with a Python package. 'conda_yml' and
+                  'pip_zip' are kept for backward schema-compatibility but rejected by IBM Cloud.
+              validation:
+                  allowed_values: [requirements_txt, custom_library, conda_yml, pip_zip]
+            - name: source_path
+              type: string
+              required: true
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Local path to the file to upload (requirements.txt for requirements_txt,
+                  tar.gz for custom_library). Resolved against the config file's directory.
+            - name: space_id
+              type: string
+              required: false
+              location: Query
+              description: The space ID scope.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: asset_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique ID of the package extension.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: asset_id
+            list_field: resources
+        state_fields:
+            - name
+            - description
+        update_strategy: recreate
+        immutable_fields: []
+
+    deployments:
+        "software-5.3":
+            # SaaS and Software 5.3.x share /v2/package_extensions (confirmed in
+            # Software 5.3.0 spec). Empty overlay declares the kind is supported on
+            # this deployment without altering the base block.
+            api: {}
+    unsupported_on: []

@@ -1,0 +1,84 @@
+resource:
+    name: environment
+    service: common_core
+    kind: environment
+    version: v1
+    description: >
+        A notebook runtime environment in a watsonx.ai project. Adoption-only: platform
+        default runtimes (e.g. "Runtime 25.1 on Python 3.12 XXS" on SaaS, "Runtime 25.1 on
+        Python 3.12" on Software — the runtime name is deployment-specific, so configs
+        should reference it via ${env:WXCTL_NOTEBOOK_RUNTIME}) are matched by display_name
+        and adopted at execution time by the EnvironmentHandler (pre_create); NoChange on
+        re-apply. Custom-environment creation is NOT supported — live-refuted on both SaaS
+        and CP4D: POST /v2/environments rejects a generic body with 4 missing-field errors
+        (name, software_specification, hardware_specification, tools_specification all
+        required), so this schema only models the adopt path. Destroy is a no-op (adopted
+        platform runtimes are shared, never torn down). The computed guid feeds job.env_id
+        and notebook.runtime.environment.
+    api:
+        base_path: /v2/environments
+        id_field: guid
+        list_endpoint: /v2/environments?types=notebook
+        get_endpoint: /v2/environments/{guid}
+        create_method: POST
+        delete_method: DELETE
+        delete_endpoint: /v2/environments/{guid}
+    schema:
+        fields:
+            - name: display_name
+              type: string
+              required: true
+              description: The environment display name (the identity discovery matches on).
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: type
+              type: string
+              required: false
+              default: notebook
+              description: Environment type. Defaults to notebook.
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: guid
+                  optional: true
+            - name: guid
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique id of the environment.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: guid
+            list_field: resources
+            # The list entry nests the display name in the CAMS envelope at
+            # entity.environment.display_name (live-verified 2026-07-05, SaaS +
+            # CP4D; metadata.name is a short code like `rt251pys1`, NOT the
+            # display name). A plain `name_field: display_name` can't reach it
+            # (the envelope fallback only checks entity.<field>/metadata.<field>),
+            # so discovery matched nothing and every re-apply re-planned Create —
+            # identity_match points the matcher at the real remote path.
+            identity_match:
+                local_path: display_name
+                remote_path: entity.environment.display_name
+        state_fields:
+            - display_name
+        update_strategy: recreate
+        immutable_fields: []
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

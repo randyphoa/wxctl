@@ -1,0 +1,386 @@
+resource:
+    name: tool
+    service: watsonx_orchestrate
+    kind: tool
+    version: v1
+    description: >
+        A Tool is a specification for a callable function or service that agents can invoke to perform actions and retrieve
+        information. Tools define input schemas, output schemas, permission levels (read_only, write_only, read_write, admin),
+        and bindings to actual implementations. Supported binding types include Python functions (with requirements and connection
+        dependencies), API endpoints, and client-side tools. Tools can be synchronous or asynchronous, enabling both immediate
+        responses and long-running operations that agents can poll for completion.
+    api:
+        base_path: /v1/orchestrate/tools
+        id_field: id
+        list_endpoint: /v1/orchestrate/tools
+        get_endpoint: /v1/orchestrate/tools/{id}
+        create_method: POST
+        update_method: PUT
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: false
+              description: >
+                  Unique name identifier for the tool. Used as the primary reference for the tool and must be unique across
+                  all tools in the tenant. Agents and users reference tools by this name.
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: display_name
+              type: string
+              required: false
+              description: >
+                  Human-readable display name shown in the UI when browsing or selecting tools. Provides a friendly name that
+                  users can easily recognize and understand.
+            - name: description
+              type: string
+              required: false
+              description: >
+                  Detailed description of what the tool does, when to use it, and what it returns. This description is crucial
+                  as it helps agents (via LLM reasoning) decide when to invoke the tool and how to use it effectively.
+            - name: permission
+              type: string
+              required: true
+              description: >
+                  The permission level required to use this tool, controlling what operations it can perform and how agents
+                  reason about its safety. 'read_only' tools can only retrieve data without side effects. 'write_only' tools
+                  can create or modify resources. 'read_write' tools can both read and write data. 'admin' tools have elevated
+                  privileges for system-level operations.
+              allowed_values: [read_only, write_only, read_write, admin]
+            - name: input_schema
+              type: object
+              required: false
+              description: >
+                  JSON Schema defining the input parameters that the tool accepts. Loaded from schema.yaml in the source directory.
+                  Defines parameter names, types, descriptions, and constraints that help agents understand how to invoke
+                  the tool with correct arguments.
+              properties:
+                  type:
+                      type: string
+                      description: >
+                          Root schema type, typically 'object' for tools that accept multiple named parameters.
+                      default: object
+                  properties:
+                      type: object
+                      description: >
+                          Object mapping parameter names to their type definitions and constraints. Each property defines
+                          one input parameter with its type, description, and validation rules.
+                  required:
+                      type: array
+                      description: >
+                          Array of parameter names that are required for tool invocation. The tool cannot be called without
+                          providing these required parameters.
+            - name: output_schema
+              type: object
+              required: false
+              description: >
+                  JSON Schema defining the structure and meaning of the tool's output. Loaded from schema.yaml in the source
+                  directory. Helps agents understand what information the tool returns and how to interpret and use the results.
+              properties:
+                  type:
+                      type: string
+                      description: >
+                          Type of the output value, typically 'object' for structured results or 'string' for simple text
+                          outputs.
+                      default: object
+                  description:
+                      type: string
+                      description: >
+                          Textual description of what the output contains and how it should be interpreted.
+                  properties:
+                      type: object
+                      description: >
+                          For object-typed outputs, defines the structure of returned data with field names, types, and descriptions
+                          for each output property.
+            - name: binding
+              type: object
+              required: false
+              description: >
+                  Binding configuration that specifies how the tool is implemented and executed. Defines the execution runtime
+                  (Python, API, etc.) and provides the necessary references and settings to invoke the actual tool implementation.
+              properties:
+                  python:
+                      type: object
+                      description: >
+                          Python runtime binding configuration for tools implemented as Python functions. Specifies the function
+                          reference, dependencies, and connection requirements.
+                      properties:
+                          function:
+                              type: string
+                              description: >
+                                  Python function reference in module:function format (e.g., 'my_module:my_function'). Points
+                                  to the actual Python function that implements the tool's logic.
+                          requirements:
+                              type: array
+                              description: >
+                                  List of Python package dependencies (pip packages) required by the tool. These are installed
+                                  in the tool's execution environment. Typically loaded from requirements.txt in the source
+                                  directory.
+                          connections:
+                              type: object
+                              description: >
+                                  Mapping of connection names to connection IDs that the tool needs to access external services.
+                                  Enables the tool to use authenticated connections for API calls.
+                              default: {}
+                              references:
+                                  resource: orchestrate_connection
+                                  field: connection_id
+                          agent_run_parameter:
+                              type: string
+                              description: >
+                                  Name of the Python function parameter that receives the AgentRun context object.
+                                  When set, the cloud runtime injects the request context (including JWT context variables)
+                                  into this parameter at invocation time. Maps to API field 'agent_run_paramater'.
+                  flow:
+                      type: object
+                      description: >
+                          Flow binding configuration for tools implemented as flows. Specifies the flow to execute and optionally
+                          the flow model for OpenAPI generation.
+                      properties:
+                          flow_id:
+                              type: string
+                              description: >
+                                  The ID/name of the flow to execute. Automatically set from spec.name when loading from a
+                                  source file.
+                          model:
+                              type: object
+                              description: >
+                                  The complete flow model containing spec, nodes, edges, and schemas. Injected automatically
+                                  when loading from a source file.
+                          version:
+                              type: string
+                              description: The version of the flow to call.
+                              default: TIP
+                          dependencies:
+                              type: object
+                              description: Dependencies required by the flow (tools and agents).
+                              properties:
+                                  tools:
+                                      type: array
+                                  agents:
+                                      type: array
+                  openapi:
+                      type: object
+                      description: >
+                          OpenAPI binding for tools backed by an HTTP endpoint defined in an OpenAPI specification.
+                          The runtime makes HTTP requests to the specified server/path with the configured
+                          security scheme. When spec_path is provided without http_method/http_path, wxctl
+                          auto-discovers all endpoints from the spec.
+                      properties:
+                          http_method:
+                              type: string
+                              description: >
+                                  HTTP method for the endpoint. Auto-filled from the OpenAPI spec during
+                                  expansion when spec_path is provided.
+                              allowed_values: [GET, POST, PUT, PATCH, DELETE]
+                          http_path:
+                              type: string
+                              description: >
+                                  API endpoint path (e.g., /ml/v4/deployments/{id}/predictions).
+                                  Auto-filled from the OpenAPI spec during expansion.
+                          success_status_code:
+                              type: integer
+                              description: Expected HTTP success status code. Defaults to 200.
+                          security:
+                              type: array
+                              description: >
+                                  List of OpenAPI security scheme objects. Each has type (apiKey, http,
+                                  oauth2, openIdConnect), scheme (basic, bearer, oauth), in (query, header,
+                                  cookie), name, and flows. Auto-filled from spec during expansion.
+                          servers:
+                              type: array
+                              description: >
+                                  Base URL(s) for the API. Must contain exactly one entry.
+                                  Auto-filled from spec during expansion.
+                          connection_id:
+                              type: string
+                              description: >
+                                  Connection app_id for authentication credentials.
+                              references:
+                                  resource: orchestrate_connection
+                                  field: app_id
+                                  optional: true
+                          permission:
+                              type: string
+                              description: >
+                                  Default permission for all generated tools. Overrides spec-derived
+                                  permission from x-ibm-operation.action.
+                              allowed_values: [read_only, write_only, read_write, admin]
+                          tools:
+                              type: array
+                              description: >
+                                  Filter which endpoints to import by operationId. Use ["*"] or omit
+                                  to import all endpoints from the spec.
+            - name: tags
+              type: array
+              required: false
+              item_type: string
+              description: >
+                  Categorization tags for organizing and discovering tools. Tags help users filter and find tools by capability,
+                  domain, or use case (e.g., 'data', 'analytics', 'integration').
+            - name: is_async
+              type: boolean
+              required: false
+              description: >
+                  Whether the tool execution is asynchronous. When true, the tool returns an acknowledgment immediately and
+                  the actual result is delivered via callback. Asynchronous tools are suitable for long-running operations
+                  where the agent should not block waiting for completion.
+              default: false
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: >
+                  Unique UUID identifier for the tool, automatically assigned by the API during creation. This ID is used
+                  by agents when specifying which tools they have access to.
+            - name: source_path
+              type: string
+              required: false
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Local filesystem path to the tool source. For Python bindings, this is a directory containing schema.yaml,
+                  Python files, and optionally requirements.txt. For flow bindings, this is a path to a flow definition file
+                  (.json, .yaml, or .yml).
+            - name: spec_path
+              type: string
+              required: false
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Path to an OpenAPI specification file (YAML or JSON). Used with binding.openapi.
+                  The spec is parsed to auto-discover endpoints and generate tool definitions.
+                  Each endpoint becomes an individual tool with schemas extracted from the spec.
+            - name: flow_path
+              type: string
+              required: false
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Path to a flow definition file (.json, .yaml, or .yml). Used with binding.flow.
+                  Additive alias for source_path — both fields work for flow bindings: the flow
+                  handler reads source_path first, then falls back to flow_path. Both are resolved
+                  against the config dir by resolve_file_paths.
+            - name: flow_llm_model
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Model the flow runtime uses for the LLM-backed auto-data-mapping nodes (script/decisions).
+                  Accepts a `${model.<ref>}` reference (resolved to the model name) or a literal model name;
+                  the flow handler injects it into the registered flow's `metadata.llm_model`. Use this on
+                  deployments whose flow runtime has no usable default flow model — e.g. a CP4D AI-Gateway
+                  instance, where it routes flow inference through the same gateway model the agents use.
+                  Optional: when unset, the flow runtime falls back to the instance `DEFAULT_FLOW_LLM_MODEL`
+                  (sufficient on SaaS). Local-only: consumed at registration, never sent as its own API field.
+              references:
+                  resource: model
+                  field: name
+                  optional: true
+            - name: artifact
+              type: object
+              required: false
+              location: LocalOnly
+              description: >
+                  Local reference to the tool artifact ZIP file that will be uploaded to the API. This ZIP contains the Python
+                  code, schema, and dependencies. Automatically generated from source_path during tool creation. This is a
+                  local-only field for managing the upload.
+              properties:
+                  path:
+                      type: string
+                      description: >
+                          Local filesystem path to the generated ZIP artifact containing the packaged tool implementation.
+                          Created automatically from the source_path directory.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+        state_fields:
+            - name
+            - display_name
+            - description
+            - permission
+            - input_schema
+            - output_schema
+            - binding
+            - tags
+            - is_async
+        update_strategy: replace
+        immutable_fields: []
+        use_json_patch: false
+
+    prompt:
+        notes:
+            - "Tools MUST have `binding` and `source_path` to work. A tool without these will fail at the API level even though they are not schema-required."
+            - "Only include REQUIRED parameters in `input_schema`. Do NOT include optional parameters. The LLM may pass `null` for optional parameters, causing runtime 422 errors."
+            - "Nullable syntax like `type: [array, \"null\"]` is not supported."
+            - "The `binding.python.function` field uses `module:function` format, where `module` is the Python filename without `.py` and `function` is the entry point (e.g., `calculator:main` refers to `main()` in `calculator.py`)."
+            - "The `source_path` directory for Python tools should contain `schema.yaml` (defines input/output schemas), `*.py` files, and optionally `requirements.txt`."
+        examples:
+            minimal: |
+                kind: tool
+                ref_name: my_tool
+                name: my_tool
+                permission: read_only
+                source_path: ../resources/tool/my_tool
+                binding:
+                  python:
+                    function: my_module:main
+            full: |
+                kind: tool
+                ref_name: calculator_tool
+                name: calculator_tool
+                display_name: Calculator Tool
+                description: A simple calculator tool that can add and multiply numbers
+                permission: read_write
+                is_async: false
+                tags:
+                  - math
+                  - utilities
+                source_path: ../resources/tool/calculator_tool
+                binding:
+                  python:
+                    function: calculator:main
+                    requirements:
+                      - ibm-watsonx-orchestrate==1.6.1
+                    connections: {}
+                input_schema:
+                  type: object
+                  properties:
+                    operation:
+                      type: string
+                      description: The mathematical operation to perform
+                      enum:
+                        - add
+                        - multiply
+                        - divide
+                    a:
+                      type: number
+                      description: The first numeric operand
+                    b:
+                      type: number
+                      description: The second numeric operand
+                  required:
+                    - operation
+                    - a
+                    - b
+                output_schema:
+                  type: object
+                  description: Result of the calculation
+                  properties:
+                    operation:
+                      type: string
+                    a:
+                      type: number
+                    b:
+                      type: number
+                    result:
+                      type: number
+                      description: The calculated result
+
+  # TODO: Add hooks if needed
+  # hooks:
+  #   post_create: service::handlers::kind::function_name

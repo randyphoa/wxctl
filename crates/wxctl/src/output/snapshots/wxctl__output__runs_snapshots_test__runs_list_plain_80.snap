@@ -1,0 +1,9 @@
+---
+source: crates/wxctl/src/output/runs_snapshots_test.rs
+expression: "render_list(&panel(80, ColorMode::Plain, GlyphSet::Unicode),\n&runs()).join(\"\\n\")"
+---
+
+  ▌ Runs
+    RUN ID                           COMMAND   STARTED                OUTCOME   ERRORS
+    20260711-101500-apply-abc123     apply     2026-07-11 10:15:00    success   0
+    20260711-100000-plan-def456      plan      2026-07-11 10:00:00    failed    2

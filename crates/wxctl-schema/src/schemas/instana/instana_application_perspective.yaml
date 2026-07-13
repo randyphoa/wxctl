@@ -1,0 +1,81 @@
+resource:
+  name: instana_application_perspective
+  service: instana
+  kind: instana_application_perspective
+  version: v1
+  description: >
+    An Instana application perspective is a saved, filter-defined view of an
+    application's traces and calls — the top-level unit Instana groups service
+    monitoring, smart alerts, and SLOs around. Created via the Application
+    Monitoring settings API (/api/application-monitoring/settings/application)
+    and identified by a server-assigned string id.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/application-monitoring/settings/application
+    id_field: id
+    list_endpoint: /api/application-monitoring/settings/application
+    get_endpoint: /api/application-monitoring/settings/application/{id}
+    create_endpoint: /api/application-monitoring/settings/application
+    create_method: POST
+    update_endpoint: /api/application-monitoring/settings/application/{id}
+    update_method: PUT
+    delete_endpoint: /api/application-monitoring/settings/application/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned (read-only) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned application-perspective id (top-level `id` on create/list/get).
+      # -- Writable (NewApplicationConfig; required set = accessRules, boundaryScope, label, scope) --
+      - name: label
+        type: string
+        required: true
+        description: Application-perspective display name; Instana's human identifier for the perspective (matched on during discovery).
+      - name: boundaryScope
+        type: string
+        required: true
+        allowed_values: [ALL, INBOUND, DEFAULT]
+        description: Trace boundary scope for the perspective.
+      - name: scope
+        type: string
+        required: true
+        allowed_values: [INCLUDE_NO_DOWNSTREAM, INCLUDE_IMMEDIATE_DOWNSTREAM_DATABASE_AND_MESSAGING, INCLUDE_ALL_DOWNSTREAM]
+        description: Downstream inclusion scope for the perspective.
+      - name: tagFilterExpression
+        type: object
+        required: false
+        description: >
+          Tag-filter selector defining which calls belong to this perspective — the
+          modern selector; never the deprecated `matchSpecification`. Writable on
+          create; server-normalized on read, so excluded from state_fields to avoid
+          phantom drift.
+      - name: accessRules
+        type: array
+        required: true
+        item_type: object
+        description: >
+          Access rules controlling perspective visibility. Writable on create;
+          server-enriched on read, so excluded from state_fields to avoid phantom drift.
+  reconciliation:
+    # GET /api/application-monitoring/settings/application returns a BARE ARRAY of
+    # ApplicationConfig (no envelope) -> no list_field. Instana identifies a
+    # perspective by `label`, not `name`, so name_field: label drives identity match.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: label
+    # state_fields = writable scalars that round-trip cleanly on list/get. The object /
+    # array fields (tagFilterExpression, accessRules) are writable Body fields excluded
+    # here because the API normalizes/enriches them on read, which would cause phantom
+    # Update{} drift (see docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md).
+    # Phase 5 may widen this set once live round-trips are verified clean (spec Invariant I4).
+    state_fields:
+      - label
+      - boundaryScope
+      - scope
+    update_strategy: replace
+    immutable_fields: []

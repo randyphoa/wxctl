@@ -1,0 +1,133 @@
+resource:
+  name: pa_dimension
+  service: planning_analytics
+  kind: pa_dimension
+  version: v1
+  description: >
+    A Planning Analytics (TM1 Database 12) dimension — a named set of members
+    organized into one or more hierarchies. Created via the TM1 REST OData API
+    (/Dimensions) and identified by its `name` (the OData entity key). Elements
+    and edges are declared inline inside `hierarchies`; there are no per-element
+    resources (real dimensions carry thousands of members).
+  #
+  # -- Profile block shape (the `planning_analytics` service) -------------------
+  # One `planning_analytics` service block == one TM1 database. Add to a profile:
+  #
+  #   "planning_analytics": {
+  #     "url": "<gateway-scheme-host>",            // e.g. http://<host>:<port>
+  #     "path_prefix": "/tm1/<database>/api/v1",   // database scoping (http::join_url)
+  #     "auth_type": "pa_session",
+  #     "apikey": "${env:PA_SESSION}"              // static-cookie mode: a pre-acquired
+  #   }                                            //   paSession value (login round-trip
+  #                                                //   via username/password lands Phase 4)
+  #
+  # Request URL = <url><path_prefix><base_path> -> <host>/tm1/<db>/api/v1/Dimensions.
+  # No profile ships in Phase 1 — this is the documented shape only (spec Non-Goal).
+  api:
+    base_path: /Dimensions
+    id_field: name
+    list_endpoint: /Dimensions
+    get_endpoint: /Dimensions('{name}')
+    create_endpoint: /Dimensions
+    create_method: POST
+    update_endpoint: /Dimensions('{name}')
+    update_method: PATCH
+    delete_endpoint: /Dimensions('{name}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        api_field: Name
+        validation:
+          pattern: "^[^']+$"   # OData single-quote delimits the entity key; reject it here
+        description: Dimension name — the OData entity key. Immutable identity.
+      - name: hierarchies
+        type: array
+        item_type: object
+        required: false
+        api_field: Hierarchies
+        description: >
+          Inline hierarchies, each carrying its own members (`elements`) and
+          parent/child relationships (`edges`). TM1 auto-creates a hierarchy named
+          after the dimension when none is supplied.
+        schema:
+          fields:
+            - name: name
+              type: string
+              required: true
+              api_field: Name
+              validation:
+                pattern: "^[^']+$"
+              description: Hierarchy name (OData entity key within the dimension).
+            - name: elements
+              type: array
+              item_type: object
+              required: false
+              api_field: Elements
+              description: Members of the hierarchy.
+              schema:
+                fields:
+                  - name: name
+                    type: string
+                    required: true
+                    api_field: Name
+                    validation:
+                      pattern: "^[^']+$"
+                    description: Element (member) name.
+                  - name: element_type
+                    type: string
+                    required: false
+                    api_field: Type
+                    allowed_values: ["Numeric", "String", "Consolidated"]
+                    description: TM1 element type.
+            - name: edges
+              type: array
+              item_type: object
+              required: false
+              api_field: Edges
+              description: Parent/child consolidation relationships.
+              schema:
+                fields:
+                  - name: parent_name
+                    type: string
+                    required: true
+                    api_field: ParentName
+                    description: Consolidated parent element name.
+                  - name: component_name
+                    type: string
+                    required: true
+                    api_field: ComponentName
+                    description: Child (component) element name.
+                  - name: weight
+                    type: float
+                    required: false
+                    api_field: Weight
+                    description: Consolidation weight (defaults to 1 on the server).
+  reconciliation:
+    # Discovery is get_by_id off the client-supplied natural key (id_source: name):
+    # GET /Dimensions('{name}') -> 200 (state-compare) / 404 (create). No list needed.
+    # id_field is `name`, so every item-endpoint placeholder above is `{name}` — it
+    # must match id_field, not default to the generic id-style placeholder
+    # (docs/troubleshoot/endpoint-placeholder-must-match-id-field-fix.md).
+    discovery:
+      method: get_by_id
+      id_source: name
+    # state_fields = declared, user-authored fields only; server-computed keys
+    # (LastSchemaUpdate, LastDataUpdate, Attributes, @odata.*) are excluded by
+    # construction. `hierarchies` is excluded: TM1 enriches it heavily on read
+    # (auto "Leaves" hierarchy, computed attributes) so it cannot round-trip
+    # offline — modeling-body drift is a Phase-4 (live) concern and may widen then.
+    state_fields:
+      - name
+    update_strategy: patch
+    # TM1's OData PATCH accepts a plain partial-JSON body, not RFC 6902 JSON Patch
+    # (deviation from the Task 1.5 plan block, which omitted this key) — without
+    # it, ResourceSchema::validate()'s json_patch_path_prefix guard rejects
+    # update_strategy: patch + the (default-true) use_json_patch combination the
+    # moment this kind is registered with a handler. Mirrors the same choice made
+    # by every other OData/plain-JSON PATCH kind (e.g. watsonx_data/*, wml_*).
+    use_json_patch: false
+    immutable_fields:
+      - name

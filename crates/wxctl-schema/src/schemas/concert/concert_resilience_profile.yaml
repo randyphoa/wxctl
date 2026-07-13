@@ -1,0 +1,164 @@
+resource:
+  name: concert_resilience_profile
+  service: concert
+  kind: concert_resilience_profile
+  version: v1
+  description: >
+    A Concert resilience assessment profile (GraderProfileRequest) is a named set of
+    resilience requirements, scored against metric input-data keys, that Concert evaluates
+    to rate an application's resilience posture. Created via the resilience assessment API
+    (POST /resilience/assessment/api/v1/profile); create returns a bare `profile_id` while
+    read/list return the canonical `id` (used by GET/DELETE /profile/{id}), so the custom
+    ResilienceProfileHandler maps profile_id -> id in post_create and recovers an
+    already-existing profile by name on a create conflict. The API exposes NO profile update
+    verb (/profile/{id} is GET + DELETE only), so every writable field is immutable and any
+    drift reconciles by replace (destroy + recreate). Its own schema — NOT shared with
+    concert_compliance_profile (3.0.0.0 gave the two profile kinds distinct request shapes).
+  # Concert has no published SaaS API — software deployment only (spec Non-Goal).
+  unsupported_on: [saas]
+  api:
+    base_path: /resilience/assessment/api/v1/profile
+    id_field: id
+    list_endpoint: /resilience/assessment/api/v1/profile
+    get_endpoint: /resilience/assessment/api/v1/profile/{id}
+    create_endpoint: /resilience/assessment/api/v1/profile
+    create_method: POST
+    # NO update_endpoint/update_method — the resilience profile API has no update verb
+    # (/profile/{id} exposes GET + DELETE only). Drift reconciles by Recreate via
+    # immutable_fields (spec Q4), mirroring common_core/package_extension.yaml.
+    delete_endpoint: /resilience/assessment/api/v1/profile/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # ── Server-assigned / API-enriched (read-only) ──
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: >
+          Canonical profile id used by GET/DELETE /profile/{id}. Create returns it under the
+          key `profile_id`; ResilienceProfileHandler.post_create injects it here as `id`.
+      - name: is_oob
+        type: boolean
+        location: Computed
+        immutable: true
+        description: Out-of-the-box flag set by the API (read-only).
+      - name: nfr_count
+        type: integer
+        location: Computed
+        immutable: true
+        description: Server-computed requirement count (read-only; excluded from comparison).
+      - name: input_data_keys_count
+        type: integer
+        location: Computed
+        immutable: true
+        description: Server-computed count of unique input-data keys across requirements (read-only).
+      - name: creation_ts
+        type: string
+        location: Computed
+        immutable: true
+        description: Creation timestamp set by the API (excluded from comparison).
+      - name: created_by
+        type: string
+        location: Computed
+        immutable: true
+        description: Creator principal (audit; excluded from comparison).
+      # ── Writable (GraderProfileRequest = Profile + requirements) ──
+      - name: name
+        type: string
+        required: true
+        description: Profile name (matched on during discovery; immutable — no update verb).
+      - name: label
+        type: string
+        required: true
+        description: Human-readable label.
+      - name: aggregate_criteria_type
+        type: string
+        required: true
+        description: >
+          How per-requirement scores aggregate into the profile score. Server-enforced enum
+          (snippet_ref, average); not constrained here (concert convention — no allowed_values,
+          the server validates).
+      - name: requirements
+        type: array
+        item_type: object
+        required: true
+        description: >
+          Resilience requirements (ProfileRequirement objects: name, library_name,
+          input_data_keys, criteria, ...) the profile evaluates. Required by the API on create.
+          Server-augmented and paginated on read, so excluded from comparison to avoid phantom
+          Recreate.
+      - name: description
+        type: string
+        required: false
+        description: Free-text profile description.
+      - name: aggregate_criteria
+        type: string
+        required: false
+        description: Optional aggregation snippet reference (used when aggregate_criteria_type is snippet_ref).
+      - name: rating_thresholds
+        type: string
+        required: false
+        description: Comma-separated rating thresholds (e.g. "50,75,95,100").
+      - name: expected_score
+        type: float
+        required: false
+        description: >
+          Optional expected score (0-100). Excluded from comparison — a float round-trip is
+          representation-sensitive; Phase 5 may add it once a live re-plan is verified clean.
+      - name: use_last_received_data
+        type: string
+        required: false
+        description: >
+          Comma-separated list of input-data-key NAMES evaluated against the last received
+          data (live-verified on 3.0.0.0: a key name is required — a boolean-ish value like
+          `"true"` 400s).
+      - name: input_data_keys
+        type: string
+        required: false
+        references:
+          resource: concert_resilience_input_data_key
+          field: name
+          optional: true
+        description: >
+          Comma-separated input-data-key NAMES the profile evaluates against. 3.0.0.0 models
+          this as a STRING (e.g. "key_a,key_b"), NOT an array of ids — so the reference targets
+          the key `name`. This top-level reference produces the DAG edge -> each
+          concert_resilience_input_data_key is ordered before the profile (spec deliverable).
+          Server-augmented on read (input_data_keys_count derived), so excluded from comparison
+          to avoid phantom drift. A single ${concert_resilience_input_data_key.k.name} resolves
+          for ordering; multi-key comma-joined refs are a Phase-5 example concern.
+      - name: metadata
+        type: object
+        required: false
+        description: >
+          Optional free-form metadata object. Passed through on create; server-augmented on
+          read, so excluded from comparison to avoid phantom drift.
+  reconciliation:
+    # GET /resilience/assessment/api/v1/profile returns a PaginatedProfileResponse envelope
+    # { items: [ProfileResponse], pagination } -> list_field: items. The `items` key is ALREADY
+    # registered in wxctl-core ENVELOPE_KEYS / ListEnvelope, so NO core change is needed. Read
+    # carries the canonical top-level `id` (id_source: id) — the 3.0.0.0 read model is NOT
+    # id-less (the 2.3.1.1 spec's "name-keyed" claim is stale). Discovery lists by name, then
+    # GETs by id.
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_field: items
+    # NO update verb -> nothing is updatable -> state_fields empty. All round-tripping writable
+    # scalars are immutable_fields: drift -> Recreate (destroy + recreate) per spec Q4.
+    # requirements (array), input_data_keys (comma-string w/ refs), metadata (object),
+    # expected_score (float), and the Computed read-only fields are excluded to avoid phantom
+    # Recreate (docs/troubleshoot/openscale-monitor-instance-reapply-phantom-drift.md). Phase 5
+    # may prune any optional scalar the server fills with a non-empty default (Invariant I4,
+    # live-verified).
+    state_fields: []
+    update_strategy: recreate
+    immutable_fields:
+      - name
+      - label
+      - aggregate_criteria_type
+      - description
+      - aggregate_criteria
+      - rating_thresholds
+      - use_last_received_data

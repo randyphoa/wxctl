@@ -1,0 +1,131 @@
+resource:
+  name: monitor_instance
+  service: openscale
+  kind: monitor_instance
+  version: v1
+  description: >
+    A monitor instance activates a monitor (quality, fairness, drift, explainability, or a custom definition) on a
+    subscription, with its parameters and alert thresholds.
+  api:
+    base_path: /v2/monitor_instances
+    id_field: id
+    list_endpoint: /v2/monitor_instances
+    get_endpoint: /v2/monitor_instances/{id}
+    create_endpoint: /v2/monitor_instances
+    create_method: POST
+    update_endpoint: /v2/monitor_instances/{id}
+    update_method: PATCH
+    delete_endpoint: /v2/monitor_instances/{id}
+    delete_method: DELETE
+  schema:
+    # candidate-ref blocks below are UNVERIFIED heuristic seams (P3). Promote to `references:` only after a P4 probe confirms.
+    # candidate-ref (tier2x:schedule_id score=60): field `schedule_id` may reference `schedule` (watsonx_orchestrate/schedule)
+    fields:
+    - name: entity
+      type: string
+      immutable: true
+      location: Computed
+    - name: metadata
+      type: string
+      immutable: true
+      location: Computed
+    - name: data_mart_id
+      type: string
+      required: true
+      also_query: true
+      validation:
+        pattern: '[a-z0-9_\-]+'
+      references:
+        resource: data_mart
+        field: id
+        require_ready: true
+    - name: target.target_id
+      type: string
+      location: Query
+      description: |
+        Discovery scoping only — sent as `?target.target_id=<id>` on list/get/delete so
+        the `monitor_definition_id` identity match resolves within one subscription.
+        Value is read from the nested `target.target_id` body field via get_nested_field.
+      references:
+        resource: subscription
+        field: id
+    - name: managed_by
+      type: string
+    - name: monitor_definition_id
+      type: string
+      required: true
+      validation:
+        pattern: '[a-z0-9_\-]+'
+      references:
+        resource: monitor_definition
+        field: id
+        optional: true
+    - name: parameters
+      type: object
+      description: Monitoring parameters consistent with the `parameters_schema` from the monitor definition
+    - name: schedule
+      type: object
+      description: |
+        The schedule used to control how frequently the target is monitored. The maximum frequency is once every 30 minutes.
+        Defaults to once every hour if not specified.
+    - name: schedule_id
+      type: string
+    - name: target
+      type: object
+      required: true
+      schema:
+        fields:
+        - name: target_type
+          type: string
+          required: true
+        - name: target_id
+          type: string
+          required: true
+          references:
+            resource: subscription
+            field: id
+    - name: thresholds
+      type: array
+      item_type: object
+      description: >
+        Alert thresholds; each is an object {metric_id, type, value}. The metric_id MUST match
+        the monitor definition: quality -> area_under_roc, fairness -> fairness_value,
+        drift_v2 -> feature_drift_score. A metric id that the definition does not emit is rejected
+        or silently never evaluated, so the monitor never alerts.
+    - name: total_records
+      type: string
+    - name: unprocessed_records
+      type: object
+      description: |
+        Summary about records count
+    - name: evaluate_on_create
+      type: boolean
+      required: false
+      location: LocalOnly
+      description: >
+        When true, fire the monitor's first evaluation run
+        (POST /v2/monitor_instances/{id}/runs) immediately after create — a
+        fire-and-forget trigger (wxctl test polls for the result). Omit on monitors
+        whose configuration is incomplete at create time (e.g. a drift monitor awaiting
+        its baseline archive). Never sent to the API.
+  reconciliation:
+    # TODO(verify): deployments / unsupported_on — add per-deployment api overlays + unsupported constraints if SaaS/Software diverge.
+    discovery:
+      method: list_and_get
+      list_field: monitor_instances
+      id_source: id
+      identity_match:
+        local_path: monitor_definition_id
+        remote_path: entity.monitor_definition_id
+    update_strategy: patch
+    json_patch_path_prefix: ""
+    # Explicit state_fields: only fields the config sets and OpenScale GET echoes
+    # consistently. Excludes server-computed runtime fields (total_records,
+    # unprocessed_records, managed_by, schedule_id) that GET returns but the config
+    # never sets — the phantom-drift source. entity/metadata are location: Computed,
+    # already outside drift comparison. Mirrors service_provider.yaml.
+    state_fields:
+      - data_mart_id
+      - monitor_definition_id
+      - target
+      - parameters

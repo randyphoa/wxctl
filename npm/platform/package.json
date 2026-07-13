@@ -1,0 +1,12 @@
+{
+  "name": "@randyphoa/wxctl-PLATFORM",
+  "version": "0.0.0-managed-by-generate.mjs",
+  "description": "wxctl native binary (managed by generate.mjs)",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/randyphoa/wxctl.git" },
+  "os": [],
+  "cpu": [],
+  "libc": [],
+  "bin": { "wxctl": "bin/wxctl" },
+  "files": ["bin"]
+}

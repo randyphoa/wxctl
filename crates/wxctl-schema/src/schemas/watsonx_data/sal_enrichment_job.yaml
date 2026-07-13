@@ -1,0 +1,127 @@
+resource:
+  name: sal_enrichment_job
+  service: watsonx_data
+  kind: sal_enrichment_job
+  version: v1
+  description: >
+      Runs a Semantic Automation Layer (SAL) metadata-enrichment job over a
+      catalog/schema's tables. An ACTION-create resource: `POST
+      /v3/sal_integration/enrichment` triggers the job (204 No Content — no id),
+      and `SalEnrichmentJobHandler::post_create` polls
+      `GET /v3/sal_integration/enrichment/jobs?project_id=<id>` until a terminal
+      marker appears. The v3 body is `{ changes: [ {catalog, operation, schema,
+      tables} ] }` (an array of `EnrichmentObj`) — the v2 single
+      `enrichment_prototype` object is now one element of `changes`.
+      Identity is a deterministic hash over `changes` (+ optional `generation` nonce)
+      persisted in wxctl's local run-hash record (the documented Q2 fallback — this
+      API exposes no id/name/tags to discover by): an unchanged config re-plans
+      NoChange; a changed input or bumped `generation` launches a new run and prior
+      runs are retained (accumulate). Fresh machine or cleared record ⇒ one re-run,
+      then idempotent. Configs MUST set `on_destroy: retain` (no DELETE endpoint);
+      the record survives destroy — bump `generation` to re-run after destroy.
+      No DELETE endpoint — destroy is a no-op via `on_destroy: retain`
+      (the fixture sets it). Requires SAL enabled first (`sal_integration`).
+      Identical on SaaS and Software.
+      ⚠ The v3 path + `changes[]` body + the handler's SAL-Mapping-project run
+      poll are LIVE-DISCOVERED (CP4D) — do NOT let a spec/OpenAPI refresh
+      revert this to the v2 `enrichment_prototype` / `/sal_integrations/...` shape.
+
+  api:
+    base_path: /v3/sal_integration/enrichment
+    id_field: id
+    get_endpoint: /v3/sal_integration/enrichment/jobs
+    create_endpoint: /v3/sal_integration/enrichment
+    create_method: POST
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Unused id slot (the enrichment POST returns 204 with no id); satisfies id_field.
+
+      - name: project_id
+        type: string
+        required: false
+        immutable: true
+        location: LocalOnly
+        description: >
+            Optional project for `sal_enrichment_settings` correlation. NOT used
+            for the job-status poll and NOT sent on the create POST (the POST
+            ignores project_id; SAL auto-creates a `SAL Mapping /{catalog}/{schema}`
+            project per target, which the handler resolves from `changes` to poll
+            the SAL_MDE job runs). Source via `${env:}`.
+
+      - name: changes
+        type: array
+        item_type: object
+        required: true
+        immutable: true
+        description: >
+            Enrichment job spec — the v3 `SalEnrichmentPrototype.changes` array.
+            Each element (`EnrichmentObj`) targets one catalog/schema. (v2 sent a
+            single `enrichment_prototype` object; v3 wraps it in this array.)
+        schema:
+          fields:
+            - name: catalog
+              type: string
+              required: true
+              description: Catalog to enrich (matches `^[a-zA-Z0-9\-]+$`).
+              references:
+                resource: storage_registration
+                field: catalog_name
+                also_allows:
+                  - database_registration
+            - name: operation
+              type: string
+              required: true
+              description: Enrichment operation (free string, e.g. `create`).
+            - name: schema
+              type: string
+              required: true
+              description: Schema within the catalog to enrich.
+            - name: tables
+              type: array
+              required: false
+              item_type: string
+              description: Explicit table list (0–10000). List tables explicitly — some builds (watsonx.data 2.3.3/2.3.4 Software) reject an omitted list with HTTP 400 instead of enriching all.
+
+      - name: generation
+        type: string
+        required: false
+        location: LocalOnly
+        description: >
+            Optional nonce folded into the identity hash. Set any new value to force a
+            fresh enrichment run with all other inputs unchanged; prior runs are retained
+            (accumulate). LocalOnly — never sent to the API body.
+
+  reconciliation:
+    discovery:
+      method: skip
+    # Q2 local-hash fallback: this API is non-discoverable (POST → 204, no
+    # id/name/tags), so the identity hash is persisted in the local env-scoped
+    # record store (runs dir local-hashes.json) by post_create after a successful
+    # run; the Skip-discovery arm consults it — recorded → NoChange, else Create
+    # (a new, retained run). Fresh machine / cleared record ⇒ one re-run, then
+    # idempotent. project_id is excluded from the hash (correlation-only; not
+    # sent on the POST).
+    identity_hash:
+      fields:
+        - changes
+      nonce_field: generation
+      storage: local
+      length: 8
+    # Explicit [] bypasses the parser's synthetic identity_hash state field (the
+    # fallback returns desired-data as remote ⇒ compare over [] is NoChange).
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+    # Empty under the accumulate model: an identity change routes to a new hash →
+    # Create, never Recreate (Phase-3 ingestion_job precedent).
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

@@ -1,0 +1,169 @@
+resource:
+  name: integration
+  service: watsonx_data
+  kind: integration
+  version: v1
+  description: >
+      Registers an external governance / lineage service with watsonx.data —
+      IBM Knowledge Catalog (`ikc`), Apache Ranger (`ranger`), Manta lineage
+      (`manta`), or Databand (`databand`). There is one integration per
+      `type`. The v3 `/v3/integrations` surface + body (`type` +
+      `catalogs.catalog_names`) is used on BOTH SaaS and Software 5.3 — no
+      per-deployment reshape. (Live-verified: CP4D serves
+      `/lakehouse/api/v3/integrations`; the version-less `/integrations` v2
+      surface 404s there. The earlier `software-5.3` v2 override was an
+      unverified assumption — current watsonx.data is v3 on both.) Secrets
+      (`apikey`, `password`, `access_token`) are `${env:}`-sourced and excluded
+      from drift (the API never returns them).
+
+  api:
+    base_path: /v3/integrations
+    id_field: id
+    list_endpoint: /v3/integrations
+    get_endpoint: /v3/integrations/{id}
+    create_endpoint: /v3/integrations
+    create_method: POST
+    update_endpoint: /v3/integrations/{id}
+    update_method: PATCH
+    delete_endpoint: /v3/integrations/{id}
+    delete_method: DELETE
+
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Unique integration id assigned by the API.
+
+      - name: type
+        type: string
+        required: true
+        immutable: true
+        allowed_values: [ikc, ranger, manta, databand]
+        description: >
+            Integration type — the identity field (one integration per type).
+            Sent verbatim as `type`. (The IBM OpenAPI's `service_type` name is
+            REJECTED by the live 2.3.x Software API — `json: unknown field
+            "service_type"`; live-discovered on CP4D 2026-06-05.)
+
+      - name: url
+        type: string
+        required: false
+        description: Integration endpoint URL (all types).
+
+      - name: apikey
+        type: string
+        required: false
+        sensitive: true
+        description: API key (ikc, manta). `${env:}`-sourced; excluded from drift.
+
+      - name: username
+        type: string
+        required: false
+        description: Username (ikc, manta, ranger).
+
+      - name: password
+        type: string
+        required: false
+        sensitive: true
+        description: Password (ranger). `${env:}`-sourced; excluded from drift.
+
+      - name: access_token
+        type: string
+        required: false
+        sensitive: true
+        description: Access token (databand). `${env:}`-sourced; excluded from drift.
+
+      - name: catalogs
+        type: object
+        required: false
+        description: >
+            Bucket catalogs governed by this integration (the UI's "Bucket
+            catalog" field). Sent as `catalogs.catalog_names`. (The OpenAPI's
+            flat `storage_catalogs` array is REJECTED by the live 2.3.x Software
+            API — `json: unknown field "storage_catalogs"`; live-discovered on
+            CP4D 2026-06-05.)
+        schema:
+          fields:
+            - name: catalog_names
+              type: array
+              required: false
+              item_type: string
+
+      - name: connection_mode
+        type: string
+        required: false
+        description: Connection mode (manta), e.g. `external`.
+
+      - name: cross_account_integration
+        type: boolean
+        required: false
+        description: Enable cross-account IKC integration (IBM Cloud / MCSP).
+
+      - name: enable_data_policy_within_wxd
+        type: boolean
+        required: false
+        description: Enable watsonx.data policy enforcement (ranger).
+
+      - name: ikc_user_account_id
+        type: string
+        required: false
+        description: Account id for cross-account IKC (use with `cross_account_integration`).
+
+      - name: ssl
+        type: boolean
+        required: false
+        description: >
+            SSL enabled (ranger; ikc on CPD). NOT in the published OpenAPI —
+            live-discovered. ⚠️ DO NOT set `ssl: true` for `ikc` on watsonx.data
+            2.3.x Software: although the create then succeeds (with `certificate`
+            + `certificate_extension`, below), the backend stores an integration
+            that PANICS the read path — every subsequent GET/list of integrations
+            returns 500 (recovered panic in lhconsole-api-v3 `uiMiddleware`),
+            which breaks discovery / re-plan / destroy. The watsonx.data UI's IKC
+            flow does not expose SSL at all; leave `ssl` unset (the integration
+            then creates AND reads cleanly). Verified on CP4D 2026-06-05.
+
+      # certificate / certificate_extension pair with `ssl: true` (the create
+      # 400s "If SSL Port is enabled, then certificate must be provided" / then
+      # "Certificate and extension must be provided together" without them).
+      # Both are live-discovered, NOT in the published OpenAPI's
+      # IntegrationPrototype (they mirror DatabaseDetails). Kept for contract
+      # completeness, but see the ssl ⚠️ above — an ssl:true ikc integration is
+      # currently unreadable on 2.3.x Software, so the governance cell omits ssl.
+      - name: certificate
+        type: string
+        required: false
+        description: >
+            PEM contents of the endpoint certificate, required when `ssl: true`.
+            Live-discovered (not in the OpenAPI). Pair with `certificate_extension`.
+      - name: certificate_extension
+        type: string
+        required: false
+        description: >
+            Certificate file extension — `pem` or `crt`. Required alongside
+            `certificate` when `ssl: true`. Live-discovered (not in the OpenAPI).
+
+      - name: resource
+        type: string
+        required: false
+        description: Selected resource (ranger).
+
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: integrations
+      id_source: id
+      identity_match:
+        local_path: type
+        remote_path: type
+    state_fields:
+      - url
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

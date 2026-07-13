@@ -1,0 +1,85 @@
+resource:
+  name: instana_slo_config
+  service: instana
+  kind: instana_slo_config
+  version: v1
+  description: >
+    An Instana SLO config (SLOConfigWithRBACTag) defines a service-level
+    objective: a target attainment over a time window for a chosen entity and
+    indicator. Created via the settings API (/api/settings/slo) and identified
+    by a server-assigned string id; the human identifier is `name`. The entity's
+    application id is nested inside `entity`, so it produces no DAG edge — the
+    SLO example (Phase 5) wires it with depends_on + ${...} interpolation.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/settings/slo
+    id_field: id
+    list_endpoint: /api/settings/slo
+    get_endpoint: /api/settings/slo/{id}
+    create_endpoint: /api/settings/slo
+    create_method: POST
+    update_endpoint: /api/settings/slo/{id}
+    update_method: PUT
+    delete_endpoint: /api/settings/slo/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned (read-only) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned SLO-config id (top-level `id` on create/list/get).
+      # -- Writable (SLOConfigWithRBACTag required: entity, indicator, name, tags, target, timeWindow) --
+      - name: name
+        type: string
+        required: true
+        description: SLO display name; Instana's human identifier (matched on during discovery).
+      - name: target
+        type: float
+        required: true
+        description: SLO target attainment (fraction, e.g. 0.99).
+      - name: tags
+        type: array
+        item_type: string
+        required: true
+        description: SLO tags.
+      - name: entity
+        type: object
+        required: true
+        description: >
+          SloEntity selector (application/service/endpoint scope). The application
+          id is nested here, so it makes no DAG edge — order with depends_on and
+          resolve the value with ${...} interpolation. Server-normalized on read,
+          so excluded from state_fields to avoid phantom drift.
+      - name: indicator
+        type: object
+        required: true
+        description: >
+          ServiceLevelIndicator (availability / latency / custom). Server-normalized
+          on read, so excluded from state_fields to avoid phantom drift.
+      - name: timeWindow
+        type: object
+        required: true
+        description: >
+          Rolling or fixed evaluation window. Server-normalized on read, so excluded
+          from state_fields to avoid phantom drift.
+  reconciliation:
+    # GET /api/settings/slo returns a PaginatedResult envelope {items, page, ...}
+    # -> list_field: items. The `items` key is already registered in
+    # wxctl-core ENVELOPE_KEYS / ListEnvelope, so no core change is needed.
+    # Identity match is on `name` (schema_reconciler default), set explicitly.
+    discovery:
+      method: list_and_get
+      list_field: items
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars that round-trip cleanly. The object fields
+    # (entity/indicator/timeWindow) and tags are server-normalized/enriched on
+    # read, so excluded to avoid phantom Update{} drift. Phase 5 may widen.
+    state_fields:
+      - name
+      - target
+    update_strategy: replace
+    immutable_fields: []

@@ -1,0 +1,177 @@
+resource:
+    name: autoai_experiment
+    service: watsonx_ai
+    kind: autoai_experiment
+    version: v1
+    description: >
+        An AutoAI Experiment runs a watsonx.ai AutoAI training to completion and surfaces the
+        ranked pipeline leaderboard. Create is a two-call sequence performed by the handler:
+        POST /ml/v4/pipelines stores an AutoAI pipeline document (doc_type: pipeline,
+        runtime auto_ai.kb, one execution_node carrying the optimization label / learning_type
+        / scorer_for_ranking / holdout_param), then POST /ml/v4/trainings submits the training
+        against the data asset with a container results_reference. The handler then polls the
+        training (GET /ml/v4/trainings/{id}) until it reaches a terminal state; on completed,
+        entity.status.metrics[] holds the leaderboard. Each distinct set of inputs (plus the
+        optional generation nonce) is a distinct, retained run identified by a <name>-<hash8>
+        name suffix: re-applying an unchanged config is a no-op, while a changed input or a
+        bumped generation launches a new run and keeps prior runs (accumulate). Destroy
+        hard-deletes the training and the stored pipeline (404-tolerant).
+    api:
+        base_path: /ml/v4/trainings
+        id_field: id
+        list_endpoint: /ml/v4/trainings?version=2024-01-01
+        get_endpoint: /ml/v4/trainings/{id}?version=2024-01-01
+        create_endpoint: /ml/v4/trainings?version=2024-01-01
+        create_method: POST
+        delete_endpoint: /ml/v4/trainings/{id}?version=2024-01-01&hard_delete=true
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              immutable: true
+              description: Experiment / training run name.
+              validation:
+                  min_length: 1
+                  max_length: 250
+            - name: training_data
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Asset id of the training data (a data_asset). Used to build the training's
+                  training_data_references entry (type: data_asset).
+              references:
+                  resource: data_asset
+                  field: asset_id
+            - name: prediction_type
+              type: string
+              required: true
+              immutable: true
+              allowed_values: [binary, multiclass, regression]
+              description: AutoAI learning task type.
+            - name: prediction_column
+              type: string
+              required: true
+              immutable: true
+              description: Target/label column name in the training data.
+            - name: scoring
+              type: string
+              required: false
+              immutable: true
+              description: >
+                  Optimization metric (scorer_for_ranking), e.g. accuracy / roc_auc / neg_root_mean_squared_error.
+                  Omit to let AutoAI choose the default for the prediction_type.
+            - name: holdout_size
+              type: float
+              required: false
+              immutable: true
+              description: Holdout fraction (0.0–1.0) carried into optimization.holdout_param.
+            - name: include_only_estimators
+              type: array
+              required: false
+              item_type: string
+              immutable: true
+              description: Restrict AutoAI to these estimator names (optional).
+            - name: t_shirt_size
+              type: string
+              required: false
+              immutable: true
+              description: Compute size for the AutoAI run (cluster default if omitted).
+            - name: space_id
+              type: string
+              required: false
+              also_query: true
+              immutable: true
+              description: The space ID scope. Sent in body on create, query param on get/list/delete.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              also_query: true
+              immutable: true
+              description: The project ID scope. Sent in body on create, query param on get/list/delete.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: generation
+              type: integer
+              required: false
+              location: LocalOnly
+              description: >
+                  Optional re-run nonce (Kubernetes metadata.generation semantics). Bump this
+                  to launch a new run with all other inputs unchanged; it is folded into the
+                  identity hash and never sent to the API body. Prior generations are retained.
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Training run id.
+            - name: pipeline_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Id of the stored AutoAI pipeline document (deleted on destroy).
+            - name: state
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Terminal training state (completed / failed / canceled).
+            - name: best_pipeline
+              type: object
+              required: false
+              location: Computed
+              immutable: true
+              description: Top-ranked pipeline (name + score) extracted from the leaderboard.
+            - name: leaderboard
+              type: array
+              required: false
+              location: Computed
+              immutable: true
+              description: Ranked pipeline metrics from entity.status.metrics.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+            list_field: resources
+        # Identity is a deterministic hash over the AutoAI inputs (identity_hash.fields
+        # below), stored as a `<name>-<hash8>` name suffix, plus the optional `generation`
+        # nonce. A completed run's create-time inputs are baked into the stored pipeline
+        # document and are NOT echoed on the training GET, so they are folded into the hash
+        # rather than compared as state fields — the parser drops them (and `name`) from the
+        # default state_fields and injects the synthetic `identity_hash` (which the request
+        # materializer never sends to any API body). Discovery matches the suffixed name:
+        # a matching run re-plans clean (NoChange); a changed input or a bumped `generation`
+        # yields a new hash → new suffixed name → no match → a new run, while prior runs
+        # (other hashes) are never matched and are retained (accumulate).
+        identity_hash:
+            fields:
+                - training_data
+                - prediction_type
+                - prediction_column
+                - scoring
+                - holdout_size
+                - include_only_estimators
+                - t_shirt_size
+                - space_id
+                - project_id
+            nonce_field: generation
+            storage: name_suffix
+            length: 8
+        update_strategy: recreate
+        immutable_fields:
+            - name
+        use_json_patch: false
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

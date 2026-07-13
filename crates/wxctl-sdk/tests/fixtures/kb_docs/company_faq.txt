@@ -1,0 +1,13 @@
+Acme Corp Company FAQ
+
+Founded: Acme Corp was founded in 1987 by Dr. Elena Vasquez in Austin, Texas.
+
+Headquarters: The company headquarters is located at 500 Innovation Drive, Austin, Texas 78701.
+
+CEO: The current CEO of Acme Corp is Marcus Chen, who assumed the role in 2019.
+
+Products: Acme Corp's flagship products include the Acme CloudSync platform for enterprise data synchronization, the Acme Sentinel security monitoring suite, and the Acme Relay API gateway.
+
+Employees: As of 2024, Acme Corp employs approximately 3,200 people across 12 offices worldwide.
+
+Revenue: Acme Corp reported annual revenue of $890 million in fiscal year 2024.

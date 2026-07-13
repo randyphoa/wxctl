@@ -1,0 +1,108 @@
+RIVERSTONE BANK — PERSONAL DEPOSIT PRODUCTS AND DISCLOSURES HANDBOOK
+======================================================================
+
+Section 1: Riverstone Everyday Checking
+----------------------------------------
+The Riverstone Everyday Checking account is designed for day-to-day spending
+and bill payment. It provides unlimited debit-card transactions, free access
+to the Riverstone ATM network (over 2,000 locations nationwide), and mobile
+check deposit through the Riverstone Banking app.
+
+Monthly maintenance fee: $8.00 per statement cycle. The monthly maintenance
+fee is waived when the account holder maintains a minimum daily balance of
+$500 or receives at least one qualifying direct deposit of $250 or more per
+statement cycle.
+
+Overdraft handling: If a transaction exceeds the available balance, Riverstone
+may, at its discretion, pay the item and assess an overdraft fee of $32.00 per
+occurrence, or return the item and assess a returned-item fee of $32.00. No
+more than three overdraft or returned-item fees will be charged per business
+day. Customers may link a Riverstone savings account for overdraft protection
+transfers at no per-transfer fee.
+
+Minimum opening deposit: $25.00. No minimum ongoing balance requirement beyond
+the fee-waiver thresholds described above.
+
+Section 2: Riverstone High-Yield Savings
+-----------------------------------------
+The Riverstone High-Yield Savings account is an interest-bearing deposit
+account intended for building personal savings. Interest is calculated on the
+average daily balance and credited to the account on the last business day of
+each statement cycle.
+
+The Annual Percentage Yield (APY) is variable and is set at Riverstone Bank's
+discretion; current rates are posted at riverstone.example.bank and are
+subject to change without prior notice.
+
+Monthly maintenance fee: $4.00 per statement cycle. The fee is waived when
+the average daily balance remains at or above $300 for the entire statement
+cycle.
+
+Federal regulations limit certain types of transfers and withdrawals from
+savings accounts. Riverstone High-Yield Savings accounts are subject to a
+limit of six convenient transfers or withdrawals per statement cycle (including
+online, telephone, and pre-authorized transfers). Excess-transaction fees of
+$10.00 per transaction apply to each transfer or withdrawal above the limit
+in a statement cycle.
+
+Minimum opening deposit: $25.00.
+
+Section 3: Riverstone Money Market
+------------------------------------
+The Riverstone Money Market account combines higher-yield interest with limited
+check-writing privileges. Account holders receive a book of ten free checks per
+year; additional check books are available for $5.00 per book.
+
+Interest tiers (variable APY, subject to change):
+  - Balance $0 – $9,999.99:    Tier 1 rate (posted at riverstone.example.bank)
+  - Balance $10,000 – $49,999.99: Tier 2 rate
+  - Balance $50,000 and above:  Tier 3 rate
+
+Monthly maintenance fee: $12.00 per statement cycle. The fee is waived when
+the average daily balance is $2,500 or more for the entire statement cycle.
+
+The same six-transfer limit that applies to Riverstone High-Yield Savings
+accounts applies to the Riverstone Money Market account. Excess-transaction
+fees are $10.00 per transaction above the limit per statement cycle.
+
+Minimum opening deposit: $1,000.00.
+
+Section 4: Fee Schedule Summary
+---------------------------------
+The following fees apply across applicable Riverstone Bank personal deposit
+accounts:
+
+  Monthly maintenance — Everyday Checking:   $8.00 (waivable; see Section 1)
+  Monthly maintenance — High-Yield Savings:  $4.00 (waivable; see Section 2)
+  Monthly maintenance — Money Market:        $12.00 (waivable; see Section 3)
+  Overdraft fee (Everyday Checking):         $32.00 per occurrence, max 3/day
+  Returned-item fee (Everyday Checking):     $32.00 per occurrence, max 3/day
+  Excess-transaction fee (Savings/MM):       $10.00 per transaction over limit
+  Domestic wire transfer — outgoing:         $25.00 per wire
+  Domestic wire transfer — incoming:         $10.00 per wire
+  International wire transfer — outgoing:    $45.00 per wire
+  Stop-payment order:                        $30.00 per request
+  Paper statement fee:                       $3.00 per cycle (eStatements free)
+  Replacement debit card (expedited):        $15.00
+
+Section 5: Regulatory Disclosures
+------------------------------------
+5.1  Variable Rates.  Interest rates and Annual Percentage Yields for
+Riverstone High-Yield Savings and Riverstone Money Market accounts are
+variable and may be adjusted at any time at Riverstone Bank's sole discretion.
+Past rates are not a guarantee of future rates. Current rates are available
+at riverstone.example.bank or by calling Riverstone customer support.
+
+5.2  Deposit Insurance.  Deposits held at Riverstone Bank are insured up to
+the applicable limits established by the relevant deposit insurance authority
+for your account type and ownership category. Riverstone Bank is a fictional
+institution used for illustrative purposes; in a real deployment, you would
+confirm your institution's actual insurer and coverage limits.
+
+5.3  General Information Only.  The information contained in this handbook is
+provided for general informational purposes only and does not constitute
+financial, legal, tax, or investment advice. Riverstone Bank encourages all
+customers to consult a qualified financial or legal advisor before making
+decisions about their personal finances. Product terms and fee schedules are
+subject to change; the most current version of this handbook supersedes all
+prior versions.

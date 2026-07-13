@@ -1,0 +1,381 @@
+# wxctl-schema dependency graph snapshot (structural drift guard).
+# Regenerate after an intentional change, then review the diff:
+#   WXCTL_REGEN_GRAPH_GOLDEN=1 cargo test -p wxctl-schema -- graph_snapshot
+
+## resources (110)
+adls_container
+  dep storage_connection
+  edge connection -> storage_connection (required)
+agent
+  dep agent
+  dep knowledge_base
+  dep model
+  dep tool
+  dep toolkit
+  edge collaborators -> agent (optional)
+  edge knowledge_base -> knowledge_base (optional)
+  edge llm -> model (optional)
+  edge toolkits -> toolkit (optional)
+  edge tools -> tool (optional)
+agent_release
+  dep agent
+  edge agent_id -> agent (required)
+ai_service
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+asset_promotion
+  dep job_run
+  dep project
+  dep space
+  edge job_run -> job_run (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+autoai_experiment
+  dep data_asset
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+  edge training_data -> data_asset (required)
+business_term
+business_terms
+catalog
+category
+  dep category
+  edge parent_category -> category (optional)
+common_core_connection
+  dep catalog
+  dep project
+  dep space
+  edge catalog_id -> catalog (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+concert_application
+concert_automation_rule
+  dep concert_application
+  dep concert_credential
+  dep concert_environment
+  edge component_id -> concert_application (optional)
+  edge component_id -> concert_environment (optional)
+  edge credential_id -> concert_credential (optional)
+concert_compliance_profile
+  dep concert_application
+  edge application_releases_ids -> concert_application (optional)
+concert_credential
+concert_environment
+concert_ingestion_job
+  dep concert_credential
+  edge credentials_id -> concert_credential (optional)
+concert_resilience_input_data_key
+concert_resilience_library
+concert_resilience_posture
+  dep concert_resilience_profile
+  edge profile_name -> concert_resilience_profile (required)
+concert_resilience_profile
+  dep concert_resilience_input_data_key
+  edge input_data_keys -> concert_resilience_input_data_key (optional)
+concert_source_repo
+concert_worker_group
+concert_workflow
+concert_workflow_exposure
+  dep concert_workflow
+  edge flow_uri -> concert_workflow (required)
+concert_workflow_role
+concert_workflow_schedule
+  dep concert_workflow
+  edge flow_urn -> concert_workflow (optional)
+data_asset
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+data_mart
+data_set
+  dep data_mart
+  edge data_mart_id -> data_mart (required)
+database_connection
+database_registration
+  dep database_connection
+  edge connection -> database_connection (required)
+db2_engine
+environment
+  dep project
+  edge project_id -> project (optional)
+gcs_bucket
+  dep storage_connection
+  edge connection -> storage_connection (required)
+guardrails_policy
+ingestion_job
+  dep spark_engine
+  edge engine_id -> spark_engine (optional)
+instana_alert
+  dep instana_alerting_channel
+  dep instana_custom_event_spec
+  edge eventFilteringConfiguration.ruleIds -> instana_custom_event_spec (optional)
+  edge integrationIds -> instana_alerting_channel (required)
+instana_alerting_channel
+instana_application_alert_config
+  dep instana_alerting_channel
+  dep instana_application_perspective
+  edge alertChannelIds -> instana_alerting_channel (required)
+  edge applicationId -> instana_application_perspective (optional)
+instana_application_perspective
+instana_custom_event_spec
+instana_maintenance_window
+instana_slo_alert_config
+  dep instana_alerting_channel
+  dep instana_slo_config
+  edge alertChannelIds -> instana_alerting_channel (required)
+  edge sloIds -> instana_slo_config (required)
+instana_slo_config
+instana_synthetic_alert_config
+  dep instana_alerting_channel
+  dep instana_synthetic_test
+  edge alertChannelIds -> instana_alerting_channel (required)
+  edge syntheticTestIds -> instana_synthetic_test (required)
+instana_synthetic_test
+instana_website_alert_config
+  dep instana_alerting_channel
+  dep instana_website_config
+  edge alertChannelIds -> instana_alerting_channel (optional)
+  edge websiteId -> instana_website_config (required)
+instana_website_config
+integrated_system
+integration
+inventory
+job
+  dep environment
+  dep notebook
+  dep project
+  dep script_asset
+  edge asset -> notebook (optional)
+  edge asset -> script_asset (required)
+  edge environment -> environment (optional)
+  edge project_id -> project (optional)
+job_run
+  dep job
+  dep project
+  edge job -> job (required)
+  edge project_id -> project (optional)
+knowledge_base
+milvus_service
+  dep storage_registration
+  edge storage_name -> storage_registration (optional)
+model
+  dep orchestrate_connection
+  edge connection_id -> orchestrate_connection (required)
+model_entry
+  dep inventory
+  edge catalog_id -> inventory (required)
+model_tracking
+  dep asset_promotion
+  dep inventory
+  dep model_entry
+  dep project
+  dep space
+  dep wml_function
+  dep wml_model
+  edge catalog_id -> inventory (optional)
+  edge model -> asset_promotion (optional)
+  edge model -> wml_function (optional)
+  edge model -> wml_model (required)
+  edge model_entry -> model_entry (required)
+  edge model_entry_catalog_id -> inventory (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+monitor_definition
+monitor_instance
+  dep data_mart
+  dep monitor_definition
+  dep subscription
+  edge data_mart_id -> data_mart (required)
+  edge monitor_definition_id -> monitor_definition (optional)
+  edge target.target_id -> subscription (optional)
+notebook
+  dep environment
+  dep project
+  edge environment -> environment (optional)
+  edge project_id -> project (optional)
+orchestrate_connection
+other_engine
+pa_chore
+pa_cube
+  dep pa_dimension
+  edge dimensions -> pa_dimension (required)
+pa_dimension
+pa_group
+pa_hierarchy
+  dep pa_dimension
+  edge dimension -> pa_dimension (required)
+pa_process
+pa_sql_data_source
+pa_subset
+  dep pa_dimension
+  edge dimension -> pa_dimension (required)
+pa_user
+  dep pa_group
+  edge groups -> pa_group (optional)
+pa_view
+  dep pa_cube
+  edge cube -> pa_cube (required)
+package_extension
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+prestissimo_engine
+  dep database_registration
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> storage_registration (optional)
+presto_engine
+  dep database_registration
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> storage_registration (optional)
+project
+rule
+rules
+s3_bucket
+  dep storage_connection
+  edge connection -> storage_connection (required)
+s3_object
+  dep s3_bucket
+  edge bucket -> s3_bucket (required)
+  edge region -> s3_bucket (required)
+sal_enrichment_job
+sal_enrichment_settings
+sal_global_settings
+sal_glossary
+sal_integration
+  dep prestissimo_engine
+  dep presto_engine
+  dep spark_engine
+  edge engine_id -> prestissimo_engine (optional)
+  edge engine_id -> presto_engine (required)
+  edge engine_id -> spark_engine (optional)
+schema
+  dep catalog
+  dep presto_engine
+  dep storage_registration
+  edge catalog_id -> catalog (required)
+  edge catalog_id -> storage_registration (optional)
+  edge engine_id -> presto_engine (required)
+script_asset
+  dep project
+  dep space
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+service_provider
+  dep space
+  edge deployment_space_id -> space (optional)
+software_specification
+  dep package_extension
+  dep project
+  dep space
+  edge package_extensions -> package_extension (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+space
+spark_engine
+  dep database_registration
+  dep s3_bucket
+  dep storage_registration
+  edge associated_catalogs -> database_registration (optional)
+  edge associated_catalogs -> s3_bucket (optional)
+  edge associated_catalogs -> storage_registration (optional)
+storage_connection
+storage_registration
+  dep adls_container
+  dep gcs_bucket
+  dep s3_bucket
+  edge bucket -> adls_container (optional)
+  edge bucket -> gcs_bucket (optional)
+  edge bucket -> s3_bucket (required)
+subscription
+  dep data_mart
+  dep service_provider
+  edge data_mart_id -> data_mart (required)
+  edge service_provider_id -> service_provider (required)
+tool
+  dep orchestrate_connection
+  edge binding.openapi.connection_id -> orchestrate_connection (optional)
+  edge binding.python.connections -> orchestrate_connection (optional)
+toolkit
+  dep orchestrate_connection
+  edge mcp.connections -> orchestrate_connection (optional)
+vault_audit_device
+vault_auth_method
+vault_database_role
+  dep vault_secret_engine
+  edge mount -> vault_secret_engine (required)
+vault_group_alias
+  dep vault_auth_method
+  dep vault_identity_group
+  edge canonical_id -> vault_identity_group (required)
+  edge mount_accessor -> vault_auth_method (required)
+vault_identity_group
+  dep vault_policy
+  edge policies -> vault_policy (optional)
+vault_jwt_role
+  dep vault_auth_method
+  edge backend -> vault_auth_method (required)
+vault_policy
+vault_secret_engine
+wml_deployment
+  dep ai_service
+  dep asset_promotion
+  dep project
+  dep space
+  dep wml_function
+  dep wml_model
+  dep wml_script
+  edge asset -> ai_service (required)
+  edge asset -> asset_promotion (optional)
+  edge asset -> wml_function (optional)
+  edge asset -> wml_model (optional)
+  edge asset -> wml_script (optional)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+wml_function
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+wml_model
+  dep autoai_experiment
+  dep project
+  dep space
+  edge experiment -> autoai_experiment (required)
+  edge project_id -> project (optional)
+  edge space_id -> space (optional)
+wml_script
+  dep project
+  dep software_specification
+  dep space
+  edge project_id -> project (optional)
+  edge software_spec -> software_specification (required)
+  edge space_id -> space (optional)
+
+## bridges (2)
+database_access: orchestrate_connection -> common_core_connection when=always
+  constraint common_core_connection.datasource_type in [postgresql, mysql, oracle, db2, netezza]
+  constraint orchestrate_connection.connection_type in [key_value_creds]
+  map credentials.database -> properties.database
+  map credentials.host -> properties.host
+  map credentials.password -> properties.password
+  map credentials.port -> properties.port
+  map credentials.username -> properties.username
+object_storage_access: orchestrate_connection -> common_core_connection when=always
+  constraint common_core_connection.datasource_type in [s3, cos, azure]
+  constraint orchestrate_connection.connection_type in [key_value_creds]
+  map credentials.access_key -> properties.access_key
+  map credentials.bucket -> properties.bucket
+  map credentials.secret_key -> properties.secret_key
+  map credentials.url -> properties.url

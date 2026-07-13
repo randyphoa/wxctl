@@ -1,0 +1,120 @@
+resource:
+    name: wml_model
+    service: watsonx_ai
+    kind: wml_model
+    version: v1
+    description: >
+        A WML Model materializes the winning pipeline of a completed AutoAI experiment as a
+        deployable wml-hybrid_0.1 model. Create is performed by the handler: it reads the
+        referenced autoai_experiment's training (GET /ml/v4/trainings/{id}) for its leaderboard,
+        resolves pipeline_name (default `best`) to the winning pipeline (P<N>), fetches the
+        server-authored model-create request.json the training wrote for that pipeline
+        (GET /v2/asset_files), patches only name + space_id, and POSTs /ml/v4/models — replaying
+        the complete by-reference body (content_location of type fs, software_spec, schemas,
+        label_column, training/pipeline ids) verbatim, then polls content_import_state. Discovery
+        is name-based (list_and_get over /ml/v4/models); a model is immutable and identified by
+        name (its publish inputs are not echoed on the model GET, so identity is `name` only).
+        Destroy hard-deletes the model.
+    api:
+        base_path: /ml/v4/models
+        id_field: id
+        list_endpoint: /ml/v4/models?version=2024-01-01
+        get_endpoint: /ml/v4/models/{id}?version=2024-01-01
+        create_endpoint: /ml/v4/models?version=2024-01-01
+        create_method: POST
+        delete_endpoint: /ml/v4/models/{id}?version=2024-01-01
+        delete_method: DELETE
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              immutable: true
+              description: Model name (shown in the space catalog; the deployable asset name).
+              validation:
+                  min_length: 1
+                  max_length: 250
+            - name: experiment
+              type: string
+              required: true
+              immutable: true
+              description: >
+                  Training id of the completed autoai_experiment whose winning pipeline is
+                  materialized. The handler reads its results_reference + leaderboard.
+              references:
+                  resource: autoai_experiment
+                  field: id
+            - name: pipeline_name
+              type: string
+              required: false
+              default: best
+              immutable: true
+              description: >
+                  Which AutoAI pipeline to materialize. `best` (default) resolves to the
+                  top-ranked leaderboard pipeline node; an explicit `Pipeline_N` selects a
+                  specific node.
+            - name: space_id
+              type: string
+              required: false
+              also_query: true
+              immutable: true
+              description: The space ID scope. Sent in body on create, query param on get/list/delete.
+              references:
+                  resource: space
+                  field: id
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              also_query: true
+              immutable: true
+              description: The project ID scope. Sent in body on create, query param on get/list/delete.
+              references:
+                  resource: project
+                  field: id
+                  optional: true
+            - name: id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Stored model id (the deployable asset id).
+            - name: model_type
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Stored model type (wml-hybrid_0.1).
+            - name: pipeline_node
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The resolved winning AutoAI leaderboard pipeline (e.g. P1).
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: id
+            list_field: resources
+        # A stored model is immutable and identified by name. Its publish inputs
+        # (content_location / training / pipeline node) are not echoed on the model
+        # GET, so comparing them against a discovered model reports false drift →
+        # spurious recreate. Identity is therefore `name` only (matches Phase 1's
+        # autoai_experiment decision); to publish a different model, change the name.
+        state_fields:
+            - name
+        update_strategy: recreate
+        immutable_fields:
+            - name
+        use_json_patch: false
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

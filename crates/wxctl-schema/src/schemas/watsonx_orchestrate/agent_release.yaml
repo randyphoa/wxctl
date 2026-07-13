@@ -1,0 +1,101 @@
+resource:
+    name: agent_release
+    service: watsonx_orchestrate
+    kind: agent_release
+    version: v1
+    description: >
+        Deploys (releases) a watsonx Orchestrate agent's current draft to the `live`
+        environment. Create with `version` omitted releases the current draft; create with
+        `version: N` pins the live environment to an existing version. Destroy undeploys the
+        release (the agent returns to draft-only) via reversible undeploy, not version-record
+        deletion. The handler owns release / repoint / undeploy (returns HookOutcome::Handled);
+        the schema's create/update/delete methods are nominal contract scaffolding. Discovery
+        lists GET /v1/orchestrate/agents/{agent_id}/environment (a bare Environment array) and
+        matches the `live` env by name (identity_match environment -> name): no live env, or a
+        matched live env with a null `current_version` (undeploy leaves the record in place
+        rather than removing it), both mean not released (plan Create; see absent_when below).
+        Only `live` is supported today.
+    api:
+        base_path: /v1/orchestrate/agents/{agent_id}/releases
+        id_field: version
+        list_endpoint: /v1/orchestrate/agents/{agent_id}/environment
+        get_endpoint: /v1/orchestrate/agents/{agent_id}/environment
+        create_method: POST
+        update_method: POST      # nominal; pre_update owns the repoint (Phase 2)
+        delete_method: DELETE    # nominal; pre_delete owns the undeploy
+    schema:
+        fields:
+            - name: agent_id
+              type: string
+              required: true
+              immutable: true
+              location: Path
+              description: >
+                  Id of the agent to release. Fills {agent_id} on every endpoint; references
+                  agent.id so the release orders after the agent in the DAG. Path (not LocalOnly)
+                  so build.rs emits the edge (ordering-only-reference-fields-localonly-no-edge-fix).
+              references:
+                  resource: agent
+                  field: id
+            - name: environment
+              type: string
+              required: false
+              default: live
+              allowed_values: [live]
+              description: >
+                  Target environment. Only `live` is supported (draft is the working state; there
+                  is no third environment). Matched against each remote env's `name` in discovery.
+            - name: version
+              type: integer
+              required: false
+              description: >
+                  Omit to release the current draft (auto-latest, known after apply); set to an
+                  existing version to pin/roll the live environment to it (repoint owned by
+                  pre_update in Phase 2).
+            - name: comments
+              type: string
+              required: false
+              location: LocalOnly
+              description: >
+                  Optional release comment. LocalOnly — folded into the release body by the handler
+                  (not materialized generically). Carries no references, so no edge is lost.
+            - name: environment_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: Live environment id, resolved/created by the handler and echoed by discovery.
+            - name: current_version
+              type: integer
+              required: false
+              location: Computed
+              description: Version currently deployed to the live environment (from discovery).
+            - name: status
+              type: string
+              required: false
+              location: Computed
+              description: Deployment status of the live environment, best-effort from discovery.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: version
+            # No `name` field on this kind -> identity_match (not the default name_field) drives
+            # matching (discovery-name-field-missing-for-nameless-kinds-fix). local `environment`
+            # ("live") vs each remote Environment's `name`. Bare-array GET auto-detected by
+            # ListEnvelope (precedent: watsonx_orchestrate/agent.yaml), so no list_field.
+            identity_match:
+                local_path: environment
+                remote_path: name
+            # Undeploy leaves the live Environment record with current_version: null.
+            # A matched live env with no deployed version is NOT a release — treat as
+            # absent so plan renders Create (and an auto-latest release re-releases).
+            absent_when:
+                field: current_version
+                equals: null
+        state_fields:
+            - environment
+            - version
+        update_strategy: replace
+        immutable_fields:
+            - agent_id
+        use_json_patch: false

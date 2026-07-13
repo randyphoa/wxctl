@@ -1,0 +1,65 @@
+NORTHWIND MANUFACTURING — ACCOUNTS PAYABLE POLICY
+==================================================
+
+Section 1: Purpose and Scope
+-----------------------------
+This policy governs the processing, validation, and payment of all vendor
+invoices received by Northwind Manufacturing. It applies to every invoice
+submitted against a Northwind purchase order, regardless of dollar amount.
+The AP team is responsible for enforcing these rules consistently before any
+payment is authorised or scheduled.
+
+Section 2: Three-Way Matching Requirement
+------------------------------------------
+Every invoice must be matched against three independent documents before it
+may be approved for payment: (1) the originating purchase order (PO),
+(2) the goods-receipt or service-confirmation record in the ERP system,
+and (3) the vendor invoice itself. A match is considered successful only when
+the vendor ID, PO number, line-item quantities, and amounts agree across all
+three documents within the tolerance band defined in Section 3. Invoices that
+cannot be matched to a valid, open PO in the ERP are automatically routed for
+human review and are never auto-approved.
+
+Section 3: Amount-Mismatch Tolerance Band
+------------------------------------------
+Minor rounding and currency-conversion discrepancies are acceptable within the
+following tolerance: the greater of ±2% of the PO line-item amount or ±$50,
+whichever is larger. For example, a PO line for $1,000 permits an invoice
+variance of up to $20 (2%); a PO line for $200 permits a variance of up to
+$50 (the flat floor). Any mismatch that exceeds this band on any line item
+routes the invoice to a human AP analyst for review and resolution. The
+analyst must document the reason for the variance and obtain a written
+approval from the relevant budget owner before payment proceeds.
+
+Section 4: Duplicate-Invoice Rule
+----------------------------------
+An invoice is flagged as a potential duplicate if either of the following
+conditions is true: (a) the same vendor ID and the same invoice number
+appear on any previously received invoice, regardless of amount or date; or
+(b) the same vendor ID, the same invoice amount, and the same invoice date
+appear on any previously received invoice, regardless of invoice number.
+Duplicate-flagged invoices are held and routed to a human AP analyst. The
+analyst verifies with the vendor whether the submission is a reissuance,
+a correction, or an inadvertent duplicate. Payment is blocked until the
+analyst resolves the flag.
+
+Section 5: Exception Routing
+------------------------------
+The following conditions always route an invoice to a human AP analyst and
+are never subject to automatic approval or payment: (a) amount mismatches
+outside the tolerance band defined in Section 3; (b) vendor ID or PO number
+on the invoice does not match any active record in the ERP vendor master or
+any open PO within the approved range; (c) a duplicate flag triggered under
+Section 4; (d) a missing or unconfirmed goods-receipt record at the time of
+matching; (e) any invoice from a vendor whose status in the ERP is marked
+On-Hold or Inactive. Exceptions must be resolved within 5 business days to
+avoid late-payment risk. The AP manager reviews all open exceptions weekly.
+
+Section 6: Payment Scheduling
+-------------------------------
+Invoices that pass three-way matching within tolerance are scheduled for
+payment according to the vendor's contracted payment terms (Net 15, Net 30,
+or Net 45) as recorded in the ERP vendor master. Early payment is permitted
+only when a vendor has an active early-payment discount agreement on file.
+Payments are released in the Tuesday batch unless the due date falls within
+2 business days, in which case an off-cycle payment may be requested.

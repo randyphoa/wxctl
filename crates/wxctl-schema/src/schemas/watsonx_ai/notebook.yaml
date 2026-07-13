@@ -1,0 +1,89 @@
+resource:
+    name: notebook
+    service: watsonx_ai
+    kind: notebook
+    version: v1
+    description: >
+        A Notebook asset stored in a watsonx.ai project. The .ipynb file is uploaded as
+        multipart/form-data to /v2/asset_files/notebook/<name>.ipynb, then POST /v2/notebooks
+        registers the notebook with a runtime environment (live-verified 2026-07-06 on CP4D:
+        octet-stream upload 400s "Invalid content type"; the create body's `project` must be a
+        bare uuid string, not {"guid": ...}). Discovery + get + destroy ride the CAMS asset
+        family — POST /v2/asset_types/notebook/search and /v2/assets/{guid} — mirroring
+        script_asset's live-proven routes; /v2/notebooks/list is a bulk get-by-ids (400 without
+        `include` + `notebooks`), NOT a list, so it cannot serve discovery. The registered
+        notebook's id lives at metadata.asset_id (no metadata.guid in the create response);
+        the handler hoists it top-level as `guid`.
+    api:
+        base_path: /v2/assets
+        id_field: guid
+        list_endpoint: /v2/asset_types/notebook/search
+        get_endpoint: /v2/assets/{guid}
+        create_method: POST
+        delete_method: DELETE
+        delete_endpoint: /v2/assets/{guid}
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: Notebook name (the .ipynb basename in the project).
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: source_path
+              type: string
+              required: true
+              location: LocalOnly
+              is_path: true
+              description: >
+                  Local path to the .ipynb file. Resolved against the config file's directory.
+            - name: environment
+              type: string
+              required: false
+              description: The notebook runtime environment guid.
+              references:
+                  resource: environment
+                  field: guid
+                  optional: true
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: guid
+                  optional: true
+            - name: guid
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique id of the notebook asset.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        # CAMS type-scoped name search (script_asset.yaml is the live-proven template);
+        # entries carry the name at metadata.name and the id at metadata.asset_id
+        # (the handler's post_discover hoists it as `guid` for ${notebook.x.guid} refs).
+        discovery:
+            method: list_and_get
+            id_source: guid
+            list_field: results
+            list_method: post
+            list_body:
+                query: "asset.asset_type:notebook"
+        state_fields:
+            - name
+        update_strategy: recreate
+        immutable_fields: []
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []

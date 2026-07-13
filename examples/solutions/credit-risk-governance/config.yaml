@@ -1,0 +1,226 @@
+# Four IBM products in one config: deploy a credit-risk model on watsonx.ai,
+# govern it with a watsonx.governance OpenScale quality monitor, and put a
+# watsonx Orchestrate loan-decision agent in front of it — the agent scores
+# applicants by calling the *same* governed deployment, so every answer it gives
+# is the one OpenScale is watching. The agent's chat LLM (gpt-oss-120b) is served
+# by watsonx.ai through the Orchestrate AI gateway, scoped by the same space.
+#
+# FSI-framed. `wxctl plan` validates with no live calls under a profile that
+# declares the watsonx.ai + OpenScale + watsonx Orchestrate services; live
+# apply/test/destroy needs a watsonx SaaS profile. Required env (placeholders
+# suffice for plan, real values for live apply): WATSONX_APIKEY (WML/scoring
+# key), GATEWAY_API_KEY (AI gateway), WATSONX_URL (the SaaS watsonx.ai host).
+# See README.
+#
+# Edges (watsonx.ai + watsonx.governance):
+#   space -> {software_specification, wml_function}.space_id
+#          -> service_provider.deployment_space_id
+#   software_specification -> wml_function.software_spec
+#   wml_function -> wml_deployment.asset
+#   data_mart -> subscription.data_mart_id, monitor_instance.data_mart_id
+#   service_provider -> subscription.service_provider_id
+#   wml_deployment -> subscription.{asset,deployment}.*_id, test.deployment
+#   subscription -> monitor_instance.target.target_id
+# Edges (watsonx Orchestrate layer):
+#   gateway_conn -> gateway_model.connection_id
+#   space -> gateway_model.provider_config.watsonx_space_id
+#   wml_deployment -> scorer_conn (depends_on; the deployment id flows into the
+#       connection credentials so the tool can call the governed deployment)
+#   scorer_conn -> score_applicant.binding.python.connections
+#   gateway_model -> loan_desk.llm
+#   score_applicant -> loan_desk.tools
+#   loan_desk -> agent_decision_test.agent
+
+kind: space
+ref_name: gov_space
+name: credit-risk-governance-space
+description: scopes the watsonx.ai deployment OpenScale governs + binds the service provider
+type: wx
+
+---
+kind: software_specification
+ref_name: gov_swspec
+name: credit-risk-governance-swspec
+base_software_specification: runtime-25.1-py3.12
+space_id: ${space.gov_space}
+
+---
+kind: wml_function
+ref_name: gov_function
+name: credit-risk-governance-function
+software_spec: ${software_specification.gov_swspec}
+space_id: ${space.gov_space}
+source_path: resources/model/score.py
+
+---
+kind: wml_deployment
+ref_name: gov_deployment
+name: credit-risk-governance-deployment
+asset: ${wml_function.gov_function}
+space_id: ${space.gov_space}
+online: {}
+
+---
+kind: service_provider
+ref_name: gov_sp
+name: credit-risk-governance-sp
+service_type: watson_machine_learning
+deployment_space_id: ${space.gov_space}
+credentials:
+  apikey: ${env:WATSONX_APIKEY}
+
+---
+kind: data_mart
+ref_name: gov_dm
+name: credit-risk-governance-dm
+internal_database: true
+
+---
+kind: subscription
+ref_name: gov_sub
+data_mart_id: ${data_mart.gov_dm}
+service_provider_id: ${service_provider.gov_sp}
+asset:
+  asset_id: ${wml_deployment.gov_deployment}
+  asset_type: model
+deployment:
+  deployment_id: ${wml_deployment.gov_deployment}
+  name: credit-risk-governance-deployment
+  deployment_type: online
+
+---
+kind: monitor_instance
+ref_name: gov_mon
+data_mart_id: ${data_mart.gov_dm}
+monitor_definition_id: quality
+target:
+  target_type: subscription
+  target_id: ${subscription.gov_sub}
+parameters:
+  min_feedback_data_size: 10
+
+---
+kind: test
+ref_name: gov_score_test
+deployment: ${wml_deployment.gov_deployment}
+turns:
+  - payload:
+      input_data:
+        - values:
+            - [120000, 0.25, 720]
+    expect_response:
+      predictions:
+        - values:
+            - [1, 0.847]
+
+# ── watsonx Orchestrate layer ───────────────────────────────────────────────
+# A loan-decision agent that scores applicants by calling the governed
+# watsonx.ai deployment above — not by re-implementing the logic.
+
+---
+# AI-gateway connection holding the chat model's credentials.
+kind: orchestrate_connection
+ref_name: gateway_conn
+app_id: crg-gateway
+name: Credit Decision Desk Gateway Connection
+connection_type: key_value_creds
+environment: [draft, live]
+preference: team
+credentials:
+  api_key: ${env:GATEWAY_API_KEY}
+
+---
+# The agent's chat LLM: gpt-oss-120b served by watsonx.ai through the AI gateway,
+# scoped by the SAME deployment space that carries the governed credit-risk model.
+kind: model
+ref_name: gateway_model
+name: virtual-model/watsonx/openai/gpt-oss-120b
+display_name: Credit Decision Desk Gateway Model (gpt-oss-120b via watsonx.ai)
+description: |
+  Chat gateway model the loan-decision agent runs on: gpt-oss-120b served by
+  watsonx.ai through the AI gateway, scoped by the credit-risk deployment space.
+model_type: chat
+connection_id: ${orchestrate_connection.gateway_conn}
+provider_config:
+  custom_host: ${env:WATSONX_URL}
+  watsonx_space_id: ${space.gov_space}
+
+---
+# key_value connection the scoring tool reads at runtime. `depends_on` orders it
+# AFTER the deployment so the late-bound deployment id in its credentials is real.
+kind: orchestrate_connection
+ref_name: scorer_conn
+app_id: crg-scorer
+name: Credit Risk Scorer Connection
+connection_type: key_value_creds
+environment: [draft, live]
+preference: team
+depends_on:
+  - wml_deployment.gov_deployment
+# Connection key-values the scoring tool reads at runtime. Two subtleties:
+#   • `wml_url`, not `url` — `url` is reserved in a wxO connection (the
+#     server_url) and is stripped from the runtime credentials, so a key named
+#     `url` never reaches the tool.
+#   • `${wml_deployment.gov_deployment.metadata.id}` — a bare `${kind.ref}`
+#     resolves to the whole resource object (dropped by the key-value store,
+#     which keeps only string values); the explicit `.metadata.id` path yields
+#     the scalar deployment id the tool needs.
+credentials:
+  wml_url: ${env:WATSONX_URL}
+  apikey: ${env:WATSONX_APIKEY}
+  deployment_id: ${wml_deployment.gov_deployment.metadata.id}
+
+---
+# Python tool: scores a loan applicant against the governed watsonx.ai
+# deployment. The binding key `crg-scorer` matches the connection's app_id and
+# the app_id the tool passes to connections.key_value(...).
+kind: tool
+ref_name: score_applicant
+name: score_applicant
+display_name: Score Applicant
+description: |
+  Scores a loan applicant (annual income, debt-to-income ratio, credit score)
+  against the governed watsonx.ai credit-risk deployment and returns an
+  approve/decline decision with a probability. Use this whenever a lending
+  decision is needed — never estimate the decision yourself.
+permission: read_only
+is_async: false
+source_path: ./resources/tool/score_applicant
+binding:
+  python:
+    function: score_applicant:main
+    connections:
+      crg-scorer: ${orchestrate_connection.scorer_conn}
+
+---
+kind: agent
+ref_name: loan_desk
+name: loan_decision_desk
+display_name: Credit Decision Desk
+description: |
+  A loan-officer assistant that makes credit decisions by scoring applicants
+  against the governed watsonx.ai credit-risk model.
+instructions: |
+  You help a loan officer decide whether to approve a credit application.
+  When the officer gives you an applicant's annual income, debt-to-income ratio,
+  and credit score, ALWAYS call the score_applicant tool to get the decision —
+  never estimate or guess the outcome yourself. Report the decision (approve or
+  decline) and the probability the tool returns, and note that the score comes
+  from a watsonx.ai model under a watsonx.governance OpenScale quality monitor.
+  All figures here are mock demo data.
+llm: ${model.gateway_model}
+style: default
+tools:
+  - ${tool.score_applicant}
+collaborators: []
+knowledge_base: []
+
+---
+kind: test
+ref_name: agent_decision_test
+agent: ${agent.loan_desk}
+turns:
+  - message: "Assess a loan applicant with annual income 120000, debt-to-income ratio 0.25, and credit score 720."
+    expect_tools:
+      - score_applicant
+    expect_answer: "Should call the scorer and report APPROVE with a probability of about 0.847."

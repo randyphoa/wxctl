@@ -1,0 +1,1 @@
+Ops assistant backed by a custom local MCP server that wxctl packages and uploads, exposing a service-status lookup tool over bundled mock data on a custom gateway model

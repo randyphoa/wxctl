@@ -1,0 +1,111 @@
+resource:
+    name: job
+    service: common_core
+    kind: job
+    version: v1
+    description: >
+        A platform Job definition in a watsonx.ai project: a reusable run configuration binding
+        a runnable asset (a script_asset or a notebook) to a runtime environment. Create is plain
+        CRUD — POST /v2/jobs stores the definition (asset_ref → the runnable asset id,
+        configuration.env_id → the runtime environment guid, configuration.env_variables → run-time
+        overrides). The API derives the runnable type from the referenced asset itself — asset_ref
+        and asset_ref_type are mutually exclusive on the wire (400 if both are sent), so this schema
+        does not declare an asset_ref_type field (live-verified 2026-07-05, both SaaS and CP4D).
+        Discovery lists the project's jobs by name; destroy deletes the job asset. The job carries
+        no run semantics — a job_run submits and polls an execution against it. Live create-body
+        shape is verified in Phase 5. The create POST body is wrapped under a top-level job key
+        ({"job": {...}}) by JobHandler.pre_create — the flat materializer output this schema's
+        api_field mappings assemble is not itself valid on the wire (live-verified 2026-07-05, both
+        SaaS and CP4D).
+    api:
+        base_path: /v2/jobs
+        id_field: asset_id
+        list_endpoint: /v2/jobs
+        get_endpoint: /v2/jobs/{asset_id}
+        create_method: POST
+        delete_method: DELETE
+        delete_endpoint: /v2/jobs/{asset_id}
+    schema:
+        fields:
+            - name: name
+              type: string
+              required: true
+              description: Job name (shown in the project's Jobs list).
+              validation:
+                  min_length: 1
+                  max_length: 255
+            - name: description
+              type: string
+              required: false
+              description: Human-readable description.
+            - name: asset
+              type: string
+              required: true
+              api_field: asset_ref
+              description: >
+                  Id of the runnable asset this job executes — a script_asset or a notebook. Sent
+                  in the create body as asset_ref. References either kind so the job is created after
+                  the asset it binds (mirrors wml_deployment.asset — primary field is the script id;
+                  a ${notebook.x.guid} value is accepted via also_allows).
+              references:
+                  resource: script_asset
+                  field: asset_id
+                  also_allows:
+                      - notebook
+            - name: environment
+              type: string
+              required: false
+              api_field: configuration.env_id
+              description: The runtime environment guid the job runs on. Sent under configuration.env_id.
+              references:
+                  resource: environment
+                  field: guid
+                  optional: true
+            - name: env_variables
+              type: array
+              required: false
+              item_type: object
+              sensitive: true
+              api_field: configuration.env_variables
+              description: >
+                  Environment-variable overrides passed to each run (name/value objects in config —
+                  readable YAML, individually sensitive-markable). Sent under
+                  configuration.env_variables, converted by JobHandler to an array of "NAME=value"
+                  strings — the wire shape the API actually requires (live-verified 2026-07-05, both
+                  SaaS and CP4D: the object shape 400s with "must be string"). ${env:VAR}-interpolatable
+                  and sensitive (redacted in logs / run records).
+            - name: project_id
+              type: string
+              required: false
+              location: Query
+              description: The project ID scope.
+              references:
+                  resource: project
+                  field: guid
+                  optional: true
+            - name: asset_id
+              type: string
+              required: false
+              location: Computed
+              immutable: true
+              description: The unique id of the job asset.
+            - name: created_at
+              type: timestamp
+              required: false
+              location: Computed
+              immutable: true
+              description: Creation timestamp.
+    reconciliation:
+        discovery:
+            method: list_and_get
+            id_source: asset_id
+            list_field: results
+        state_fields:
+            - name
+        update_strategy: recreate
+        immutable_fields: []
+
+    deployments:
+        "software-5.3":
+            api: {}
+    unsupported_on: []
