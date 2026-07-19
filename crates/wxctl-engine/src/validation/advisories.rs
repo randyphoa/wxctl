@@ -13,7 +13,7 @@ use wxctl_core::ResourceKey;
 use wxctl_schema::dependency_graph::orphan_bridge_opportunities;
 use wxctl_schema::deployment::Deployment;
 
-use super::types::{ValidationAdvisory, ValidationResult};
+use super::types::{Advisory, ValidationResult};
 
 /// Scan a validated config for orphaned one-sided bridges and return one V505
 /// advisory per (bridge, orphan resource). Empty on an invalid result (no resource
@@ -21,7 +21,7 @@ use super::types::{ValidationAdvisory, ValidationResult};
 ///
 /// `deployment`: `Some(d)` uses `d` for bridge activation; `None` is the conservative
 /// default (only bridges active on every deployment flavor).
-pub fn bridge_advisories(result: &ValidationResult, deployment: Option<&Deployment>) -> Vec<ValidationAdvisory> {
+pub fn bridge_advisories(result: &ValidationResult, deployment: Option<&Deployment>) -> Vec<Advisory> {
     let resources = result.resources();
     if resources.is_empty() {
         return Vec::new();
@@ -64,7 +64,7 @@ pub fn bridge_advisories(result: &ValidationResult, deployment: Option<&Deployme
             };
             let message = format!("orphan resource: the '{}' bridge links '{}' to '{}', which is absent from this config{}", opp.bridge_name, opp.present_kind, opp.missing_kind, mappings);
             let suggestion = format!("Add a '{}' resource and wire it to this '{}', or run `wxctl compose paths` for the full linkage. If '{}' is intentionally standalone, ignore this advisory.", opp.missing_kind, opp.present_kind, opp.present_kind);
-            advisories.push(ValidationAdvisory { code: wxctl_core::logging::error_codes::V505.to_string(), resource, message, suggestion });
+            advisories.push(Advisory { code: wxctl_core::logging::error_codes::V505.to_string(), resource, message, suggestion });
         }
     }
     advisories

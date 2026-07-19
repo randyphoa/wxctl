@@ -1,5 +1,5 @@
 use crate::output::color::Theme;
-use crate::output::{CollectorGuard, OutputCollector, RunSinkGuard, install_collector, install_run_sink, set_full_trace};
+use crate::output::{CollectorGuard, OutputCollector, RunSinkGuard, install_collector, install_run_sink, set_active_run_deployment, set_full_trace};
 use anyhow::{Result, bail};
 use parking_lot::Mutex;
 use std::path::{Path, PathBuf};
@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use uuid::Uuid;
 use wxctl_core::logging::run_record::{RunCounts, RunManifest, RunSink, generate_run_id, utc_now_string};
+use wxctl_core::types::Deployment;
 use wxctl_core::{ClientFactory, ConcurrencyConfig, Config, ResourceRegistry};
 use wxctl_engine::{ExecutionResults, OperationType, SchemaBasedReconciler};
 
@@ -118,6 +119,17 @@ impl CommandContext {
 
         // Create client factory if profile is provided
         let client_factory = if let Some(profile) = profile { Some(Arc::new(ClientFactory::new(profile, profile_path, &concurrency_config).inspect_err(|_| run_sink.finalize("failed"))?)) } else { None };
+
+        // Record the run's deployment scope now that the profile is resolved (the
+        // manifest predates profile load, so this lands late but before finalize).
+        // Profile-level effective value, defaulting to `Saas` the same way
+        // `ClientFactory::deployment_for_service` does when the profile omits it;
+        // per-service overrides (cross-env profiles) are not distinguished here.
+        // Credential-free commands construct no factory, so no deployment is recorded.
+        if let Some(cf) = &client_factory {
+            let deployment = cf.profile_deployment().ok().flatten().unwrap_or(Deployment::Saas);
+            set_active_run_deployment(Some(deployment.flavor().to_string()));
+        }
 
         // Resolve color theme. The collector panel draws to stderr, so gate
         // auto-detection on stderr's TTY (keeps a colored panel on screen even

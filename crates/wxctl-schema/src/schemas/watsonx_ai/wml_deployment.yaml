@@ -163,3 +163,14 @@ resource:
         immutable_fields:
             - asset
         use_json_patch: false
+
+advisories:
+  - severity: warn
+    tier: doc_cited
+    date: "2026-06-12"
+    text: >-
+      A watsonx.ai online deployment (wml_deployment) is scoped to a deployment space, not a
+      project. Using a common_core_project as the deployment container does not work: the
+      deployment, its software specification, and its function all expect a space id, and a
+      project reference cannot supply one. Create the deployable asset and its deployment inside a
+      common_core_space.

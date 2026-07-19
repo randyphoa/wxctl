@@ -6,12 +6,12 @@ use wxctl_core::{DependencyEdge, IndexGraph, ResourceKey, ResourceSet, Validated
 // here so `super::types::*` and `wxctl_engine::validation::types::*` resolve unchanged.
 pub use wxctl_schema::validation::{AnnotatedValidationError, ValidationError};
 
-/// A warn-level, non-blocking validation advisory (the Phase 3 V505 bridge advisory).
-/// Advisories ride alongside a `ValidationResult` but never change `valid` or the exit
-/// code. Serializes to `{ code, resource, message, suggestion }`.
+/// A warn-level, non-blocking advisory. Shared by validation (V505 bridge) and
+/// reconciliation (R501 collision) producers. Rides alongside a result but never
+/// changes validity or the exit code. Serializes to `{ code, resource, message, suggestion }`.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-pub struct ValidationAdvisory {
+pub struct Advisory {
     /// Namespaced advisory code (e.g. `WXCTL-V505`).
     pub code: String,
     /// `"<kind>/<ref_name>"` the advisory anchors to.
@@ -29,9 +29,9 @@ pub struct ValidationAdvisory {
 /// never affect `is_valid()`.
 pub enum ValidationResult {
     /// Validation succeeded with the validated resources.
-    Valid { resources: ResourceSet<ValidatedResource>, advisories: Vec<ValidationAdvisory> },
+    Valid { resources: ResourceSet<ValidatedResource>, advisories: Vec<Advisory> },
     /// Validation failed with errors.
-    Invalid { errors: Vec<AnnotatedValidationError>, advisories: Vec<ValidationAdvisory> },
+    Invalid { errors: Vec<AnnotatedValidationError>, advisories: Vec<Advisory> },
 }
 
 impl ValidationResult {
@@ -48,7 +48,7 @@ impl ValidationResult {
     /// Attach advisories, preserving validity (builder-style). No producer calls this
     /// yet; the Phase 3 bridge-advisory scan will.
     #[must_use]
-    pub fn with_advisories(mut self, advisories: Vec<ValidationAdvisory>) -> Self {
+    pub fn with_advisories(mut self, advisories: Vec<Advisory>) -> Self {
         match &mut self {
             Self::Valid { advisories: a, .. } | Self::Invalid { advisories: a, .. } => *a = advisories,
         }
@@ -72,7 +72,7 @@ impl ValidationResult {
 
     /// Get the advisories (empty on both variants until the Phase 3 producer runs).
     #[must_use]
-    pub fn advisories(&self) -> &[ValidationAdvisory] {
+    pub fn advisories(&self) -> &[Advisory] {
         match self {
             Self::Valid { advisories, .. } | Self::Invalid { advisories, .. } => advisories,
         }

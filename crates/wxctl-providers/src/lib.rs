@@ -13,6 +13,7 @@ mod factsheets;
 mod instana;
 pub mod local_hash;
 mod openscale;
+mod pa_workspace;
 mod planning_analytics;
 mod vault;
 mod watsonx_ai;
@@ -93,6 +94,7 @@ pub mod handlers {
     pub use super::factsheets::handlers as factsheets;
     pub use super::instana::handlers as instana;
     pub use super::openscale::handlers as openscale;
+    pub use super::pa_workspace::handlers as pa_workspace;
     pub use super::planning_analytics::handlers as planning_analytics;
     pub use super::vault::handlers as vault;
     pub use super::watsonx_ai::handlers as watsonx_ai;
@@ -131,6 +133,7 @@ pub fn get_handler(resource_name: &str) -> Option<Arc<dyn ResourceHandler>> {
         .or_else(|| concert_workflows::get_handler(resource_name))
         .or_else(|| instana::get_handler(resource_name))
         .or_else(|| planning_analytics::get_handler(resource_name))
+        .or_else(|| pa_workspace::get_handler(resource_name))
         .or_else(|| vault::get_handler(resource_name))
 }
 

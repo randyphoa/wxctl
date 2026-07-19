@@ -38,6 +38,7 @@ pub const R003: &str = "WXCTL-R003"; // Reconciliation conflict
 pub const R004: &str = "WXCTL-R004"; // Resource kind unsupported on active deployment
 pub const R005: &str = "WXCTL-R005"; // Immutable-field drift rejected (reject_on_immutable_drift)
 pub const R006: &str = "WXCTL-R006"; // requires.deployment not satisfied by active deployment
+pub const R501: &str = "WXCTL-R501"; // Cross-type name collision at discovery: same name, different list_filter value (warn, advisory)
 
 // Execution
 pub const E001: &str = "WXCTL-E001"; // Create operation failed

@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::str::FromStr;
 use wxctl_compose::extract_prompt_body;
-use wxctl_engine::{AnnotatedValidationError, ValidationAdvisory, ValidationError, ValidationPipeline, bridge_advisories};
+use wxctl_engine::{Advisory, AnnotatedValidationError, ValidationError, ValidationPipeline, bridge_advisories};
 use wxctl_schema::deployment::Deployment;
 
 pub async fn execute(config_paths: &[String], fix_prompt: Option<&str>, output: Option<&OutputFormat>, skip_post_validate: bool, deployment: Option<ComposeDeployment>) -> Result<()> {
@@ -82,7 +82,7 @@ fn format_error_list(errors: &[AnnotatedValidationError]) -> String {
     errors.iter().enumerate().map(|(i, e)| format!("{}. [{}] {}: {}. {}", i + 1, e.resource, e.error.field(), e.error, e.error.suggestion())).collect::<Vec<_>>().join("\n")
 }
 
-fn assemble_fix_prompt(config_paths: &[String], errors: &[AnnotatedValidationError], advisories: &[ValidationAdvisory], original_prompt_path: Option<&str>) -> Result<String> {
+fn assemble_fix_prompt(config_paths: &[String], errors: &[AnnotatedValidationError], advisories: &[Advisory], original_prompt_path: Option<&str>) -> Result<String> {
     if let Some(path) = original_prompt_path {
         let original_prompt = std::fs::read_to_string(path).with_context(|| format!("Failed to read original prompt: {}", path))?;
         let config_content = load_configs(config_paths)?;

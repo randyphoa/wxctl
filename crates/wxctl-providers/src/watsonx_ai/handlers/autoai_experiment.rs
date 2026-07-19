@@ -21,11 +21,13 @@ fn matches_status(status: &str, candidates: &[&str]) -> bool {
 }
 
 /// learning_type for the optimization block. AutoAI tabular task types map 1:1
-/// onto the wxctl prediction_type allowed_values.
+/// onto the wxctl prediction_type allowed_values; forecasting maps to the AutoAI
+/// time-series learning type (SDK service_engine.py::_get_learning_type).
 fn learning_type(prediction_type: &str) -> &'static str {
     match prediction_type {
         "multiclass" => "multiclass",
         "regression" => "regression",
+        "forecasting" => "timeseries",
         _ => "binary",
     }
 }
@@ -42,27 +44,18 @@ fn with_scope(mut spec: RequestSpec, resource: &Value) -> RequestSpec {
 }
 
 /// Build the AutoAI pipeline document (doc_type: pipeline) from user fields.
+/// Forecasting emits the time-series optimization block on the auto_ai.ts runtime;
+/// tabular task types emit the label-based block on auto_ai.kb.
 fn build_pipeline_doc(resource: &Value) -> Value {
     let prediction_type = resource.get("prediction_type").and_then(|v| v.as_str()).unwrap_or("binary");
-    let mut optimization = json!({
-        "learning_type": learning_type(prediction_type),
-        "label": resource.get("prediction_column").and_then(|v| v.as_str()).unwrap_or(""),
-        "run_cognito_flag": true,
-    });
-    if let Some(scoring) = resource.get("scoring").and_then(|v| v.as_str()) {
-        optimization["scorer_for_ranking"] = json!(scoring);
-    }
-    if let Some(holdout) = resource.get("holdout_size").and_then(|v| v.as_f64()) {
-        optimization["holdout_param"] = json!(holdout);
-    }
-    if let Some(est) = resource.get("include_only_estimators").and_then(|v| v.as_array()) {
-        optimization["include_only_estimators"] = json!(est);
-    }
+    let is_forecasting = prediction_type == "forecasting";
+    let optimization = if is_forecasting { build_ts_optimization(resource) } else { build_tabular_optimization(resource) };
+    let runtime_name = if is_forecasting { "auto_ai.ts" } else { "auto_ai.kb" };
     // The v4 pipelines API rejects an empty hardware_spec ("No id or name provided
     // when validating the hardware specification"). Mirror the SDK's t_shirt_size
     // mapping: a short size string (≤2 chars, e.g. "L"/"XS") is a hardware-spec
     // NAME (upper-cased); a longer value is treated as a hardware-spec id. Default
-    // to "L" — the SDK's default for binary/multiclass remote AutoAI runs.
+    // to "L" — the SDK's default for remote AutoAI runs.
     let t_size = resource.get("t_shirt_size").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).unwrap_or("L");
     let hardware_spec = if t_size.len() <= 2 { json!({"name": t_size.to_uppercase()}) } else { json!({"id": t_size}) };
     json!({
@@ -80,8 +73,56 @@ fn build_pipeline_doc(resource: &Value) -> Value {
                 "parameters": {"stage_flag": true, "output_logs": true, "optimization": optimization},
             }],
         }],
-        "runtimes": [{"id": "autoai", "name": "auto_ai.kb", "app_data": {"wml_data": {"hardware_spec": hardware_spec}}}],
+        "runtimes": [{"id": "autoai", "name": runtime_name, "app_data": {"wml_data": {"hardware_spec": hardware_spec}}}],
     })
+}
+
+/// Tabular (binary/multiclass/regression) optimization block: single `label`
+/// column, cognito flag, and optional scorer/holdout/estimators.
+fn build_tabular_optimization(resource: &Value) -> Value {
+    let prediction_type = resource.get("prediction_type").and_then(|v| v.as_str()).unwrap_or("binary");
+    let mut optimization = json!({
+        "learning_type": learning_type(prediction_type),
+        "label": resource.get("prediction_column").and_then(|v| v.as_str()).unwrap_or(""),
+        "run_cognito_flag": true,
+    });
+    if let Some(scoring) = resource.get("scoring").and_then(|v| v.as_str()) {
+        optimization["scorer_for_ranking"] = json!(scoring);
+    }
+    if let Some(holdout) = resource.get("holdout_size").and_then(|v| v.as_f64()) {
+        optimization["holdout_param"] = json!(holdout);
+    }
+    if let Some(est) = resource.get("include_only_estimators").and_then(|v| v.as_array()) {
+        optimization["include_only_estimators"] = json!(est);
+    }
+    optimization
+}
+
+/// Time-series (forecasting) optimization block. Field names mirror the
+/// watsonx.ai SDK time-series pipeline document (service_engine.py):
+/// target_columns, timestamp_column, lookback_window, prediction_horizon,
+/// num_backtest. `scorer_for_ranking` defaults to the TS SMAPE metric when the
+/// user omits `scoring`. No `label` / `holdout_param` (TS uses backtests).
+fn build_ts_optimization(resource: &Value) -> Value {
+    let mut optimization = json!({"learning_type": "timeseries"});
+    if let Some(cols) = resource.get("prediction_columns").and_then(|v| v.as_array()) {
+        optimization["target_columns"] = json!(cols);
+    }
+    if let Some(ts) = resource.get("timestamp_column").and_then(|v| v.as_str()) {
+        optimization["timestamp_column"] = json!(ts);
+    }
+    if let Some(lb) = resource.get("lookback_window").and_then(|v| v.as_i64()) {
+        optimization["lookback_window"] = json!(lb);
+    }
+    if let Some(fw) = resource.get("forecast_window").and_then(|v| v.as_i64()) {
+        optimization["prediction_horizon"] = json!(fw);
+    }
+    if let Some(bt) = resource.get("backtest_num").and_then(|v| v.as_i64()) {
+        optimization["num_backtest"] = json!(bt);
+    }
+    let scorer = resource.get("scoring").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).unwrap_or("neg_avg_symmetric_mean_absolute_percentage_error");
+    optimization["scorer_for_ranking"] = json!(scorer);
+    optimization
 }
 
 impl ResourceHandler for AutoaiExperimentHandler {
@@ -313,4 +354,53 @@ async fn wait_for_training_terminal(client: &HttpClient, training_id: &str, spac
         }
     })
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn learning_type_maps_forecasting_to_timeseries() {
+        assert_eq!(learning_type("forecasting"), "timeseries");
+        assert_eq!(learning_type("multiclass"), "multiclass");
+        assert_eq!(learning_type("regression"), "regression");
+        assert_eq!(learning_type("binary"), "binary");
+    }
+
+    #[test]
+    fn build_pipeline_doc_forecasting_emits_ts_optimization() {
+        let resource = json!({
+            "prediction_type": "forecasting",
+            "prediction_columns": ["demand_mw"],
+            "timestamp_column": "ts",
+            "lookback_window": 48,
+            "forecast_window": 24,
+            "backtest_num": 4,
+        });
+        let doc = build_pipeline_doc(&resource);
+        let opt = &doc["pipelines"][0]["nodes"][0]["parameters"]["optimization"];
+        assert_eq!(opt["learning_type"], json!("timeseries"));
+        assert_eq!(opt["target_columns"], json!(["demand_mw"]));
+        assert_eq!(opt["timestamp_column"], json!("ts"));
+        assert_eq!(opt["lookback_window"], json!(48));
+        assert_eq!(opt["prediction_horizon"], json!(24));
+        assert_eq!(opt["num_backtest"], json!(4));
+        assert_eq!(opt["scorer_for_ranking"], json!("neg_avg_symmetric_mean_absolute_percentage_error"));
+        assert!(opt.get("label").is_none(), "TS block must not carry a tabular label");
+        assert!(opt.get("holdout_param").is_none(), "TS block uses backtests, not holdout");
+        assert_eq!(doc["runtimes"][0]["name"], json!("auto_ai.ts"));
+    }
+
+    #[test]
+    fn build_pipeline_doc_tabular_unchanged() {
+        let resource = json!({"prediction_type": "regression", "prediction_column": "price", "scoring": "neg_root_mean_squared_error"});
+        let doc = build_pipeline_doc(&resource);
+        let opt = &doc["pipelines"][0]["nodes"][0]["parameters"]["optimization"];
+        assert_eq!(opt["learning_type"], json!("regression"));
+        assert_eq!(opt["label"], json!("price"));
+        assert_eq!(opt["scorer_for_ranking"], json!("neg_root_mean_squared_error"));
+        assert!(opt.get("target_columns").is_none());
+        assert_eq!(doc["runtimes"][0]["name"], json!("auto_ai.kb"));
+    }
 }

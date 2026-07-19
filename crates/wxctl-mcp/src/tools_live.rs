@@ -4,7 +4,7 @@
 //! computes the prompt on failure before delegating to the shared shape. `wxctl_plan`
 //! calls `wxctl_sdk::json::plan_output` directly (see `crate::server`).
 
-use wxctl_engine::{AnnotatedValidationError, ValidationAdvisory, ValidationError, ValidationResult};
+use wxctl_engine::{Advisory, AnnotatedValidationError, ValidationError, ValidationResult};
 use wxctl_sdk::json::{ValidateOutput, validate_output};
 
 /// Map a `ValidationResult` into the shared validate output. On failure, attach an inline
@@ -20,7 +20,7 @@ pub fn shape_validation(result: &ValidationResult, config_yaml: &str) -> Validat
 /// (`wxctl/crates/wxctl/src/commands/validate.rs`): `fix.md` body with `<CONFIG>`/`<ERRORS>`/
 /// `<SCHEMA_REFERENCE>` substituted; schema docs scoped to the kinds that have errors plus
 /// every kind an add-resource suggestion names; a non-blocking advisories appendix when present.
-fn assemble_fix_prompt(config_yaml: &str, errors: &[AnnotatedValidationError], advisories: &[ValidationAdvisory]) -> String {
+fn assemble_fix_prompt(config_yaml: &str, errors: &[AnnotatedValidationError], advisories: &[Advisory]) -> String {
     let errors_text = errors.iter().enumerate().map(|(i, e)| format!("{}. [{}] {}: {}. {}", i + 1, e.resource, e.error.field(), e.error, e.error.suggestion())).collect::<Vec<_>>().join("\n");
     let mut ref_kinds: std::collections::HashSet<&str> = errors.iter().filter_map(|e| if e.resource.is_empty() { None } else { e.resource.split('/').next() }).collect();
     for e in errors {
@@ -64,7 +64,7 @@ mod tests {
             resource: "agent/a".to_string(),
             error: ValidationError::UnresolvedReference { field_path: "tools[0]".to_string(), ref_kind: "wml_model".to_string(), ref_name: "absent".to_string(), required_chain: vec![("autoai_experiment".to_string(), "wml_model".to_string(), "experiment".to_string())] },
         };
-        let adv = ValidationAdvisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan resource".into(), suggestion: "add an orchestrate_connection".into() };
+        let adv = Advisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan resource".into(), suggestion: "add an orchestrate_connection".into() };
         let result = ValidationResult::failure(vec![err]).with_advisories(vec![adv]);
 
         let out = shape_validation(&result, "kind: agent\nref_name: a\n");

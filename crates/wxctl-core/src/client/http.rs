@@ -550,6 +550,9 @@ const ENVELOPE_KEYS: &[&str] = &[
     // HashiCorp Vault LIST envelope — the keys array is nested under `data`
     // ({"data":{"keys":[...]}}); the VaultKeys variant reads data.keys.
     "keys",
+    // Planning Analytics Workspace content plane: `GET /Assets(path='{folder}')?$expand=Assets`
+    // returns the folder entity with its children under the OData nav property `Assets`.
+    "Assets",
 ];
 
 /// Inner object of the HashiCorp Vault LIST envelope: `{"data":{"keys":[...]}}`.
@@ -568,57 +571,140 @@ struct VaultKeysData<T> {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum ListEnvelope<T> {
-    Resources { resources: Vec<T> },
-    Applications { applications: Vec<T> },
-    Catalogs { catalogs: Vec<T> },
-    Categories { categories: Vec<T> },
-    Connections { connections: Vec<T> },
-    Engines { engines: Vec<T> },
-    PrestoEngines { presto_engines: Vec<T> },
-    SparkEngines { spark_engines: Vec<T> },
-    Jobs { jobs: Vec<T> },
-    Buckets { buckets: Vec<T> },
-    Results { results: Vec<T> },
-    Items { items: Vec<T> },
-    Data { data: Vec<T> },
+    Resources {
+        resources: Vec<T>,
+    },
+    Applications {
+        applications: Vec<T>,
+    },
+    Catalogs {
+        catalogs: Vec<T>,
+    },
+    Categories {
+        categories: Vec<T>,
+    },
+    Connections {
+        connections: Vec<T>,
+    },
+    Engines {
+        engines: Vec<T>,
+    },
+    PrestoEngines {
+        presto_engines: Vec<T>,
+    },
+    SparkEngines {
+        spark_engines: Vec<T>,
+    },
+    Jobs {
+        jobs: Vec<T>,
+    },
+    Buckets {
+        buckets: Vec<T>,
+    },
+    Results {
+        results: Vec<T>,
+    },
+    Items {
+        items: Vec<T>,
+    },
+    Data {
+        data: Vec<T>,
+    },
     // Lower-frequency v3 watsonx.data envelopes kept late so serde's
     // untagged linear probe hits the common shapes above first.
-    StorageRegistrations { storage_registrations: Vec<T> },
-    DatabaseRegistrations { database_registrations: Vec<T> },
-    PrestissimoEngines { prestissimo_engines: Vec<T> },
-    Db2Engines { db2_engines: Vec<T> },
-    OtherEngines { other_engines: Vec<T> },
-    MilvusServices { milvus_services: Vec<T> },
-    Rules { rules: Vec<T> },
-    Schemas { schemas: Vec<T> },
-    Integrations { integrations: Vec<T> },
+    StorageRegistrations {
+        storage_registrations: Vec<T>,
+    },
+    DatabaseRegistrations {
+        database_registrations: Vec<T>,
+    },
+    PrestissimoEngines {
+        prestissimo_engines: Vec<T>,
+    },
+    Db2Engines {
+        db2_engines: Vec<T>,
+    },
+    OtherEngines {
+        other_engines: Vec<T>,
+    },
+    MilvusServices {
+        milvus_services: Vec<T>,
+    },
+    Rules {
+        rules: Vec<T>,
+    },
+    Schemas {
+        schemas: Vec<T>,
+    },
+    Integrations {
+        integrations: Vec<T>,
+    },
     // OpenScale (watsonx.governance) envelope keys.
-    ServiceProviders { service_providers: Vec<T> },
-    DataMarts { data_marts: Vec<T> },
-    Subscriptions { subscriptions: Vec<T> },
-    MonitorInstances { monitor_instances: Vec<T> },
-    DataSets { data_sets: Vec<T> },
-    IntegratedSystems { integrated_systems: Vec<T> },
-    MonitorDefinitions { monitor_definitions: Vec<T> },
-    Policies { policies: Vec<T> },
+    ServiceProviders {
+        service_providers: Vec<T>,
+    },
+    DataMarts {
+        data_marts: Vec<T>,
+    },
+    Subscriptions {
+        subscriptions: Vec<T>,
+    },
+    MonitorInstances {
+        monitor_instances: Vec<T>,
+    },
+    DataSets {
+        data_sets: Vec<T>,
+    },
+    IntegratedSystems {
+        integrated_systems: Vec<T>,
+    },
+    MonitorDefinitions {
+        monitor_definitions: Vec<T>,
+    },
+    Policies {
+        policies: Vec<T>,
+    },
     // IBM Concert core-API list envelopes (unique keys — kept late so serde's
     // untagged linear probe hits the common shapes above first).
-    Environments { environments: Vec<T> },
-    SourceRepos { source_repos: Vec<T> },
-    Credentials { credentials: Vec<T> },
-    IngestionJobs { ingestion_jobs: Vec<T> },
-    AutomationRules { automation_rules: Vec<T> },
-    Profiles { profiles: Vec<T> },
+    Environments {
+        environments: Vec<T>,
+    },
+    SourceRepos {
+        source_repos: Vec<T>,
+    },
+    Credentials {
+        credentials: Vec<T>,
+    },
+    IngestionJobs {
+        ingestion_jobs: Vec<T>,
+    },
+    AutomationRules {
+        automation_rules: Vec<T>,
+    },
+    Profiles {
+        profiles: Vec<T>,
+    },
     // Planning Analytics (TM1 Database 12) OData list envelope. Named `ValueEnvelope`
     // (not `Value`) to avoid shadowing `serde_json::Value`; kept late so serde's
     // untagged linear probe hits the common shapes above first.
-    ValueEnvelope { value: Vec<T> },
+    ValueEnvelope {
+        value: Vec<T>,
+    },
+    // Planning Analytics Workspace folder listing: the expanded children ride the folder
+    // entity's `Assets` nav array (PascalCase). Kept late so serde's untagged linear probe hits
+    // the common shapes first; the folder object carries no earlier variant's key.
+    AssetChildren {
+        #[serde(rename = "Assets")]
+        assets: Vec<T>,
+    },
     // HashiCorp Vault LIST envelope: {"data":{"keys":[...]}}. NESTED (the keys
     // array is under `data`), unlike every flat variant above. Kept late so serde's
     // untagged linear probe hits the common shapes first; the earlier
     // `Data { data: Vec<T> }` variant (an ARRAY under `data`) is tried before this
     // and fails on Vault's OBJECT `data`, falling through to here.
-    VaultKeys { data: VaultKeysData<T> },
+    VaultKeys {
+        data: VaultKeysData<T>,
+    },
     Direct(Vec<T>),
 }
 
@@ -690,6 +776,7 @@ impl<T: DeserializeOwned> ListEnvelope<T> {
             ListEnvelope::AutomationRules { automation_rules } => automation_rules,
             ListEnvelope::Profiles { profiles } => profiles,
             ListEnvelope::ValueEnvelope { value } => value,
+            ListEnvelope::AssetChildren { assets } => assets,
             ListEnvelope::VaultKeys { data } => data.keys,
             ListEnvelope::Direct(items) => items,
         }

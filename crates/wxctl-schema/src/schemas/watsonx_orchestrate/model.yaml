@@ -87,6 +87,15 @@ resource:
                             resource: wml_deployment
                             field: id
                             optional: true
+            - name: config
+              type: object
+              required: false
+              description: >
+                  Inference-time model configuration (the wxO API's ModelConfig object). Keys pass through unchanged; commonly
+                  used keys are model (the provider-side model id), max_tokens / max_completion_tokens (completion budget; the
+                  watsonx.ai default is 1024, which reasoning models such as gpt-oss can exhaust on reasoning_content before
+                  emitting any answer text), reasoning_effort (low, medium, high), temperature, thinking, parallel_tool_calls,
+                  disable_tool_validation, and response_format.
             - name: description
               type: string
               required: false
@@ -203,6 +212,7 @@ resource:
             - name
             - display_name
             - provider_config
+            - config
             - description
             - tags
             - model_type
@@ -222,6 +232,7 @@ resource:
             - "The `model_type` determines the model's usage pattern: `chat` for conversational, `completion` for text generation, `embedding` for vector representations."
             - "The `provider_config.provider` field identifies which LLM provider API to use (e.g., `watsonx`, `openai`, `anthropic`). Use `provider_config.custom_host` for non-default endpoints (the API returns it as `customHost`, but author it snake_case to match the declared subfield)."
             - "Agents reference models via the `llm` field using `${model.<ref_name>}` syntax or a plain string model name."
+            - "Set inference parameters in `config` (not `provider_config`, which rejects them). For reasoning models (e.g. gpt-oss) set `config.max_tokens` well above the 1024 default so the reasoning phase cannot exhaust the budget before the answer, e.g. `config: {model: openai/gpt-oss-120b, max_tokens: 8192, reasoning_effort: medium}`."
         examples:
             minimal: |
                 kind: model
@@ -263,3 +274,14 @@ resource:
   # TODO: Add hooks if needed
   # hooks:
   #   post_create: service::handlers::kind::function_name
+
+advisories:
+  - severity: warn
+    tier: doc_cited
+    date: "2026-06-12"
+    text: >-
+      A watsonx Orchestrate model's connection_id must reference an Orchestrate connection
+      (orchestrate_connection), not a Common Core (CAMS) common_core_connection. A CAMS connection
+      asset id is accepted at create time but inference then fails, because the AI gateway cannot
+      resolve credentials from it. Share cross-product credentials through an Orchestrate
+      connection instead.

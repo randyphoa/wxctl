@@ -1,8 +1,15 @@
-//! Match `docs/troubleshoot/*.md` entries to a run's errors. Two signals: the
+//! Match a project's troubleshooting runbooks to a run's errors. Two signals: the
 //! error **code** (a doc mentioning `WXCTL-H001` is a strong match) and **keywords**
-//! drawn from error messages. Directory from `WXCTL_TROUBLESHOOT_DIR`, default
-//! `docs/troubleshoot/` resolved relative to the current working directory; silently
-//! skipped when the directory is absent (spec §Diagnose engine point 4).
+//! drawn from error messages.
+//!
+//! The corpus belongs to whoever runs wxctl, not to wxctl itself: any directory of
+//! Markdown files describing recurring failures. Directory from
+//! `WXCTL_TROUBLESHOOT_DIR`, else `docs/troubleshoot/` resolved relative to the
+//! current working directory, so a repo that keeps runbooks there gets them matched
+//! automatically. Absent directory means no corpus, which is the common case for an
+//! installed binary run from an arbitrary cwd; the section is then skipped silently
+//! rather than reported as an error. Documented for users in `wxctl/AGENTS.md`
+//! (Error recovery).
 
 use serde::Serialize;
 use std::path::PathBuf;

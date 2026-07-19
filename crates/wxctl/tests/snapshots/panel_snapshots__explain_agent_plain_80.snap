@@ -55,6 +55,10 @@ expression: "run(&[\"explain\", \"agent\"], \"80\", \"never\", \"\")"
     collaborators   -->  ${agent.<ref_name>}   optional
     knowledge_base  -->  ${knowledge_base.<ref_name>}   optional
 
+  | Consumers
+    agent          -->  .collaborators   optional
+    agent_release  -->  .agent_id   required
+
   | Notes
     * Agent `style` controls reasoning: `default` is standard conversational, `react` enables ReAct (Reasoning + Acting) for step-by-step problem solving, `planner` enables advanced multi-step task decomposition.
     * Tools are referenced using `${tool.<ref_name>}` syntax, collaborators using `${agent.<ref_name>}`, and knowledge bases using `${knowledge_base.<ref_name>}`.

@@ -1,0 +1,22 @@
+---
+source: crates/wxctl/src/output/plan_snapshots_test.rs
+expression: "advisory_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode))"
+---
+  [38;2;120;169;255m▌[0m [1mPipeline[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mvalidation[0m       [38;2;125;133;144m0.1s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mreconciliation[0m   [38;2;125;133;144m3 reconciled[0m   [38;2;125;133;144m0.8s[0m
+    [38;2;63;185;80m✓[0m [38;2;63;185;80mplanning[0m         [38;2;125;133;144m0.0s[0m
+
+  [38;2;120;169;255m▌[0m [1mChanges[0m
+[38;2;125;133;144m       Type      Name     Action[0m
+    [38;2;63;185;80m+[0m  paw_book  Reports  [38;2;63;185;80mcreate[0m
+  [38;2;120;169;255m▌[0m [1mAdvisories[0m
+
+    [38;2;210;153;34m![0m [1mpaw_book/Reports[0m  [38;2;125;133;144mWXCTL-R501[0m
+      a same-named item exists with asset_type='folder' (expected 'dashboard');
+      'Reports' is absent and will be created — a backend enforcing cross-type
+      name uniqueness may then reject the create
+      [38;2;120;169;255mfix[0m If the create is rejected, rename this resource so its name does not collide with the existing item of a different type.
+
+[38;2;63;185;80m✓[0m [1mplan:[0m [38;2;63;185;80m+1 to add[0m [38;2;125;133;144m·[0m [38;2;125;133;144m1.0s[0m
+  [38;2;125;133;144mnext: wxctl apply -f x[0m

@@ -1,0 +1,79 @@
+resource:
+  name: instana_builtin_event_spec
+  service: instana
+  kind: instana_builtin_event_spec
+  version: v1
+  description: >
+    An Instana BUILT-IN event specification (BuiltInEventSpecification) is a
+    shipped, catalog-defined event rule. The 1.307 API cannot create or edit its
+    body (GET list + GET /{id} only); the only writable state is `enabled`, toggled
+    via POST /{id}/enable | /{id}/disable. So this kind is ADOPT + TOGGLE: the user
+    declares the built-in `id` (picked from GET /built-in) and the desired
+    `enabled`; BuiltinEventSpecHandler adopts the built-in by id and converges
+    `enabled` via the enable/disable POSTs (pre_create + pre_update). Destroy is the
+    schema-driven DELETE /{id}, which the endpoint contract defines as "reset the
+    built-in to its default" (OQ2 — live-probed in Phase 3; if DELETE does not mean
+    reset, Phase 3 switches destroy to converge-to-default-enabled).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/event-specifications/built-in
+    id_field: id
+    list_endpoint: /api/events/settings/event-specifications/built-in
+    get_endpoint: /api/events/settings/event-specifications/built-in/{id}
+    # create is adopt-only: BuiltinEventSpecHandler.pre_create owns it (GET /{id} +
+    # converge enabled), so this POST is display-only and NEVER issued (the API has
+    # no POST for built-ins). update is likewise handler-owned via pre_update
+    # (enable/disable POST side-effects), so update_endpoint/method are display-only
+    # (no PUT/PATCH exists for built-ins). Precedent: instana_alert (get_by_id +
+    # handler-owned create/update with a display-only endpoint).
+    create_endpoint: /api/events/settings/event-specifications/built-in
+    create_method: POST
+    update_endpoint: /api/events/settings/event-specifications/built-in/{id}
+    update_method: POST
+    delete_endpoint: /api/events/settings/event-specifications/built-in/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: true
+        immutable: true
+        description: >
+          The built-in event id (user-supplied; the adopt key + get_by_id
+          id_source). Pick it from GET /api/events/settings/event-specifications/built-in.
+      - name: enabled
+        type: boolean
+        required: false
+        description: >
+          Desired enabled state (default true). The only writable field; converged
+          via POST /{id}/enable | /{id}/disable by BuiltinEventSpecHandler.
+      - name: name
+        type: string
+        required: false
+        description: Built-in display name (read-model). Optional -> excluded from state_fields.
+      - name: description
+        type: string
+        required: false
+        description: Built-in description (read-model). Optional -> excluded from state_fields.
+      - name: severity
+        type: integer
+        required: false
+        description: Event severity (read-model). Optional -> excluded from state_fields.
+      - name: triggering
+        type: boolean
+        required: false
+        description: Whether the event also opens an incident (read-model). Optional -> excluded from state_fields.
+  reconciliation:
+    # Discovery is get_by_id off the user-supplied built-in id (id_source: id): GET
+    # /built-in/{id} -> 200 (state-compare on `enabled`) / 404 (adopt error via
+    # pre_create). Built-ins always exist, so the hot path is Update -> pre_update
+    # converge. state_fields = [enabled]: the only writable/convergeable field.
+    discovery:
+      method: get_by_id
+      id_source: id
+    state_fields:
+      - enabled
+    update_strategy: replace
+    immutable_fields:
+      - id

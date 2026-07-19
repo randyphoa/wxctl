@@ -82,6 +82,13 @@ metaPkg.optionalDependencies = Object.fromEntries(TARGETS.map((t) => [`@randypho
 writeFileSync(path.join(metaOut, 'package.json'), `${JSON.stringify(metaPkg, null, 2)}\n`);
 copyFileSync(path.join(HERE, 'meta', 'bin', 'wxctl.mjs'), path.join(metaOut, 'bin', 'wxctl.mjs'));
 if (existsSync(license)) copyFileSync(license, path.join(metaOut, 'LICENSE'));
+// Ship the project README in the meta tarball so npmjs.com renders a real page
+// body. npm always includes README.md when present; with none bundled the page
+// shows only the description (the "empty page"). Single source of truth: reuse
+// the workspace README rather than a separate npm copy that would drift. npm
+// rewrites its relative links/images against the `repository` field at render.
+const readme = path.join(WORKSPACE, 'README.md');
+if (existsSync(readme)) copyFileSync(readme, path.join(metaOut, 'README.md'));
 
 // Platform sub-packages: generate only those whose binary is present under
 // <artifacts>. A single-host run yields meta + the host sub-package only; the CI

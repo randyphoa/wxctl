@@ -2,7 +2,7 @@
 # Regenerate after an intentional change, then review the diff:
 #   WXCTL_REGEN_GRAPH_GOLDEN=1 cargo test -p wxctl-schema -- graph_snapshot
 
-## resources (110)
+## resources (127)
 adls_container
   dep storage_connection
   edge connection -> storage_connection (required)
@@ -118,14 +118,29 @@ instana_alert
   edge eventFilteringConfiguration.ruleIds -> instana_custom_event_spec (optional)
   edge integrationIds -> instana_alerting_channel (required)
 instana_alerting_channel
+instana_api_token
 instana_application_alert_config
   dep instana_alerting_channel
   dep instana_application_perspective
   edge alertChannelIds -> instana_alerting_channel (required)
   edge applicationId -> instana_application_perspective (optional)
 instana_application_perspective
+instana_automation_action
+instana_automation_policy
+instana_builtin_event_spec
+instana_custom_dashboard
 instana_custom_event_spec
+instana_custom_payload_configuration
+instana_infra_alert_config
+  dep instana_alerting_channel
+  edge alertChannelIds -> instana_alerting_channel (optional)
+instana_log_alert_config
+  dep instana_alerting_channel
+  edge alertChannelIds -> instana_alerting_channel (optional)
 instana_maintenance_window
+instana_rbac_group
+instana_rbac_team
+instana_release
 instana_slo_alert_config
   dep instana_alerting_channel
   dep instana_slo_config
@@ -227,6 +242,24 @@ package_extension
   dep space
   edge project_id -> project (optional)
   edge space_id -> space (optional)
+paw_application
+  dep paw_folder
+  edge folder -> paw_folder (required)
+paw_book
+  dep paw_folder
+  edge folder -> paw_folder (required)
+paw_folder
+  dep paw_folder
+  edge folder -> paw_folder (required)
+paw_plan
+  dep paw_folder
+  edge folder -> paw_folder (required)
+paw_view
+  dep paw_folder
+  edge folder -> paw_folder (required)
+paw_workbench
+  dep paw_folder
+  edge folder -> paw_folder (required)
 prestissimo_engine
   dep database_registration
   dep storage_registration

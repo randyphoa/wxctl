@@ -25,6 +25,7 @@ const SCHEMA_DIRS: &[(&str, &str)] = &[
     ("src/schemas/concert_workflows", "schemas/concert_workflows"),
     ("src/schemas/instana", "schemas/instana"),
     ("src/schemas/planning_analytics", "schemas/planning_analytics"),
+    ("src/schemas/pa_workspace", "schemas/pa_workspace"),
     ("src/schemas/vault", "schemas/vault"),
 ];
 
@@ -38,6 +39,10 @@ const VALID_FIELD_TYPES: &[&str] = &["string", "integer", "float", "boolean", "o
 #[derive(Deserialize)]
 struct SchemaFile {
     resource: ResourceDef,
+    /// Top-level `advisories:` block (sibling to `resource:`). Baked into
+    /// RESOURCE_ADVISORIES; a malformed entry here fails the build.
+    #[serde(default)]
+    advisories: Vec<AdvisoryDef>,
 }
 
 #[derive(Deserialize)]
@@ -62,6 +67,15 @@ struct ResourceDef {
 struct PromptDef {
     #[serde(default)]
     notes: Vec<String>,
+}
+
+/// One entry of a schema's top-level `advisories:` block.
+#[derive(Deserialize)]
+struct AdvisoryDef {
+    severity: String, // "info" | "warn"
+    tier: String,
+    date: String,
+    text: String,
 }
 
 #[derive(Deserialize)]
@@ -516,7 +530,7 @@ fn first_sentence(desc: &str) -> String {
     if trimmed.ends_with('.') { trimmed.to_string() } else { format!("{}.", trimmed) }
 }
 
-fn generate_rust_code(order: &[String], resources: &[ProcessedResource], include_paths: &HashMap<String, String>, schemas: &[ResourceDef]) -> String {
+fn generate_rust_code(order: &[String], resources: &[ProcessedResource], include_paths: &HashMap<String, String>, schemas: &[ResourceDef], advisories_by_kind: &HashMap<String, Vec<AdvisoryDef>>) -> String {
     // Build name → index mapping from topological order
     let name_to_idx: HashMap<&str, usize> = order.iter().enumerate().map(|(i, name)| (name.as_str(), i)).collect();
 
@@ -665,6 +679,31 @@ fn generate_rust_code(order: &[String], resources: &[ProcessedResource], include
             let mut entry = format!("    ({:?}, &[", schema.kind);
             for note in notes {
                 entry.push_str(&format!("{:?}, ", note));
+            }
+            entry.push_str("]),");
+            writeln!(code, "{}", entry).unwrap();
+        }
+    }
+    writeln!(code, "];").unwrap();
+    writeln!(code).unwrap();
+
+    // ── RESOURCE_ADVISORIES: (kind, &[(severity, tier, date, text)]) parallel to RESOURCE_CATALOG ──
+    // Iterated over `order` with the same `schema_lookup` so the two tables stay
+    // index-aligned; advisories are looked up by `schema.kind` in `advisories_by_kind`
+    // (populated from each schema file's top-level `advisories:` block).
+    // Named via a type alias (like EdgeTuple/ConstraintTuple) — the raw 4-tuple form
+    // trips clippy::type_complexity.
+    writeln!(code, "/// One advisory: (severity, tier, date, text).").unwrap();
+    writeln!(code, "pub type AdvisoryTuple = (&'static str, &'static str, &'static str, &'static str);").unwrap();
+    writeln!(code, "/// Published advisories per kind: (kind, &[(severity, tier, date, text)]). Parallel to RESOURCE_CATALOG.").unwrap();
+    writeln!(code, "pub static RESOURCE_ADVISORIES: &[(&str, &[AdvisoryTuple])] = &[").unwrap();
+    for name in order {
+        if let Some(schema) = schema_lookup.get(name.as_str()) {
+            let advs = advisories_by_kind.get(&schema.kind).map(Vec::as_slice).unwrap_or(&[]);
+            let mut entry = format!("    ({:?}, &[", schema.kind);
+            for a in advs {
+                assert!(a.severity == "info" || a.severity == "warn", "advisory severity on {} must be info|warn, got {:?}", schema.kind, a.severity);
+                entry.push_str(&format!("({:?}, {:?}, {:?}, {:?}), ", a.severity, a.tier, a.date, a.text));
             }
             entry.push_str("]),");
             writeln!(code, "{}", entry).unwrap();
@@ -885,6 +924,10 @@ fn main() {
     let mut all_schemas: Vec<ResourceDef> = Vec::new();
     let mut include_paths: HashMap<String, String> = HashMap::new();
     let mut seen_names: HashSet<String> = HashSet::new();
+    // kind -> its top-level `advisories:` block, keyed off `resource.kind` (not
+    // `resource.name`) so it aligns with RESOURCE_CATALOG / RESOURCE_PROMPT_NOTES,
+    // which are also keyed by kind.
+    let mut advisories_by_kind: HashMap<String, Vec<AdvisoryDef>> = HashMap::new();
 
     for &(fs_dir, include_prefix) in SCHEMA_DIRS {
         let dir = Path::new(fs_dir);
@@ -920,6 +963,8 @@ fn main() {
                 if !seen_names.insert(name.clone()) {
                     panic!("Duplicate schema name '{}' found in {}", name, path.display());
                 }
+
+                advisories_by_kind.insert(schema_file.resource.kind.clone(), schema_file.advisories);
 
                 // Build absolute include_str! path (include_str! in generated files
                 // resolves relative to OUT_DIR, so we must use absolute paths).
@@ -989,7 +1034,7 @@ fn main() {
     // Build name → index mapping from topological order
     let name_to_idx: HashMap<&str, usize> = order.iter().enumerate().map(|(i, name)| (name.as_str(), i)).collect();
 
-    let rust_code = generate_rust_code(&order, &resources, &include_paths, &all_schemas);
+    let rust_code = generate_rust_code(&order, &resources, &include_paths, &all_schemas, &advisories_by_kind);
     let bridge_code = generate_bridge_code(&linkages, &name_to_idx);
 
     let rust_code = format!("{}\n{}", rust_code, bridge_code);

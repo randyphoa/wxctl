@@ -27,5 +27,5 @@ mod span_ext;
 pub mod tracing_layer;
 
 pub use collector::*;
-pub use run_record_layer::{RunRecordLayer, RunSinkGuard, finalize_active_run, install_run_sink, set_full_trace};
+pub use run_record_layer::{RunRecordLayer, RunSinkGuard, finalize_active_run, install_run_sink, set_active_run_deployment, set_full_trace};
 pub use tracing_layer::{COLLECTOR_FILTER, CollectorGuard, OutputCollectorLayer, install_collector};

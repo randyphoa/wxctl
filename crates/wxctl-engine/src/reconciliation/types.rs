@@ -20,6 +20,8 @@ pub enum DiscoveryStatus {
 pub struct ReconciliationPlan {
     pub operations: Vec<Operation>,
     pub errors: Vec<ReconciliationError>,
+    /// Warn-level, non-blocking advisories raised during discovery (e.g. R501).
+    pub advisories: Vec<crate::Advisory>,
 }
 
 #[derive(Debug, Clone)]

@@ -49,13 +49,56 @@ resource:
               type: string
               required: true
               immutable: true
-              allowed_values: [binary, multiclass, regression]
+              allowed_values: [binary, multiclass, regression, forecasting]
               description: AutoAI learning task type.
             - name: prediction_column
               type: string
-              required: true
+              required: false
               immutable: true
-              description: Target/label column name in the training data.
+              description: >
+                  Target/label column name for a tabular experiment. Required for
+                  binary/multiclass/regression; omit for forecasting (use prediction_columns).
+                  Exactly one of prediction_column / prediction_columns must be set.
+            - name: prediction_columns
+              type: array
+              item_type: string
+              required: false
+              immutable: true
+              description: >
+                  Target/label column names for a forecasting experiment (one entry per series).
+                  Mutually exclusive with the tabular prediction_column: exactly one of the two
+                  must be set. Emitted as optimization.target_columns in the TS pipeline document.
+              validation:
+                  one_of:
+                      - [prediction_column, prediction_columns]
+            - name: timestamp_column
+              type: string
+              required: false
+              immutable: true
+              description: >
+                  Name of the timestamp column ordering the series (forecasting only). Emitted as
+                  optimization.timestamp_column.
+            - name: lookback_window
+              type: integer
+              required: false
+              immutable: true
+              description: >
+                  Number of past time steps the model reads to produce a forecast (forecasting
+                  only). Emitted as optimization.lookback_window.
+            - name: forecast_window
+              type: integer
+              required: false
+              immutable: true
+              description: >
+                  Number of future time steps to predict, the forecast horizon (forecasting only).
+                  Emitted as optimization.prediction_horizon.
+            - name: backtest_num
+              type: integer
+              required: false
+              immutable: true
+              description: >
+                  Number of backtest folds used to evaluate the forecasting pipelines. Emitted as
+                  optimization.num_backtest.
             - name: scoring
               type: string
               required: false
@@ -157,6 +200,11 @@ resource:
                 - training_data
                 - prediction_type
                 - prediction_column
+                - prediction_columns
+                - timestamp_column
+                - lookback_window
+                - forecast_window
+                - backtest_num
                 - scoring
                 - holdout_size
                 - include_only_estimators

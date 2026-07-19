@@ -29,6 +29,10 @@ expression: "explain_presto(&panel(100, ColorMode::Dark, GlyphSet::Unicode))"
     associated_catalogs  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${storage_registration.<ref_name>}[0m   [38;2;125;133;144moptional[0m
     associated_catalogs  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${database_registration.<ref_name>}[0m   [38;2;125;133;144moptional[0m
 
+  [38;2;120;169;255m▌[0m [1mConsumers[0m
+    sal_integration  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m.engine_id[0m   [1mrequired[0m
+    schema           [38;2;125;133;144m──▶[0m  [38;2;120;169;255m.engine_id[0m   [1mrequired[0m
+
   [38;2;120;169;255m▌[0m [1mAuthoring[0m
     [38;2;125;133;144menvelope  [0m [38;2;125;133;144mA config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).[0m
     [38;2;125;133;144mref_name  [0m [38;2;125;133;144mUnique handle for this resource within the config. Used to reference it from other resources, then stripped before the API call (not a schema field).[0m

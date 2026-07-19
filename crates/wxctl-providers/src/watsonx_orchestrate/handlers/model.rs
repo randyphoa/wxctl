@@ -25,8 +25,7 @@ const PROVIDER_CONFIG_KEY_MAP: [(&str, &str); 7] =
 /// `provider` is dropped unconditionally because the AI-Gateway pattern (the only
 /// place `provider_config` is set across the repo's configs) never sets it — the
 /// server re-derives it from the model name. A config that sets `provider`
-/// explicitly would need the general recursive-subset comparison instead; see
-/// `docs/handover/wxo-model-provider-config-drift.md`.
+/// explicitly would need the general recursive-subset comparison instead.
 fn normalize_provider_config(remote_data: &mut Value, operation_id: &str) {
     let Some(pc) = remote_data.pointer_mut("/provider_config").and_then(|v| v.as_object_mut()) else {
         return;

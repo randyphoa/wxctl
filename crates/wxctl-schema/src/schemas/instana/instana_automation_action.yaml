@@ -1,0 +1,57 @@
+resource:
+  name: instana_automation_action
+  service: instana
+  kind: instana_automation_action
+  version: v1
+  description: >
+    An Instana automation action (Action) is a runnable script/HTTP/etc. unit
+    that automation policies invoke. The 1.307 API is READ-ONLY for actions
+    (GET /api/automation/actions list + GET /{id}), so this kind is ADOPT-ONLY:
+    it exists so a policy can resolve an action to its server id by name.
+    AutomationActionHandler.pre_create adopts a matching action by `name` or
+    errors (it never POSTs); pre_delete is a no-op (adopted actions are not owned
+    by the apply). Create the action once in the Automation UI (precedent: the
+    common_core `environment` adopt-only kind).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/automation/actions
+    id_field: id
+    list_endpoint: /api/automation/actions
+    get_endpoint: /api/automation/actions/{id}
+    # create_method is declared so the create operation wires pre_create, which
+    # ALWAYS returns Handled (adopt) or errors — the API has no POST for actions,
+    # so this POST is never issued. delete is intercepted by pre_delete (no-op).
+    create_method: POST
+    delete_endpoint: /api/automation/actions/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned action id (top-level `id` on list/get).
+      - name: name
+        type: string
+        required: true
+        description: Action display name; the identity discovery matches on.
+      - name: type
+        type: string
+        required: false
+        description: Action type (read-model; e.g. script/http). Optional -> excluded from state_fields.
+      - name: description
+        type: string
+        required: false
+        description: Free-text action description (read-model).
+  reconciliation:
+    # GET /api/automation/actions returns a BARE ARRAY of Action -> no list_field.
+    # Identity match on `name`. Adopt-only: state_fields carries only the identity.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    state_fields:
+      - name
+    update_strategy: replace
+    immutable_fields: []

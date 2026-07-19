@@ -62,6 +62,13 @@ async fn run_tests(config_paths: &[String], profile: &str, profile_path: Option<
     // instead of a stale `0` (the test flow's plan otherwise runs with NoOpObserver).
     let exec_observer = Arc::new(CliProgressObserver::new(collector));
     let client = WxctlClient::new(profile, profile_path)?;
+    // Record the run's deployment scope now that the profile is resolved (the manifest,
+    // installed in `execute` before this async body runs, predates profile load). Mirrors
+    // `CommandContext::setup_with_render`'s recording, via the same active-sink helper since
+    // `test` has no `CommandContext`. Defaults to `Saas` like `WxctlClient::profile_deployment`'s
+    // callers elsewhere treat an absent profile-level deployment.
+    let deployment = client.profile_deployment().unwrap_or(wxctl_core::types::Deployment::Saas);
+    crate::output::set_active_run_deployment(Some(deployment.flavor().to_string()));
     let results = client.test_with_observers(&mut config, observer, exec_observer).await?;
 
     if json {

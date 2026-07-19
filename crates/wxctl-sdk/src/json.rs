@@ -11,7 +11,7 @@
 
 use crate::testing::{TestResults, TurnOutcome};
 use serde::Serialize;
-use wxctl_engine::{AnnotatedValidationError, CompiledPlan, ExecutionResult, ExecutionResults, Operation, OperationType, ValidationAdvisory, ValidationResult};
+use wxctl_engine::{Advisory, AnnotatedValidationError, CompiledPlan, ExecutionResult, ExecutionResults, Operation, OperationType, ValidationResult};
 
 // ── validate ──
 
@@ -27,7 +27,7 @@ pub struct ValidateOutput {
     /// Warn-level advisories (non-blocking). Present only when non-empty; an empty list
     /// elides the key. Never affects `valid` or the exit code.
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub warnings: Vec<ValidationAdvisory>,
+    pub warnings: Vec<Advisory>,
     /// A ready-to-run LLM correction prompt. Populated only when `valid == false`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fix_prompt: Option<String>,
@@ -66,6 +66,10 @@ pub struct PlanOutput {
     pub operations: Vec<PlanOperation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<Vec<serde_json::Value>>,
+    /// Warn-level, non-blocking advisories raised during reconciliation. Present only
+    /// when non-empty; empty elides the key. Never affects the exit code.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub advisories: Vec<Advisory>,
 }
 
 // ── execute (apply / destroy) ──
@@ -101,6 +105,10 @@ pub struct ExecuteOutput {
     pub skipped: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<Vec<serde_json::Value>>,
+    /// Warn-level, non-blocking advisories raised during reconciliation. Present only
+    /// when non-empty; empty elides the key. Never affects the exit code.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub advisories: Vec<Advisory>,
 }
 
 // ── test ──
@@ -159,7 +167,7 @@ pub fn plan_output(plan: &CompiledPlan, verbose: bool) -> PlanOutput {
         operations.push(PlanOperation { key: op.key.to_string(), op_type: op.op_type.to_string(), kind: op.key.kind.to_string(), ref_name: op.key.name.to_string() });
     }
     let raw = verbose.then(|| plan.operations.iter().map(shape_raw_operation).collect());
-    PlanOutput { summary, operations, raw }
+    PlanOutput { summary, operations, raw, advisories: plan.advisories.clone() }
 }
 
 fn shape_raw_operation(op: &Operation) -> serde_json::Value {
@@ -183,7 +191,7 @@ pub fn execute_output(run_id: String, results: &ExecutionResults, verbose: bool)
     let failed = results.failed.iter().map(|r| FailedResource { key: key_string(r), error: r.error.clone().unwrap_or_default() }).collect();
     let skipped = results.skipped.iter().map(ToString::to_string).collect();
     let raw = verbose.then(|| results.succeeded.iter().chain(results.failed.iter()).map(|r| serde_json::json!({ "key": key_string(r), "success": r.success, "response": r.response.clone() })).collect());
-    ExecuteOutput { run_id, summary, succeeded, failed, skipped, raw }
+    ExecuteOutput { run_id, summary, succeeded, failed, skipped, raw, advisories: Vec::new() }
 }
 
 fn turn_outcome_label(outcome: &TurnOutcome) -> &'static str {
@@ -232,6 +240,7 @@ mod tests {
                 op("s3_bucket", "e", OperationType::Retain),
                 op("s3_bucket", "f", OperationType::Recreate),
             ],
+            advisories: Vec::new(),
         };
         // Non-verbose: summary buckets the six op types; raw is omitted.
         let out = plan_output(&plan, false);
@@ -293,11 +302,18 @@ mod tests {
     /// matching the repo's existing `assert_snapshot!` usage.
     #[test]
     fn dto_json_shapes_are_pinned() {
-        let plan = PlanOutput { summary: PlanSummary { create: 1, update: 2, delete: 3, no_change: 4 }, operations: vec![PlanOperation { key: "space/a".into(), op_type: "create".into(), kind: "space".into(), ref_name: "a".into() }], raw: None };
+        let plan = PlanOutput { summary: PlanSummary { create: 1, update: 2, delete: 3, no_change: 4 }, operations: vec![PlanOperation { key: "space/a".into(), op_type: "create".into(), kind: "space".into(), ref_name: "a".into() }], raw: None, advisories: Vec::new() };
         insta::assert_snapshot!("plan_output", serde_json::to_string_pretty(&plan).unwrap());
 
-        let execute =
-            ExecuteOutput { run_id: "run-001".into(), summary: ExecuteSummary { succeeded: 1, failed: 1, skipped: 1, cancelled: false }, succeeded: vec!["space/a".into()], failed: vec![FailedResource { key: "space/b".into(), error: "boom".into() }], skipped: vec!["space/c".into()], raw: None };
+        let execute = ExecuteOutput {
+            run_id: "run-001".into(),
+            summary: ExecuteSummary { succeeded: 1, failed: 1, skipped: 1, cancelled: false },
+            succeeded: vec!["space/a".into()],
+            failed: vec![FailedResource { key: "space/b".into(), error: "boom".into() }],
+            skipped: vec!["space/c".into()],
+            raw: None,
+            advisories: Vec::new(),
+        };
         insta::assert_snapshot!("execute_output", serde_json::to_string_pretty(&execute).unwrap());
 
         let test = TestOutput {
@@ -311,10 +327,24 @@ mod tests {
         let validate = ValidateOutput {
             valid: false,
             errors: vec![serde_json::json!({ "resource": "agent/a", "field": "name", "code": "V001", "message": "missing", "suggestion": "add name" })],
-            warnings: vec![ValidationAdvisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan resource; bridge to orchestrate_connection not wired".into(), suggestion: "add an orchestrate_connection or see wxctl compose paths".into() }],
+            warnings: vec![Advisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan resource; bridge to orchestrate_connection not wired".into(), suggestion: "add an orchestrate_connection or see wxctl compose paths".into() }],
             fix_prompt: Some("fix this".into()),
         };
         insta::assert_snapshot!("validate_output", serde_json::to_string_pretty(&validate).unwrap());
+    }
+
+    /// AC3 shape: pins the serialized `advisories` array (code/resource/message/suggestion)
+    /// on a `PlanOutput` that carries one advisory. Sibling to `dto_json_shapes_are_pinned`,
+    /// kept separate so that snapshot stays untouched.
+    #[test]
+    fn plan_output_includes_advisories() {
+        let plan_adv = PlanOutput {
+            summary: PlanSummary { create: 1, update: 0, delete: 0, no_change: 0 },
+            operations: vec![PlanOperation { key: "paw_book/Reports".into(), op_type: "create".into(), kind: "paw_book".into(), ref_name: "Reports".into() }],
+            raw: None,
+            advisories: vec![Advisory { code: "WXCTL-R501".into(), resource: "paw_book/Reports".into(), message: "a same-named item exists with a different asset_type".into(), suggestion: "rename this resource".into() }],
+        };
+        insta::assert_snapshot!("plan_output_with_advisory", serde_json::to_string_pretty(&plan_adv).unwrap());
     }
 
     #[test]
@@ -330,7 +360,7 @@ mod tests {
         assert!(json.get("warnings").is_none(), "empty warnings must elide the key: {json}");
 
         // A valid result WITH an advisory → warnings present, valid still true, no fix_prompt.
-        let adv = ValidationAdvisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan".into(), suggestion: "add orchestrate_connection".into() };
+        let adv = Advisory { code: "WXCTL-V505".into(), resource: "common_core_connection/db".into(), message: "orphan".into(), suggestion: "add orchestrate_connection".into() };
         let with_adv = ValidationResult::success(ResourceSet::<wxctl_core::ValidatedResource>::from_sorted(vec![])).with_advisories(vec![adv]);
         let out = validate_output(&with_adv, None);
         assert!(out.valid, "advisories never change valid");

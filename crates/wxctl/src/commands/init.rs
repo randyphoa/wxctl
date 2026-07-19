@@ -19,7 +19,7 @@ fn auth_for(service: &str) -> (&'static str, &'static str) {
     match service {
         "watsonx_ai" | "watsonx_data" | "watsonx_orchestrate" | "factsheets" | "openscale" | "common_core" => ("apikey", "zenapikey"),
         "cloud_object_storage" => ("hmac", "hmac"),
-        "planning_analytics" => ("pa_session", "pa_session"),
+        "planning_analytics" | "pa_workspace" => ("pa_session", "pa_session"),
         "instana" => ("api_token", "api_token"),
         "concert" | "concert_workflows" => ("c_api_key", "c_api_key"),
         "vault" => ("vault_token", "vault_token"),
@@ -52,7 +52,7 @@ fn saas_url_hint(service: &str) -> &'static str {
         "cloud_object_storage" => "https://s3.<REGION>.cloud-object-storage.appdomain.cloud",
         "instana" => "https://<TENANT>-<UNIT>.instana.io",
         "concert" | "concert_workflows" => "https://<CONCERT_HOST>",
-        "planning_analytics" => "https://<TENANT>.planning-analytics.cloud.ibm.com",
+        "planning_analytics" | "pa_workspace" => "https://<TENANT>.planning-analytics.cloud.ibm.com",
         "vault" => "https://<VAULT_HOST>:8200",
         _ => "https://<HOST>",
     }

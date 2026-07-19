@@ -585,6 +585,9 @@ impl OutputCollector {
         if has_errors {
             self.emit_errors_section(&panel);
         }
+        if !self.advisories.is_empty() {
+            self.emit_advisories_section(&panel);
+        }
         let footer = self.build_exec_footer(command, has_errors);
         for line in render_exec_footer(&panel, &footer) {
             self.emit(&line);

@@ -1,0 +1,73 @@
+resource:
+  name: instana_custom_payload_configuration
+  service: instana
+  kind: instana_custom_payload_configuration
+  version: v1
+  description: >
+    The Instana GLOBAL custom payload configuration (CustomPayloadConfiguration) —
+    a tenant-wide set of custom key/type fields attached to every triggered event.
+    A SINGLETON: get and set both hit
+    /api/events/settings/custom-payload-configurations with no {id}
+    (discovery.method: singleton); set = PUT the whole {fields} set (a full
+    replace, NOT a merge). DELETE clears the ENTIRE tenant-global set, so `destroy`
+    on this kind wipes everyone's custom payload fields — document the blast radius
+    wherever this kind is used.
+    Phase-3 live probes: (1) empty-set GET returns {fields:[],version:0} ->
+    `absent_when {fields: []}` added (live-confirmed 2026-07-14); (2) `fields`
+    joined state_fields (live-confirmed 2026-07-14) -- safe for a single-element
+    array (positional compare, no reorder risk); widen the caution back if a
+    multi-element example ever phantom-drifts. (3) create is POST-only in the
+    generic engine (execution/operations/create.rs hardcodes Method::POST,
+    ignoring this schema's `create_method: PUT` -- live-probed 405), and the
+    default update/delete paths need an `id` this id-less singleton's responses
+    never carry -- `CustomPayloadConfigurationHandler` (pre_create/pre_update/
+    pre_delete) owns all three verbs against the id-less endpoint directly.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/custom-payload-configurations
+    id_field: id
+    get_endpoint: /api/events/settings/custom-payload-configurations
+    create_endpoint: /api/events/settings/custom-payload-configurations
+    # Whole-set upsert: PUT the {fields} set (no per-id create).
+    create_method: PUT
+    # DELETE the id-less endpoint clears the whole set.
+    delete_endpoint: /api/events/settings/custom-payload-configurations
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Unused id slot (the singleton endpoint returns {fields, version}, no id); satisfies id_field.
+      - name: fields
+        type: array
+        item_type: object
+        required: true
+        description: >
+          The tenant-global custom payload fields (CustomPayloadField entries:
+          required key + type, e.g. staticString / dynamic tag). PUT replaces the
+          whole set. Server round-trips it with an added `version`; kept out of
+          state_fields (see the Phase-3 probe note above).
+  reconciliation:
+    # Global singleton: GET the id-less endpoint (discovery.method: singleton). A
+    # non-empty 200 is the existing set; the whole {fields} set is PUT to create/
+    # update and DELETEd (id-less) to clear.
+    discovery:
+      method: singleton
+      # Empty-set GET returns {"fields":[],...} (HTTP 200); treat [] as absent so the
+      # create PUT fires on first apply (probed live 2026-07-14 against a CE 1.11.0 backend).
+      absent_when:
+        field: fields
+        equals: []
+    # `fields` live-confirmed safe to compare (single-element array in the
+    # committed example; see the live-probe note above for the multi-element caveat).
+    state_fields:
+      - fields
+    update_strategy: replace
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

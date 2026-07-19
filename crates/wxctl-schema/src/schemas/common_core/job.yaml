@@ -74,6 +74,19 @@ resource:
                   strings — the wire shape the API actually requires (live-verified 2026-07-05, both
                   SaaS and CP4D: the object shape 400s with "must be string"). ${env:VAR}-interpolatable
                   and sensitive (redacted in logs / run records).
+            - name: schedule
+              type: string
+              required: false
+              description: >
+                  Cron schedule string for recurring runs (e.g. "0 2 * * *"). Sent under the job
+                  envelope as job.schedule. An empty string means unscheduled. Maps to the Jobs API
+                  job.schedule field (POST/PATCH /v2/jobs).
+            - name: schedule_info
+              type: object
+              required: false
+              description: >
+                  Optional schedule metadata sent under job.schedule_info: repeat (bool) and
+                  startOn / endOn (epoch-ms integers). Passed through verbatim to the Jobs API.
             - name: project_id
               type: string
               required: false

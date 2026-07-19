@@ -1,15 +1,37 @@
 use super::references::check_dependencies;
 use super::types::{DiscoveryStatus, Operation, OperationType, ReconciliationError, ReconciliationPlan, SkipReason};
+use crate::Advisory;
 use crate::context::RuntimeIdStore;
 use crate::execution::resolution::{resolve_dependencies, resolve_dependencies_partial};
 use crate::execution::{ExecutionObserver, NoOpObserver};
 use anyhow::Result;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tracing::{Instrument, info_span};
 use wxctl_core::logging::redact_for_log;
 use wxctl_core::registry::ResourceDescriptor;
 use wxctl_core::{ClientFactory, OnDestroyPolicy, Reconciler, RemoteResource, ResourceRegistry, StateComparison, ValidatedResource};
 use wxctl_schema::schema::DiscoveryMethod;
+
+/// Collects `discover_all` advisories into typed `Advisory` values for the plan.
+struct CollectingAdvisorySink(Mutex<Vec<Advisory>>);
+
+impl CollectingAdvisorySink {
+    fn new() -> Self {
+        Self(Mutex::new(Vec::new()))
+    }
+    fn into_advisories(self) -> Vec<Advisory> {
+        self.0.into_inner().unwrap_or_default()
+    }
+}
+
+impl wxctl_core::AdvisorySink for CollectingAdvisorySink {
+    fn push(&self, code: &str, resource: &str, message: &str, suggestion: &str) {
+        if let Ok(mut v) = self.0.lock() {
+            v.push(Advisory { code: code.to_string(), resource: resource.to_string(), message: message.to_string(), suggestion: suggestion.to_string() });
+        }
+    }
+}
 
 /// Fires `on_reconcile_resource_complete` exactly once when dropped, regardless
 /// of which `continue` / `?` path ends the loop iteration. `success` defaults to
@@ -167,6 +189,7 @@ impl ReconciliationPipeline {
         async {
             let mut operations = Vec::new();
             let mut errors = Vec::new();
+            let advisory_sink = CollectingAdvisorySink::new();
 
             // Cache for service-specific HTTP clients
             let mut clients: std::collections::HashMap<String, wxctl_core::client::HttpClient> = std::collections::HashMap::new();
@@ -281,7 +304,7 @@ impl ReconciliationPipeline {
                 } else {
                     // Discover ALL remote resources with matching name
                     let resolved = resolved_resource.as_ref().unwrap();
-                    match reconciler.discover_all(operation_id, resolved, client.clone()).await {
+                    match reconciler.discover_all(operation_id, resolved, client.clone(), &advisory_sink).await {
                         Ok(mut remotes) => {
                             // Destroy mode seeds the cache with resolved-local data on a miss so
                             // dependents' template refs still resolve; without this the cascade
@@ -374,7 +397,7 @@ impl ReconciliationPipeline {
                         // the identity-relevant paths resolved. If any scoping/identity param
                         // still has an unresolved template ref, discover_all skips the API
                         // call and returns empty — the resource is treated as Create.
-                        let remotes = match reconciler.discover_all(operation_id, &local_resource, client.clone()).await {
+                        let remotes = match reconciler.discover_all(operation_id, &local_resource, client.clone(), &advisory_sink).await {
                             Ok(remotes) => remotes,
                             // Destroy tolerates discovery failures on the Deferred path too —
                             // symmetric with the Discovered path above — so one 400/500 on a
@@ -481,7 +504,7 @@ impl ReconciliationPipeline {
                 tracing::Span::current().record("status", "failed");
                 tracing::debug!(target: "wxctl::substage::reconciliation", status = "failed", "reconciliation stage failed");
             }
-            Ok(ReconciliationPlan { operations, errors })
+            Ok(ReconciliationPlan { operations, errors, advisories: advisory_sink.into_advisories() })
         }
         .instrument(span)
         .await

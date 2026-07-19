@@ -34,7 +34,7 @@ impl Default for ConcurrencyConfig {
     fn default() -> Self {
         Self {
             global_limit: default_global_limit(),
-            service_limits: HashMap::from([("wkc".to_string(), 10), ("catalog".to_string(), 20), ("governance".to_string(), 10), ("instana".to_string(), 10), ("planning_analytics".to_string(), 10)]),
+            service_limits: HashMap::from([("wkc".to_string(), 10), ("catalog".to_string(), 20), ("governance".to_string(), 10), ("instana".to_string(), 10), ("planning_analytics".to_string(), 10), ("pa_workspace".to_string(), 10)]),
             default_timeout_secs: default_operation_timeout(),
             request_timeout_secs: default_request_timeout(),
         }

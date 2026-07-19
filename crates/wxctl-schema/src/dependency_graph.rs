@@ -152,6 +152,26 @@ pub fn get_edges(name: &str) -> Option<&'static [EdgeTuple]> {
     resource_index(name).map(get_edge_tuples_by_index)
 }
 
+/// Reverse edges: every `(consumer_kind, field, required)` whose edge targets `kind`.
+/// Scans the compiled `RESOURCE_EDGES` (parallel to `RESOURCES`, one slice of
+/// edges per resource). Deterministic: sorted by (consumer_kind, field). O(total edges).
+pub fn consumers(kind: &str) -> Vec<(&'static str, &'static str, bool)> {
+    let Some(target_idx) = resource_index(kind) else {
+        return Vec::new();
+    };
+    let mut out: Vec<(&'static str, &'static str, bool)> = Vec::new();
+    for i in 0..RESOURCES.len() {
+        let from = RESOURCES[i].0;
+        for &(field, tidx, required, ..) in RESOURCE_EDGES[i] {
+            if tidx == target_idx {
+                out.push((from, field, required));
+            }
+        }
+    }
+    out.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+    out
+}
+
 /// Check whether any value in the list is a `${target_kind.xxx}` template reference.
 ///
 /// A value references a target kind if it matches the pattern `${kind.name}`
@@ -171,6 +191,12 @@ pub fn resource_catalog() -> &'static [(&'static str, &'static str, &'static str
 #[inline]
 pub fn resource_prompt_notes(kind: &str) -> &'static [&'static str] {
     RESOURCE_PROMPT_NOTES.iter().find(|(k, _)| *k == kind).map(|(_, notes)| *notes).unwrap_or(&[])
+}
+
+/// Published advisories for `kind`: `(severity, tier, date, text)` tuples, or empty.
+/// Baked from the schema's top-level `advisories:` block (build.rs RESOURCE_ADVISORIES).
+pub fn resource_advisories(kind: &str) -> &'static [AdvisoryTuple] {
+    RESOURCE_ADVISORIES.iter().find(|(k, _)| *k == kind).map(|(_, a)| *a).unwrap_or(&[])
 }
 
 /// Returns the deployment flavors (`saas`, `software`) a kind supports.
@@ -865,6 +891,20 @@ mod tests {
         // `tool` declares prompt.notes in its schema; unknown kinds return empty.
         assert!(!resource_prompt_notes("tool").is_empty(), "tool should have prompt notes");
         assert!(resource_prompt_notes("definitely_not_a_kind").is_empty());
+    }
+
+    #[test]
+    fn test_consumers_reverse_accessor() {
+        // agent_release references agent via `agent_id`; agent is a consumer target.
+        let cs = consumers("agent");
+        assert!(cs.iter().any(|&(k, f, _)| k == "agent_release" && f == "agent_id"), "agent_release consumes agent: {cs:?}");
+        assert!(consumers("definitely_not_a_kind").is_empty());
+    }
+
+    #[test]
+    fn test_resource_advisories_accessor_absent() {
+        // No kind carries advisories until emit runs; the accessor is empty-safe.
+        assert!(resource_advisories("definitely_not_a_kind").is_empty());
     }
 
     #[test]

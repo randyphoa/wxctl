@@ -55,6 +55,10 @@ expression: "run(&[\"explain\", \"agent\"], \"80\", \"dark\", \"unicode\")"
     collaborators   [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${agent.<ref_name>}[0m   [38;2;125;133;144moptional[0m
     knowledge_base  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m${knowledge_base.<ref_name>}[0m   [38;2;125;133;144moptional[0m
 
+  [38;2;120;169;255m▌[0m [1mConsumers[0m
+    agent          [38;2;125;133;144m──▶[0m  [38;2;120;169;255m.collaborators[0m   [38;2;125;133;144moptional[0m
+    agent_release  [38;2;125;133;144m──▶[0m  [38;2;120;169;255m.agent_id[0m   [1mrequired[0m
+
   [38;2;120;169;255m▌[0m [1mNotes[0m
     [38;2;125;133;144m•[0m [38;2;125;133;144mAgent `style` controls reasoning: `default` is standard conversational, `react` enables ReAct (Reasoning + Acting) for step-by-step problem solving, `planner` enables advanced multi-step task decomposition.[0m
     [38;2;125;133;144m•[0m [38;2;125;133;144mTools are referenced using `${tool.<ref_name>}` syntax, collaborators using `${agent.<ref_name>}`, and knowledge bases using `${knowledge_base.<ref_name>}`.[0m

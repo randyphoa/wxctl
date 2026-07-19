@@ -508,6 +508,12 @@ pub struct DiscoveryDefinition {
     /// discovery (absent → 400 for mounts/auth; audit has no GET at all → 405).
     #[serde(default)]
     pub list_map: bool,
+    /// For `ListAndGet` only: an opt-in type predicate that filters a
+    /// heterogeneous list response to only this kind's items. See [`ListFilter`].
+    /// `skip_serializing_if` keeps `null` out of any schema serialization for the
+    /// ~100 kinds that do not declare it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub list_filter: Option<ListFilter>,
 }
 
 /// Sentinel that marks a discovered body (`Singleton` 200 response, or a
@@ -532,6 +538,23 @@ pub struct IdentityMatch {
     pub local_path: String,
     /// Dot path into each remote list item (same segment rules as `local_path`).
     pub remote_path: String,
+}
+
+/// An opt-in discovery predicate that filters a heterogeneous list response to
+/// only the items belonging to this kind. Used where a kind's `list_endpoint`
+/// returns a mixed collection (e.g. Planning Analytics `Assets(...)?$expand=Assets`
+/// returns folders, dashboards, and every other type together), so a plain
+/// name match could adopt an item of a different type. When declared, discovery
+/// keeps only items whose `field` (dot path into each list item) equals `equals`
+/// in addition to the name match. Both keys are required: serde rejects a
+/// `list_filter` block missing either (a schema parse error at build time).
+/// Declares no `references`, so it adds no dependency-graph edges.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ListFilter {
+    /// Dot path into each remote list item (same segment rules as `IdentityMatch`).
+    pub field: String,
+    /// The string value at `field` that marks an item as belonging to this kind.
+    pub equals: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -814,7 +837,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields, ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".to_string() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".to_string() },
                     state_fields: None,
                     update_strategy: UpdateStrategy::Patch,
                     immutable_fields: vec![],

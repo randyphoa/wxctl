@@ -1,0 +1,28 @@
+---
+source: crates/wxctl-sdk/src/json.rs
+expression: "serde_json::to_string_pretty(&plan_adv).unwrap()"
+---
+{
+  "summary": {
+    "create": 1,
+    "update": 0,
+    "delete": 0,
+    "no_change": 0
+  },
+  "operations": [
+    {
+      "key": "paw_book/Reports",
+      "op_type": "create",
+      "kind": "paw_book",
+      "ref_name": "Reports"
+    }
+  ],
+  "advisories": [
+    {
+      "code": "WXCTL-R501",
+      "resource": "paw_book/Reports",
+      "message": "a same-named item exists with a different asset_type",
+      "suggestion": "rename this resource"
+    }
+  ]
+}

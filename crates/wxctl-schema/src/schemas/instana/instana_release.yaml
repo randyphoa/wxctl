@@ -1,0 +1,78 @@
+resource:
+  name: instana_release
+  service: instana
+  kind: instana_release
+  version: v1
+  description: >
+    An Instana release (Release) marks a deployment boundary on the timeline,
+    optionally scoped to applications and services, so events and analytics can be
+    correlated to a rollout. Created via /api/releases and identified by a
+    server-assigned string id (ReleaseWithMetadata.id); the human identifier is
+    `name`. Plain CRUD: POST create, PUT /{id} full-body update, DELETE. The
+    smallest new kind.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/releases
+    id_field: id
+    list_endpoint: /api/releases
+    # OpenAPI names the path param {releaseId}; endpoint placeholders must match
+    # id_field (docs/troubleshoot/endpoint-placeholder-must-match-id-field-fix.md),
+    # so the item endpoints use {id}, filled from id_field: id.
+    get_endpoint: /api/releases/{id}
+    create_endpoint: /api/releases
+    create_method: POST
+    update_endpoint: /api/releases/{id}
+    update_method: PUT
+    delete_endpoint: /api/releases/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned release id (top-level `id` on create/list/get; ReleaseWithMetadata.id).
+      - name: name
+        type: string
+        required: true
+        description: Release display name; Instana's human identifier (matched on during discovery).
+      - name: start
+        type: integer
+        required: true
+        description: >
+          Release start time in epoch milliseconds (required by the Release
+          contract). Live-probed 2026-07-14: the backend rejects a `start` more
+          than 10 minutes in the future (422 "Start must not be more than 10
+          minutes in the future") -- opposite of instana_maintenance_window's
+          "must not be in the past" rule. Any past epoch is accepted
+          indefinitely, so committed examples use a fixed past timestamp
+          (a release marks a deployment that already happened), not a future one.
+      - name: applications
+        type: array
+        item_type: object
+        required: false
+        description: >
+          ApplicationScope entries ({name}) the release is scoped to. Server-
+          normalized on read (ApplicationScopeWithMetadata), so excluded from state_fields.
+      - name: services
+        type: array
+        item_type: object
+        required: false
+        description: >
+          ServiceScope entries ({name, scopedTo}) the release is scoped to. Server-
+          normalized on read (ServiceScopeWithMetadata), so excluded from state_fields.
+  reconciliation:
+    # GET /api/releases returns a BARE ARRAY of ReleaseWithMetadata -> no list_field.
+    # Identity match on `name`.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars (name + start). The scope arrays are
+    # server-normalized objects -> excluded to avoid phantom drift.
+    state_fields:
+      - name
+      - start
+    update_strategy: replace
+    immutable_fields: []

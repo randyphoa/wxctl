@@ -22,7 +22,7 @@ use std::future::Future;
 use std::pin::Pin;
 use wxctl_core::client::{BodyKind, HttpClient, Method, RequestSpec, error_matches};
 use wxctl_core::registry::FieldDescriptor;
-use wxctl_core::traits::{HookOutcome, Reconciler, ResourceHandler, StateComparison};
+use wxctl_core::traits::{AdvisorySink, HookOutcome, NoOpAdvisorySink, Reconciler, ResourceHandler, StateComparison};
 use wxctl_core::types::{RemoteResource, ValidatedResource};
 
 pub struct AssetPromotionHandler;
@@ -92,7 +92,7 @@ fn discovery_scope(data: &Value) -> Option<(String, String, String, Option<Strin
 impl Reconciler for AssetPromotionReconciler {
     fn discover<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient) -> Pin<Box<dyn Future<Output = Result<RemoteResource>> + Send + 'a>> {
         Box::pin(async move {
-            let mut matches = self.discover_all(operation_id, resource, client).await?;
+            let mut matches = self.discover_all(operation_id, resource, client, &NoOpAdvisorySink).await?;
             if matches.is_empty() { Ok(RemoteResource { key: resource.key.clone(), data: Value::Null, exists: false }) } else { Ok(matches.swap_remove(0)) }
         })
     }
@@ -105,7 +105,7 @@ impl Reconciler for AssetPromotionReconciler {
     /// refs resolve from cached state on the NoChange path. Not found (or
     /// identity fields still templated) ⇒ empty, and the pipeline decides
     /// Create/CreateUnchecked as before.
-    fn discover_all<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient) -> Pin<Box<dyn Future<Output = Result<Vec<RemoteResource>>> + Send + 'a>> {
+    fn discover_all<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient, _advisories: &'a dyn AdvisorySink) -> Pin<Box<dyn Future<Output = Result<Vec<RemoteResource>>> + Send + 'a>> {
         Box::pin(async move {
             let Some((at, asset_name, space_id, project_id)) = discovery_scope(&resource.data) else {
                 tracing::debug!(target: "wxctl::reconciliation::discovery", operation_id = %operation_id, resource_type = %resource.key.kind, resource_name = %resource.key.name, "skipping discovery: asset_name/space_id absent or unresolved");

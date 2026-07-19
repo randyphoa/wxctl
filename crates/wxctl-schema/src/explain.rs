@@ -22,6 +22,12 @@ pub struct ExplainView {
     pub endpoints: ExplainEndpoints,
     pub fields: Vec<ExplainField>,
     pub dependencies: Vec<ExplainDependency>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub consumers: Vec<ExplainConsumer>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub advisories: Vec<ExplainAdvisory>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<ExplainVariant>,
     pub prompt_notes: Vec<String>,
 }
 
@@ -185,6 +191,36 @@ pub struct ExplainDependency {
     pub required: bool,
 }
 
+/// A kind that consumes this one via a `${<this kind>.<ref_name>}` reference —
+/// the reverse of [`ExplainDependency`]. Sourced from the compile-time edge
+/// table so it stays in sync with the forward `dependencies` view.
+#[derive(Serialize)]
+pub struct ExplainConsumer {
+    pub kind: String,
+    pub field: String,
+    pub required: bool,
+}
+
+/// A published advisory for this kind — a known limitation, gotcha, or
+/// deprecation notice an agent should see before authoring against it.
+/// Sourced from the schema's top-level `advisories:` block.
+#[derive(Serialize)]
+pub struct ExplainAdvisory {
+    pub severity: String,
+    pub tier: String,
+    pub date: String,
+    pub text: String,
+}
+
+/// One discriminator-scoped field group from a variant schema (e.g. one
+/// datasource type's fields on a connection kind).
+#[derive(Serialize)]
+pub struct ExplainVariant {
+    pub name: String,
+    pub applies_to: Vec<String>,
+    pub fields: Vec<ExplainField>,
+}
+
 fn location_str(loc: &FieldLocation) -> &'static str {
     match loc {
         FieldLocation::Body => "Body",
@@ -262,9 +298,25 @@ pub fn build_view(desc: &ResourceDescriptor) -> ExplainView {
     // for all schemas, so the graph (keyed by resource name) is reachable by kind.
     let dependencies = get_edges(&desc.name).unwrap_or(&[]).iter().map(|&(field_name, target_index, required, ..)| ExplainDependency { field: field_name.to_string(), target_kind: get_resource_by_index(target_index).name.to_string(), required }).collect();
 
+    // Reverse edges: kinds that reference this one, the mirror of `dependencies`.
+    let consumers = crate::dependency_graph::consumers(&desc.name).into_iter().map(|(kind, field, required)| ExplainConsumer { kind: kind.to_string(), field: field.to_string(), required }).collect();
+
+    let advisories = crate::dependency_graph::resource_advisories(&desc.kind).iter().map(|&(severity, tier, date, text)| ExplainAdvisory { severity: severity.to_string(), tier: tier.to_string(), date: date.to_string(), text: text.to_string() }).collect();
+
+    // Discriminator-scoped field groups (e.g. per-datasource-type fields on a
+    // connection kind), sorted by variant key for deterministic output.
+    let variants = match &desc.schema.resource.schema.variants {
+        Some(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort_unstable();
+            keys.into_iter().map(|k| ExplainVariant { name: k.clone(), applies_to: map[k].applies_to.clone(), fields: build_fields(&map[k].fields) }).collect()
+        }
+        None => Vec::new(),
+    };
+
     let prompt_notes = resource_prompt_notes(&desc.kind).iter().map(|s| s.to_string()).collect();
 
-    ExplainView { kind: desc.kind.clone(), service: desc.service.clone(), id_field: desc.id_field.clone(), authoring: Authoring::new(), endpoints, fields, dependencies, prompt_notes }
+    ExplainView { kind: desc.kind.clone(), service: desc.service.clone(), id_field: desc.id_field.clone(), authoring: Authoring::new(), endpoints, fields, dependencies, consumers, advisories, variants, prompt_notes }
 }
 
 /// One row of the resource catalog, filtered by service and/or deployment flavor.

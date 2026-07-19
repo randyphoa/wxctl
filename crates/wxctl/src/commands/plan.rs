@@ -27,6 +27,8 @@ pub async fn execute(config_paths: &[String], profile: &str, profile_path: Optio
         }
 
         ctx.lock_collector().print_plan();
+        let advisory_blocks: Vec<crate::output::sections::AdvisoryBlock> = plan.advisories.iter().map(|a| crate::output::sections::AdvisoryBlock { code: a.code.clone(), resource: a.resource.clone(), message: a.message.clone(), suggestion: a.suggestion.clone() }).collect();
+        ctx.lock_collector().set_advisories(advisory_blocks);
         ctx.finish()
     }
     .await;

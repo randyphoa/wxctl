@@ -3,8 +3,7 @@
 //! kind's declared readiness state (`api.readiness`). Skips references whose
 //! target kind is unknown, declares no readiness block, has no resolved id,
 //! or whose service is not part of this apply. Runs on the Create path only
-//! (not Recreate/Update). Spec:
-//! docs/specs/2026-07-07-openscale-data-mart-readiness-spec.md.
+//! (not Recreate/Update).
 
 use super::ExecutionState;
 use anyhow::{Result, bail};

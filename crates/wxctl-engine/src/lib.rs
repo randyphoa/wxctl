@@ -14,4 +14,4 @@ pub use reconciliation::types::{Operation, OperationType, ReconciliationError, R
 pub use reconciliation::{ReconcileMode, ReconciliationPipeline, SchemaBasedReconciler};
 pub use validation::ValidationPipeline;
 pub use validation::advisories::bridge_advisories;
-pub use validation::types::{AnnotatedValidationError, ValidationAdvisory, ValidationError, ValidationResult};
+pub use validation::types::{Advisory, AnnotatedValidationError, ValidationError, ValidationResult};

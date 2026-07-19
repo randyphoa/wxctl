@@ -17,7 +17,10 @@ pub async fn execute(config_paths: &[String], profile: &str, profile_path: Optio
         let observer = Arc::new(CliProgressObserver::new(ctx.collector.clone()));
         let (operation_id, plan, graph) = pipeline.plan_for_apply_with(&mut ctx.config, true, observer.clone()).await?;
 
+        let advisories = plan.advisories.clone();
         ctx.lock_collector().print_plan();
+        let advisory_blocks: Vec<crate::output::sections::AdvisoryBlock> = advisories.iter().map(|a| crate::output::sections::AdvisoryBlock { code: a.code.clone(), resource: a.resource.clone(), message: a.message.clone(), suggestion: a.suggestion.clone() }).collect();
+        ctx.lock_collector().set_advisories(advisory_blocks);
 
         // Execution with the same CLI observer
         let executor_config = ExecutorConfig::new(ctx.concurrency_config.global_limit, ctx.concurrency_config.default_timeout_secs);
@@ -35,7 +38,8 @@ pub async fn execute(config_paths: &[String], profile: &str, profile_path: Optio
             // failure — so an agent always gets structured `failed[]` detail before the
             // nonzero exit. `ctx._run_id` is the run-record id (matches wxctl-mcp's
             // `scope.run_id`), so the emitted `run_id` feeds `wxctl debug` / `run_diagnose`.
-            let out = wxctl_sdk::json::execute_output(ctx._run_id.clone(), &results, false);
+            let mut out = wxctl_sdk::json::execute_output(ctx._run_id.clone(), &results, false);
+            out.advisories = advisories;
             println!("{}", serde_json::to_string_pretty(&out)?);
             handle_execution_results(&ctx.operation_id, &results, "Execution")?;
             return Ok(());

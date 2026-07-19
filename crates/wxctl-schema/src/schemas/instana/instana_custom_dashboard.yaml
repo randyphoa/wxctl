@@ -1,0 +1,79 @@
+resource:
+  name: instana_custom_dashboard
+  service: instana
+  kind: instana_custom_dashboard
+  version: v1
+  description: >
+    An Instana custom dashboard (CustomDashboard) is a titled board of widgets
+    with access rules. Created via /api/custom-dashboard and identified by a
+    server-assigned string id; the human identifier is `title`. The list endpoint
+    returns CustomDashboardPreview entries (id + title); list_and_get then GETs
+    the full board (widgets + accessRules) by id. `widgets` is EXCLUDED from
+    state_fields: live-probed 2026-07-14 (direct PUT experiments against
+    Instana Custom Edition 1.11.0) proved this backend's
+    `PUT /custom-dashboard/{id}` does NOT apply content edits to a widget whose
+    `id` already exists in the stored set (title/width changes on an existing
+    id are silently dropped; the returned array order is also non-deterministic
+    across calls, unrelated to send order) -- only add/remove-by-id is honored.
+    Putting `widgets` in state_fields against that backend means an edited
+    widget field can never converge: `plan` reports an Update forever (the
+    remote never catches up), breaking idempotency (K3) permanently. AC 2's
+    K4 update round-trip therefore edits the dashboard's own `title` field
+    (below), not widget content, on this backend.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/custom-dashboard
+    id_field: id
+    list_endpoint: /api/custom-dashboard
+    get_endpoint: /api/custom-dashboard/{id}
+    create_endpoint: /api/custom-dashboard
+    create_method: POST
+    update_endpoint: /api/custom-dashboard/{id}
+    update_method: PUT
+    delete_endpoint: /api/custom-dashboard/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        # Modeled server-assigned per the spec's identity column. NOTE: the 1.307
+        # OpenAPI marks `id` REQUIRED in the POST body (as with alerting channels,
+        # docs/troubleshoot/instana-live-contract-quirks.md #1); if the Phase 3
+        # backend 500s on an id-less create, switch to a client-supplied id then.
+        description: Server-assigned custom-dashboard id (top-level `id` on create/list/get).
+      - name: title
+        type: string
+        required: true
+        description: Dashboard title; Instana's human identifier (matched on during discovery).
+      - name: accessRules
+        type: array
+        item_type: object
+        required: true
+        description: >
+          AccessRule entries (accessType READ/READ_WRITE + relationType
+          USER/API_TOKEN/ROLE/TEAM/GLOBAL). Server-normalized on read, so excluded
+          from state_fields.
+      - name: widgets
+        type: array
+        item_type: object
+        required: true
+        description: >
+          Widget entries (id + type + config + layout). Excluded from
+          state_fields: live-probed 2026-07-14, the backend's PUT does not
+          apply content edits to an existing widget id (see the resource
+          description above) -- comparing this field would report an Update
+          that can never converge.
+  reconciliation:
+    # GET /api/custom-dashboard returns a BARE ARRAY of CustomDashboardPreview
+    # (carries `title`) -> no list_field. Identity match on `title`.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: title
+    state_fields:
+      - title
+    update_strategy: replace
+    immutable_fields: []

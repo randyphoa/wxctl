@@ -1,0 +1,443 @@
+resource:
+  name: instana_api_token
+  service: instana
+  kind: instana_api_token
+  version: v1
+  description: >
+    An Instana API token (ApiToken) created via /api/settings/api-tokens; the
+    identity is a CLIENT-SUPPLIED `internalId` (also the path param), the human
+    identifier is `name`. `accessGrantingToken` is the secret bearer value used
+    on the wire as the API key -- marked sensitive so every sink (logs, run
+    records, diffs) redacts it; the example supplies it via
+    `${env:INSTANA_APITOKEN_GRANT}`. The remaining ~86 fields are per-permission
+    booleans (canConfigure*/canView*/canCreate*/... plus limited*Scope flags),
+    all optional and server-defaulted; kept out of state_fields (except one) to
+    avoid phantom drift across that many booleans (OQ4).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/settings/api-tokens
+    id_field: internalId
+    list_endpoint: /api/settings/api-tokens
+    # OpenAPI item paths use {internalId}; endpoint placeholders must match
+    # id_field (docs/troubleshoot/endpoint-placeholder-must-match-id-field-fix.md).
+    get_endpoint: /api/settings/api-tokens/{internalId}
+    create_endpoint: /api/settings/api-tokens
+    create_method: POST
+    update_endpoint: /api/settings/api-tokens/{internalId}
+    update_method: PUT
+    delete_endpoint: /api/settings/api-tokens/{internalId}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Identity (CLIENT-SUPPLIED, ApiToken required: internalId, name, accessGrantingToken) --
+      - name: internalId
+        type: string
+        required: true
+        immutable: true
+        description: >
+          CLIENT-SUPPLIED api-token id (path identity / id_field). Immutable -- a
+          different internalId is a different token.
+      - name: name
+        type: string
+        required: true
+        description: Token display name; Instana's human identifier (matched on during discovery).
+      - name: accessGrantingToken
+        type: string
+        required: true
+        sensitive: true
+        description: >
+          The token's secret bearer value (credential; redacted at emission).
+          Supply via ${env:INSTANA_APITOKEN_GRANT} in examples, never inline.
+      - name: expiresOn
+        type: integer
+        required: false
+        description: Token expiry, epoch milliseconds. Omit for a non-expiring token.
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned token id (top-level `id` on create/list/get; distinct from the client-supplied `internalId`).
+      # -- Permission booleans (ApiToken; all optional, server-defaulted) --
+      - name: canConfigureAgentRunMode
+        type: boolean
+        required: false
+        description: Can configure agent run mode.
+      - name: canConfigureAgents
+        type: boolean
+        required: false
+        description: Can configure agents.
+      - name: canConfigureAiAgents
+        type: boolean
+        required: false
+        description: Can configure AI agents.
+      - name: canConfigureApdex
+        type: boolean
+        required: false
+        description: Can configure apdex.
+      - name: canConfigureApiTokens
+        type: boolean
+        required: false
+        description: Can configure API tokens.
+      - name: canConfigureApplicationSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure application smart alerts.
+      - name: canConfigureApplications
+        type: boolean
+        required: false
+        description: Can configure applications.
+      - name: canConfigureAuthenticationMethods
+        type: boolean
+        required: false
+        description: Can configure authentication methods.
+      - name: canConfigureAutomationActions
+        type: boolean
+        required: false
+        description: Can configure automation actions.
+      - name: canConfigureAutomationPolicies
+        type: boolean
+        required: false
+        description: Can configure automation policies.
+      - name: canConfigureBizops
+        type: boolean
+        required: false
+        description: Can configure BizOps.
+      - name: canConfigureDatabaseManagement
+        type: boolean
+        required: false
+        description: Can configure database management.
+      - name: canConfigureEumApplications
+        type: boolean
+        required: false
+        description: Can configure EUM applications.
+      - name: canConfigureEventsAndAlerts
+        type: boolean
+        required: false
+        description: Can configure events and alerts.
+      - name: canConfigureGlobalAlertPayload
+        type: boolean
+        required: false
+        description: Can configure global alert payload.
+      - name: canConfigureGlobalApplicationSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure global application smart alerts.
+      - name: canConfigureGlobalInfraSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure global infra smart alerts.
+      - name: canConfigureGlobalLogSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure global log smart alerts.
+      - name: canConfigureGlobalSyntheticSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure global synthetic smart alerts.
+      - name: canConfigureIntegrations
+        type: boolean
+        required: false
+        description: Can configure integrations.
+      - name: canConfigureLLM
+        type: boolean
+        required: false
+        description: Can configure LLM.
+      - name: canConfigureLogManagement
+        type: boolean
+        required: false
+        description: Can configure log management.
+      - name: canConfigureLogRetentionPeriod
+        type: boolean
+        required: false
+        description: Can configure log retention period.
+      - name: canConfigureMaintenanceWindows
+        type: boolean
+        required: false
+        description: Can configure maintenance windows.
+      - name: canConfigureMobileAppMonitoring
+        type: boolean
+        required: false
+        description: Can configure mobile app monitoring.
+      - name: canConfigureMobileAppSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure mobile app smart alerts.
+      - name: canConfigurePersonalApiTokens
+        type: boolean
+        required: false
+        description: Can configure personal API tokens.
+      - name: canConfigureReleases
+        type: boolean
+        required: false
+        description: Can configure releases.
+      - name: canConfigureServiceLevelCorrectionWindows
+        type: boolean
+        required: false
+        description: Can configure service level correction windows.
+      - name: canConfigureServiceLevelSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure service level smart alerts.
+      - name: canConfigureServiceLevels
+        type: boolean
+        required: false
+        description: Can configure service levels.
+      - name: canConfigureServiceMapping
+        type: boolean
+        required: false
+        description: Can configure service mapping.
+      - name: canConfigureSessionSettings
+        type: boolean
+        required: false
+        description: Can configure session settings.
+      - name: canConfigureSubtraces
+        type: boolean
+        required: false
+        description: Can configure subtraces.
+      - name: canConfigureSyntheticCredentials
+        type: boolean
+        required: false
+        description: Can configure synthetic credentials.
+      - name: canConfigureSyntheticLocations
+        type: boolean
+        required: false
+        description: Can configure synthetic locations.
+      - name: canConfigureSyntheticTests
+        type: boolean
+        required: false
+        description: Can configure synthetic tests.
+      - name: canConfigureTeams
+        type: boolean
+        required: false
+        description: Can configure teams.
+      - name: canConfigureUsers
+        type: boolean
+        required: false
+        description: Can configure users.
+      - name: canConfigureWebsiteSmartAlerts
+        type: boolean
+        required: false
+        description: Can configure website smart alerts.
+      - name: canCreateHeapDump
+        type: boolean
+        required: false
+        description: Can create heap dump.
+      - name: canCreatePublicCustomDashboards
+        type: boolean
+        required: false
+        description: Can create public custom dashboards.
+      - name: canCreateThreadDump
+        type: boolean
+        required: false
+        description: Can create thread dump.
+      - name: canDeleteAutomationActionHistory
+        type: boolean
+        required: false
+        description: Can delete automation action history.
+      - name: canDeleteLogs
+        type: boolean
+        required: false
+        description: Can delete logs.
+      - name: canEditAllAccessibleCustomDashboards
+        type: boolean
+        required: false
+        description: Can edit all accessible custom dashboards.
+      - name: canInstallNewAgents
+        type: boolean
+        required: false
+        description: Can install new agents.
+      - name: canInvokeAlertChannel
+        type: boolean
+        required: false
+        description: Can invoke alert channel.
+      - name: canManuallyCloseIssue
+        type: boolean
+        required: false
+        description: Can manually close issue.
+      - name: canRunAutomationActions
+        type: boolean
+        required: false
+        description: Can run automation actions.
+      - name: canUseSyntheticCredentials
+        type: boolean
+        required: false
+        description: Can use synthetic credentials.
+      - name: canViewAccountAndBillingInformation
+        type: boolean
+        required: false
+        description: Can view account and billing information.
+      - name: canViewAuditLog
+        type: boolean
+        required: false
+        description: Can view audit log.
+      - name: canViewBizAlerts
+        type: boolean
+        required: false
+        description: Can view biz alerts.
+      - name: canViewBusinessActivities
+        type: boolean
+        required: false
+        description: Can view business activities.
+      - name: canViewBusinessProcessDetails
+        type: boolean
+        required: false
+        description: Can view business process details.
+      - name: canViewBusinessProcesses
+        type: boolean
+        required: false
+        description: Can view business processes.
+      - name: canViewLogVolume
+        type: boolean
+        required: false
+        description: Can view log volume.
+      - name: canViewLogs
+        type: boolean
+        required: false
+        description: Can view logs.
+      - name: canViewSyntheticLocations
+        type: boolean
+        required: false
+        description: Can view synthetic locations.
+      - name: canViewSyntheticTestResults
+        type: boolean
+        required: false
+        description: Can view synthetic test results.
+      - name: canViewSyntheticTests
+        type: boolean
+        required: false
+        description: Can view synthetic tests.
+      - name: canViewTraceDetails
+        type: boolean
+        required: false
+        description: Can view trace details.
+      - name: limitedAiGatewayScope
+        type: boolean
+        required: false
+        description: Restrict token to AI Gateway scope.
+      - name: limitedAlertChannelsScope
+        type: boolean
+        required: false
+        description: Restrict token to alert channels scope.
+      - name: limitedApplicationsScope
+        type: boolean
+        required: false
+        description: Restrict token to applications scope.
+      - name: limitedAutomationScope
+        type: boolean
+        required: false
+        description: Restrict token to automation scope.
+      - name: limitedBizOpsScope
+        type: boolean
+        required: false
+        description: Restrict token to biz ops scope.
+      - name: limitedGenAIScope
+        type: boolean
+        required: false
+        description: Restrict token to gen AI scope.
+      - name: limitedInfrastructureScope
+        type: boolean
+        required: false
+        description: Restrict token to infrastructure scope.
+      - name: limitedKubernetesScope
+        type: boolean
+        required: false
+        description: Restrict token to kubernetes scope.
+      - name: limitedLinuxKVMHypervisorScope
+        type: boolean
+        required: false
+        description: Restrict token to linux KVM hypervisor scope.
+      - name: limitedLogsScope
+        type: boolean
+        required: false
+        description: Restrict token to logs scope.
+      - name: limitedMobileAppsScope
+        type: boolean
+        required: false
+        description: Restrict token to mobile apps scope.
+      - name: limitedNutanixScope
+        type: boolean
+        required: false
+        description: Restrict token to nutanix scope.
+      - name: limitedOpenstackScope
+        type: boolean
+        required: false
+        description: Restrict token to openstack scope.
+      - name: limitedPcfScope
+        type: boolean
+        required: false
+        description: Restrict token to PCF (Pivotal Cloud Foundry) scope.
+      - name: limitedPhmcScope
+        type: boolean
+        required: false
+        description: Restrict token to PowerVM HMC scope.
+      - name: limitedPvcScope
+        type: boolean
+        required: false
+        description: Restrict token to PVC scope.
+      - name: limitedServiceLevelScope
+        type: boolean
+        required: false
+        description: Restrict token to service level scope.
+      - name: limitedSyntheticsScope
+        type: boolean
+        required: false
+        description: Restrict token to synthetics scope.
+      - name: limitedVsphereScope
+        type: boolean
+        required: false
+        description: Restrict token to vsphere scope.
+      - name: limitedWebsitesScope
+        type: boolean
+        required: false
+        description: Restrict token to websites scope.
+      - name: limitedWindowsHypervisorScope
+        type: boolean
+        required: false
+        description: Restrict token to windows hypervisor scope.
+      - name: limitedXenServerScope
+        type: boolean
+        required: false
+        description: Restrict token to XenServer scope.
+      - name: limitedZhmcScope
+        type: boolean
+        required: false
+        description: Restrict token to zHMC scope.
+  reconciliation:
+    # GET /api/settings/api-tokens returns a BARE ARRAY of ApiToken -> no list_field.
+    # Identity source is the client-supplied internalId; match on `name`.
+    discovery:
+      method: list_and_get
+      id_source: internalId
+      name_field: name
+    # state_fields = name (match) + canConfigureReleases (one boolean, proves a
+    # clean round-trip -- K4 editable field). accessGrantingToken (sensitive),
+    # expiresOn, and the other ~85 booleans stay OUT of state_fields to avoid
+    # phantom drift across that many server-defaulted flags (OQ4). `internalId`
+    # deliberately STAYS OUT (unlike RBAC group/team's Computed `id`): it's a
+    # real user-declared field here, and this backend ignores the client-
+    # supplied value (see immutable_fields note below) -- putting it in
+    # state_fields would compare the (always-different) local vs remote value
+    # and phantom-drift forever. PUT /settings/api-tokens/{internalId} still
+    # 500s without SOME internalId in the body, but update.rs's default path
+    # now injects the server-discovered value unconditionally for PUT
+    # (execution/operations/update.rs), so no state_fields entry is needed.
+    state_fields:
+      - name
+      - canConfigureReleases
+    update_strategy: replace
+    # internalId is NOT in immutable_fields despite the field-level doc calling
+    # it client-supplied identity: live-probed 2026-07-14 against a CE 1.11.0 backend
+    # (Instana Custom Edition 1.11.0) -- the backend silently ignores the
+    # client-supplied internalId on create and always assigns its own opaque
+    # value (e.g. request "wxctl-ci-token" -> stored "DAuvfzI1S2611RfVWc_CjA").
+    # Discovery already matches on `name` (name_field above), so identity is
+    # sound without internalId; putting internalId in immutable_fields against
+    # a backend that won't honor it means every plan sees local != remote on
+    # that field forever -> an endless Recreate churn that never converges.
+    # Widen back to `[internalId]` only after confirming a backend that
+    # actually round-trips the client-supplied value.
+    immutable_fields: []
+
+  deployments: {}
+  unsupported_on: []

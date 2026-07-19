@@ -165,6 +165,10 @@ impl WxctlMcpServer {
         let mut config = input.config_input.load_deployable()?;
         let client = self.live_client().await?;
         let scope = McpRunScope::begin(op.command(), &self.profile, input.config_input.scope_paths(), self.full_trace);
+        // Record the run's deployment scope now that the live client (and its resolved
+        // profile) is available — mirrors `CommandContext::setup_with_render`'s recording.
+        let deployment = client.profile_deployment().unwrap_or(wxctl_core::types::Deployment::Saas);
+        scope.set_deployment(Some(deployment.flavor().to_string()));
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<ProgressEvent>();
         spawn_progress_drain(peer, meta.get_progress_token(), rx);
         let observer = Arc::new(ProgressExecutionObserver::new(tx));
@@ -322,6 +326,10 @@ impl WxctlMcpServer {
         let mut config = input.load()?;
         let client = self.live_client().await?;
         let scope = McpRunScope::begin("test", &self.profile, input.scope_paths(), self.full_trace);
+        // Record the run's deployment scope now that the live client (and its resolved
+        // profile) is available — mirrors `CommandContext::setup_with_render`'s recording.
+        let deployment = client.profile_deployment().unwrap_or(wxctl_core::types::Deployment::Saas);
+        scope.set_deployment(Some(deployment.flavor().to_string()));
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<ProgressEvent>();
         spawn_progress_drain(peer, meta.get_progress_token(), rx);
         let observer = Arc::new(ProgressTestObserver::new(tx));

@@ -6,7 +6,7 @@
   "homepage": "https://github.com/randyphoa/wxctl",
   "repository": { "type": "git", "url": "git+https://github.com/randyphoa/wxctl.git" },
   "bin": { "wxctl": "bin/wxctl.mjs" },
-  "files": ["bin"],
+  "files": ["bin", "README.md"],
   "engines": { "node": ">=18" },
   "optionalDependencies": {
     "@randyphoa/wxctl-darwin-x64": "0.0.0-managed-by-generate.mjs",

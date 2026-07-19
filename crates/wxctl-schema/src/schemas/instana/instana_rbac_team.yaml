@@ -1,0 +1,70 @@
+resource:
+  name: instana_rbac_team
+  service: instana
+  kind: instana_rbac_team
+  version: v1
+  description: >
+    An Instana RBAC team (ApiTeam) groups members under a scope for scoped access.
+    Created via /api/settings/rbac/teams and identified by a server-assigned string
+    id; the human identifier is `tag` (the team has no `name` field). Plain CRUD:
+    POST create, PUT /{id} full-body update, DELETE /{id}. `members` and `scope`
+    are server-normalized objects excluded from state_fields; `info` ({description})
+    is the small writable object used for the K4 update round-trip.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/settings/rbac/teams
+    id_field: id
+    list_endpoint: /api/settings/rbac/teams
+    get_endpoint: /api/settings/rbac/teams/{id}
+    create_endpoint: /api/settings/rbac/teams
+    create_method: POST
+    update_endpoint: /api/settings/rbac/teams/{id}
+    update_method: PUT
+    delete_endpoint: /api/settings/rbac/teams/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned team id (top-level `id` on create/list/get; ApiTeam.id).
+      - name: tag
+        type: string
+        required: true
+        description: Team tag; Instana's human identifier for a team (matched on during discovery — there is no `name`).
+      - name: info
+        type: object
+        required: false
+        description: >
+          ApiTeamInfo ({description}). Small writable object; in state_fields so the
+          K4 update round-trip can edit info.description. If it phantom-drifts on
+          read, narrow state_fields to [tag] and cite K1-K3,K5 for this kind.
+      - name: members
+        type: array
+        item_type: object
+        required: false
+        description: ApiTeamMember entries. Server-normalized on read, so excluded from state_fields.
+      - name: scope
+        type: object
+        required: false
+        description: ApiTeamScope (access-permission + filter arrays). Server-normalized on read, so excluded from state_fields.
+  reconciliation:
+    # GET /api/settings/rbac/teams returns a BARE ARRAY of ApiTeam -> no list_field.
+    # NAMELESS kind: match on `tag` (name_field: tag).
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: tag
+    # state_fields = tag (identity) + info (small writable object for the K4 update
+    # round-trip). members/scope are server-normalized -> excluded to avoid phantom drift.
+    # PUT /settings/rbac/teams/{id} 500s without `id` in the body (live-probed
+    # 2026-07-14, same live contract as instana_rbac_group's PUT); update.rs's
+    # default update path injects the server-discovered id unconditionally for
+    # PUT (execution/operations/update.rs), so no state_fields entry is needed.
+    state_fields:
+      - tag
+      - info
+    update_strategy: replace
+    immutable_fields: []

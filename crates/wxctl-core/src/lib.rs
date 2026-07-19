@@ -29,6 +29,6 @@ pub use wxctl_graph::{CycleError, DependencyEdge, IndexGraph, ParsedReference, R
 pub use diagnose::{DiagnosisBundle, RunArtifact, RunSummary, TriageClass, build_bundle, find_latest_failed, list_runs, load_artifact, match_troubleshoot};
 pub use registry::filters::filter_request_fields;
 pub use registry::{ResourceDescriptor, ResourceRegistry};
-pub use traits::{Reconciler, ResourceHandler, StateComparison};
+pub use traits::{AdvisorySink, NoOpAdvisorySink, Reconciler, ResourceHandler, StateComparison};
 pub use types::{Config, IStr, OnDestroyPolicy, Profile, RawResource, RemoteResource, ResourceKey, ValidatedResource, error_chain_vec, istr};
 pub use wxctl_schema::schema::{ResourceDefinition, ResourceSchema, SchemaParser};

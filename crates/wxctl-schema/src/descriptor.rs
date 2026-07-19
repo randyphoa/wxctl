@@ -111,7 +111,7 @@ mod tests {
                     ..Default::default()
                 },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".to_string() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".to_string() },
                     state_fields: None,
                     update_strategy: UpdateStrategy::Patch,
                     immutable_fields: vec![],

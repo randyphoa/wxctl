@@ -83,26 +83,19 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, &descriptor.schema, &state.registry);
     let current = op.remote.as_ref().map(|r| &r.data).ok_or_else(|| anyhow!("No remote data for update"))?;
 
-    let resource_id = extract_resource_id(current, &descriptor.id_field).ok_or_else(|| anyhow!("Missing ID field for update"))?;
-
     let endpoint_template = endpoints.update.as_ref().unwrap_or(&endpoints.get);
 
-    let method = match &endpoints.update_method {
-        Some(wxctl_schema::schema::HttpMethod::Put) => Method::PUT,
-        Some(wxctl_schema::schema::HttpMethod::Patch) => Method::PATCH,
-        Some(wxctl_schema::schema::HttpMethod::Post) => Method::POST,
-        _ => Method::PATCH,
-    };
-
-    let use_json_patch = descriptor.schema.resource.reconciliation.use_json_patch;
-    let body_selector = if method == Method::PATCH && use_json_patch {
-        let path_prefix = descriptor.schema.resource.reconciliation.json_patch_path_prefix.as_ref().ok_or_else(|| anyhow!("json_patch_path_prefix required"))?.clone();
-        BodyKindSelector::JsonPatch { changed_fields: fields.clone(), path_prefix, fields: &descriptor.schema.resource.schema.fields }
-    } else {
-        BodyKindSelector::Json
-    };
-
-    // Allow handler to modify resolved_data before materialization
+    // Allow handler to modify resolved_data before materialization. Runs BEFORE
+    // id extraction AND method/body-selector resolution below (mirrors
+    // delete.rs's pre_delete-before-id-extraction precedent): a handler may own
+    // the update entirely (HookOutcome::Handled) against an id-less endpoint
+    // whose remote data carries no id field at all (e.g.
+    // instana_custom_payload_configuration's global singleton, which also
+    // declares no update_endpoint/update_method — the default-PATCH +
+    // use_json_patch fallback below would then demand a json_patch_path_prefix
+    // no such kind ever configures) — requiring either first would spuriously
+    // fail those kinds before the handler ever gets a chance to bypass the
+    // default id-keyed path.
     let mut body = resolved_data.clone();
     if let Some(handler) = state.registry.get_handler(&descriptor.name) {
         let payload_before = body.clone();
@@ -120,6 +113,24 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
         }
     }
 
+    // Default path — only reached when no handler Handled the update above.
+    let resource_id = extract_resource_id(current, &descriptor.id_field).ok_or_else(|| anyhow!("Missing ID field for update"))?;
+
+    let method = match &endpoints.update_method {
+        Some(wxctl_schema::schema::HttpMethod::Put) => Method::PUT,
+        Some(wxctl_schema::schema::HttpMethod::Patch) => Method::PATCH,
+        Some(wxctl_schema::schema::HttpMethod::Post) => Method::POST,
+        _ => Method::PATCH,
+    };
+
+    let use_json_patch = descriptor.schema.resource.reconciliation.use_json_patch;
+    let body_selector = if method == Method::PATCH && use_json_patch {
+        let path_prefix = descriptor.schema.resource.reconciliation.json_patch_path_prefix.as_ref().ok_or_else(|| anyhow!("json_patch_path_prefix required"))?.clone();
+        BodyKindSelector::JsonPatch { changed_fields: fields.clone(), path_prefix, fields: &descriptor.schema.resource.schema.fields }
+    } else {
+        BodyKindSelector::Json
+    };
+
     // Materialize from handler-modified body (includes injected fields like input_schema)
     let materializer = RequestMaterializer::new(method.clone(), endpoint_template);
     let mut final_spec = materializer.materialize(&body, &descriptor.schema.resource.schema.fields, body_selector)?;
@@ -130,12 +141,39 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     // (e.g. database_registration's `connection` ref) on PATCH. See
     // `prune_body_to_state_fields` for why this must translate local field names to
     // api_field-mapped body keys rather than comparing them directly.
+    //
+    // NOTE: this deliberately does NOT fire for PUT (`!use_json_patch` excludes
+    // it when `use_json_patch` is true, the schema-wide default) — a PUT is
+    // normally a full-object replace, and most `update_strategy: replace`
+    // PUT kinds need every declared field on the wire, not just state_fields
+    // (confirmed live 2026-07-14: pruning an Instana RBAC group PUT down to
+    // state_fields 422s "members must not be null, permissionSet must not be
+    // null" — the API wants the whole object back). Leave this PATCH-only.
     if !use_json_patch
         && (method == Method::PATCH || method == Method::PUT)
         && let BodyKind::Json(Value::Object(ref mut map)) = final_spec.body
         && let Some(allowed) = descriptor.schema.resource.reconciliation.state_fields.as_ref()
     {
         prune_body_to_state_fields(map, allowed, &descriptor.schema.resource.schema.fields);
+    }
+
+    // Some APIs require the resource's own id to ride the update BODY (not
+    // just the URL path) even though `id_field` is often a Computed field
+    // never present in local config data, or (for a client-supplied identity
+    // field like instana_api_token's `internalId`) may hold a locally-declared
+    // value the backend doesn't actually honor (live-probed 2026-07-14: three
+    // Instana kinds — RBAC group, RBAC team, api_token — 422/500 a PUT whose
+    // body omits/mismatches the id despite it already being in the URL path).
+    // Unconditionally OVERWRITE with the server-DISCOVERED `resource_id` on
+    // every plain-JSON PUT (not PATCH — PATCH bodies are intentionally
+    // partial and this would be a much bigger behavior change across the
+    // whole schema catalog; PUT is inherently a full-object replace, so
+    // including the authoritative id is always safe). Independent of the
+    // prune step above, which never touches full-body PUT bodies.
+    if method == Method::PUT
+        && let BodyKind::Json(Value::Object(ref mut map)) = final_spec.body
+    {
+        map.insert(descriptor.id_field.clone(), Value::String(resource_id.clone()));
     }
 
     final_spec.path_vars.insert(descriptor.id_field.clone(), resource_id.clone());

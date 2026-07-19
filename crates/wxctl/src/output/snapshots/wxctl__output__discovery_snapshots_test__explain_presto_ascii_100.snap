@@ -29,6 +29,10 @@ expression: "explain_presto(&panel(100, ColorMode::Plain, GlyphSet::Ascii))"
     associated_catalogs  -->  ${storage_registration.<ref_name>}   optional
     associated_catalogs  -->  ${database_registration.<ref_name>}   optional
 
+  | Consumers
+    sal_integration  -->  .engine_id   required
+    schema           -->  .engine_id   required
+
   | Authoring
     envelope   A config is one or more YAML documents separated by `---`. Each has top-level `kind` and `ref_name`, then the fields below at the top level (not nested under `spec`).
     ref_name   Unique handle for this resource within the config. Used to reference it from other resources, then stripped before the API call (not a schema field).

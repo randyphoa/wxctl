@@ -60,6 +60,12 @@ impl McpRunScope {
         self.span.clone()
     }
 
+    /// Record the run's deployment (`saas` / `software`) once the profile is resolved —
+    /// `begin` predates the live client, so this lands late but before `finish`.
+    pub fn set_deployment(&self, deployment: Option<String>) {
+        self.sink.set_deployment(deployment);
+    }
+
     /// Finalize the manifest with a definite outcome (`success` | `failed`).
     pub fn finish(&self, outcome: &str) {
         self.sink.finalize(outcome);

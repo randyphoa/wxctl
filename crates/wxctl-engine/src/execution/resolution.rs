@@ -297,7 +297,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![make_field("name", FieldType::String), make_field("tools", FieldType::Array), make_field("style", FieldType::String)], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".to_string() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".to_string(), list_filter: None },
                     identity_hash: None,
                     state_fields: None,
                     update_strategy: UpdateStrategy::Patch,

@@ -1,0 +1,80 @@
+resource:
+  name: instana_automation_policy
+  service: instana
+  kind: instana_automation_policy
+  version: v1
+  description: >
+    An Instana automation policy (Policy) binds a trigger (a customEvent /
+    builtinEvent / smart-alert type, referencing an event spec by id) to one or
+    more type configurations that run automation actions or workflows. Created
+    via /api/automation/policies and identified by a server-assigned string id;
+    the human identifier is `name`. The trigger's event-spec id is NESTED inside
+    the `trigger` object and the action ids are nested inside
+    `typeConfigurations`, so neither produces a DAG edge — order dependencies with
+    depends_on and resolve the nested ids with ${...} interpolation (precedent:
+    instana_slo_config.entity).
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/automation/policies
+    id_field: id
+    list_endpoint: /api/automation/policies
+    get_endpoint: /api/automation/policies/{id}
+    create_endpoint: /api/automation/policies
+    create_method: POST
+    update_endpoint: /api/automation/policies/{id}
+    update_method: PUT
+    delete_endpoint: /api/automation/policies/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        # Modeled server-assigned per the spec's identity column. NOTE: the 1.307
+        # OpenAPI marks `id` REQUIRED in the POST body; if the Phase 3 backend
+        # rejects an id-less create, switch to a client-supplied id then.
+        description: Server-assigned policy id (top-level `id` on create/list/get).
+      - name: name
+        type: string
+        required: true
+        description: Policy display name; Instana's human identifier (matched on during discovery).
+      - name: description
+        type: string
+        required: false
+        description: Free-text policy description.
+      - name: tags
+        type: array
+        item_type: string
+        required: false
+        description: Policy tags.
+      - name: trigger
+        type: object
+        required: true
+        description: >
+          Trigger selector (`type` = customEvent / builtinEvent / *SmartAlert /
+          schedule; `id` = the referenced event-spec id, a NESTED ref that makes
+          no DAG edge — order with depends_on and resolve with ${...}).
+          Server-normalized on read, so excluded from state_fields.
+      - name: typeConfigurations
+        type: array
+        item_type: object
+        required: true
+        description: >
+          TypeConfiguration entries (`name` = automatic/manual + a runnable that
+          references an automation action or workflow by NESTED id — no DAG edge;
+          resolve with ${...}). Server-normalized on read, so excluded from
+          state_fields.
+  reconciliation:
+    # GET /api/automation/policies returns a BARE ARRAY of Policy -> no list_field.
+    # Identity match on `name`.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    state_fields:
+      - name
+      - description
+    update_strategy: replace
+    immutable_fields: []

@@ -39,6 +39,7 @@ pub(crate) fn product_name(service: &str) -> &str {
         "concert_workflows" => "IBM Concert Workflows",
         "instana" => "IBM Instana",
         "planning_analytics" => "IBM Planning Analytics",
+        "pa_workspace" => "IBM Planning Analytics Workspace",
         "cloud_object_storage" => "Cloud Object Storage",
         "local" => "Local",
         other => other,

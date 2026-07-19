@@ -102,6 +102,12 @@ pub(crate) fn match_job_by_name(list_response: &Value, name: &str) -> Option<Val
 /// and `asset_ref_type` with 400 "mutually exclusive" (live-verified
 /// 2026-07-05, both SaaS and CP4D); the server derives the runnable type from
 /// the referenced asset.
+///
+/// `schedule` / `schedule_info` are top-level under the inner `job` object, so
+/// they ride the same `{"job": {...}}` create envelope. Updates use
+/// `update_strategy: recreate` (destroy + create), whose create half re-enters
+/// `pre_create` → `build_job_body`, so the update path carries the identical
+/// nesting — no separate PATCH body shaping is needed.
 fn build_job_body(resource: &Value) -> Result<Value> {
     let name = resource.get("name").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).ok_or_else(|| anyhow!("job requires 'name'"))?;
     let asset_ref = resource.get("asset").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).ok_or_else(|| anyhow!("job requires 'asset'"))?;
@@ -112,6 +118,12 @@ fn build_job_body(resource: &Value) -> Result<Value> {
     });
     if let Some(description) = resource.get("description").and_then(|v| v.as_str()) {
         job["description"] = json!(description);
+    }
+    if let Some(schedule) = resource.get("schedule").and_then(|v| v.as_str()) {
+        job["schedule"] = json!(schedule);
+    }
+    if let Some(schedule_info) = resource.get("schedule_info") {
+        job["schedule_info"] = schedule_info.clone();
     }
 
     let mut configuration = json!({});
@@ -239,6 +251,26 @@ mod tests {
         assert!(body.get("asset_ref_type").is_none());
         assert_eq!(body["configuration"]["env_id"], json!("env-456"));
         assert_eq!(body["configuration"]["env_variables"], json!(["THRESHOLD=0.5"]));
+    }
+
+    // schedule / schedule_info ride the top level of the inner job object; both
+    // are omitted when absent.
+    #[test]
+    fn build_job_body_includes_schedule_fields() {
+        let resource = json!({
+            "name": "nightly-ingest",
+            "asset": "notebook-1",
+            "schedule": "0 2 * * *",
+            "schedule_info": {"repeat": true, "startOn": 1_700_000_000_000_i64},
+        });
+        let body = build_job_body(&resource).expect("build_job_body should succeed");
+        assert_eq!(body["schedule"], json!("0 2 * * *"));
+        assert_eq!(body["schedule_info"]["repeat"], json!(true));
+        assert_eq!(body["schedule_info"]["startOn"], json!(1_700_000_000_000_i64));
+
+        let no_sched = build_job_body(&json!({"name": "n", "asset": "a"})).unwrap();
+        assert!(no_sched.get("schedule").is_none());
+        assert!(no_sched.get("schedule_info").is_none());
     }
 
     // env_pairs_to_strings converts {name, value} objects into "NAME=value"

@@ -1,0 +1,76 @@
+resource:
+  name: instana_rbac_group
+  service: instana
+  kind: instana_rbac_group
+  version: v1
+  description: >
+    An Instana RBAC access group (ApiGroup) binds members to a permission set
+    (ApiPermissionSet: a `permissions` string array plus optional scope filters).
+    Created via /api/settings/rbac/groups and identified by a server-assigned
+    string id; the human identifier is `name`. Plain CRUD: POST create, PUT /{id}
+    full-body update, DELETE /{id}. `members` and `permissionSet` are server-
+    normalized objects; state_fields keeps `name` + `description` (a writable
+    scalar the backend round-trips) for a clean idempotency + update round-trip,
+    excluding the object fields to avoid phantom drift.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/settings/rbac/groups
+    id_field: id
+    list_endpoint: /api/settings/rbac/groups
+    get_endpoint: /api/settings/rbac/groups/{id}
+    create_endpoint: /api/settings/rbac/groups
+    create_method: POST
+    update_endpoint: /api/settings/rbac/groups/{id}
+    update_method: PUT
+    delete_endpoint: /api/settings/rbac/groups/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned group id (top-level `id` on create/list/get; ApiGroup.id).
+      - name: name
+        type: string
+        required: true
+        description: Group display name; Instana's human identifier (matched on during discovery).
+      - name: description
+        type: string
+        required: false
+        description: >
+          Group description (the backend returns it on read; the writable scalar used
+          for the K4 update round-trip). If the live round-trip proves it does not
+          persist, narrow state_fields to [name] and cite K1-K3,K5 for this kind.
+      - name: members
+        type: array
+        item_type: object
+        required: true
+        description: >
+          ApiMember entries (userId/email/name). Server-normalized on read (adds
+          display name), so excluded from state_fields. May be an empty array; if the
+          backend rejects empty members, supply a userId via ${env:} in the example.
+      - name: permissionSet
+        type: object
+        required: true
+        description: >
+          ApiPermissionSet (permissions string array + scope filters). Server-
+          defaulted/normalized on read, so excluded from state_fields to avoid drift.
+  reconciliation:
+    # GET /api/settings/rbac/groups returns a BARE ARRAY of ApiGroup -> no list_field.
+    # Identity match on `name`.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # PUT /settings/rbac/groups/{id} 422s "id must not be null" without it in
+    # the body (live-probed 2026-07-14); update.rs's default update path
+    # injects the server-discovered id unconditionally for PUT
+    # (execution/operations/update.rs), so no state_fields entry is needed
+    # here (id stays a pure Computed field, never compared for drift).
+    state_fields:
+      - name
+      - description
+    update_strategy: replace
+    immutable_fields: []

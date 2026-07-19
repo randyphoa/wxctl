@@ -3,779 +3,1053 @@ source: crates/wxctl/tests/panel_snapshots.rs
 expression: "run(&[\"resources\"], \"80\", \"dark\", \"unicode\")"
 ---
 
-  [1mresource catalog[0m   [38;2;125;133;144m110 kinds · 12 products[0m
+  [1mresource catalog[0m   [38;2;125;133;144m127 kinds · 13 products[0m
 
   [38;2;120;169;255m▌[0m [1mAI Factsheets[0m   [38;2;125;133;144m(factsheets · 3 kinds)[0m
-    [38;2;120;169;255minventory                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn inventory is an AI[0m
-[38;2;125;133;144m                                                         Factsheets model[0m
-[38;2;125;133;144m                                                         inventory: a governance[0m
-[38;2;125;133;144m                                                         catalog that holds the[0m
-[38;2;125;133;144m                                                         model use cases tracked[0m
-[38;2;125;133;144m                                                         for an organization.[0m
-    [38;2;120;169;255mmodel_entry                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA model entry is an AI[0m
-[38;2;125;133;144m                                                         Factsheets model use[0m
-[38;2;125;133;144m                                                         case that groups the[0m
-[38;2;125;133;144m                                                         tracked models,[0m
-[38;2;125;133;144m                                                         deployments, and[0m
-[38;2;125;133;144m                                                         factsheets for one[0m
-[38;2;125;133;144m                                                         business problem within[0m
-[38;2;125;133;144m                                                         a model inventory.[0m
-    [38;2;120;169;255mmodel_tracking                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAssociates a trained[0m
-[38;2;125;133;144m                                                         Watson Machine Learning[0m
-[38;2;125;133;144m                                                         model (incl. AutoAI)[0m
-[38;2;125;133;144m                                                         with a governance[0m
-[38;2;125;133;144m                                                         model_entry (AI use[0m
-[38;2;125;133;144m                                                         case) so the model is[0m
-[38;2;125;133;144m                                                         tracked in a model[0m
-[38;2;125;133;144m                                                         inventory.[0m
+    [38;2;120;169;255minventory                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn inventory is an[0m
+[38;2;125;133;144m                                                            AI Factsheets model[0m
+[38;2;125;133;144m                                                            inventory: a[0m
+[38;2;125;133;144m                                                            governance catalog[0m
+[38;2;125;133;144m                                                            that holds the model[0m
+[38;2;125;133;144m                                                            use cases tracked[0m
+[38;2;125;133;144m                                                            for an organization.[0m
+    [38;2;120;169;255mmodel_entry                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA model entry is an[0m
+[38;2;125;133;144m                                                            AI Factsheets model[0m
+[38;2;125;133;144m                                                            use case that groups[0m
+[38;2;125;133;144m                                                            the tracked models,[0m
+[38;2;125;133;144m                                                            deployments, and[0m
+[38;2;125;133;144m                                                            factsheets for one[0m
+[38;2;125;133;144m                                                            business problem[0m
+[38;2;125;133;144m                                                            within a model[0m
+[38;2;125;133;144m                                                            inventory.[0m
+    [38;2;120;169;255mmodel_tracking                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAssociates a trained[0m
+[38;2;125;133;144m                                                            Watson Machine[0m
+[38;2;125;133;144m                                                            Learning model[0m
+[38;2;125;133;144m                                                            (incl. AutoAI) with[0m
+[38;2;125;133;144m                                                            a governance[0m
+[38;2;125;133;144m                                                            model_entry (AI use[0m
+[38;2;125;133;144m                                                            case) so the model[0m
+[38;2;125;133;144m                                                            is tracked in a[0m
+[38;2;125;133;144m                                                            model inventory.[0m
 
   [38;2;120;169;255m▌[0m [1mCloud Object Storage[0m   [38;2;125;133;144m(cloud_object_storage · 5 kinds)[0m
-    [38;2;120;169;255madls_container                   [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mAzure Data Lake Storage[0m
-[38;2;125;133;144m                                                         container (Gen1 or[0m
-[38;2;125;133;144m                                                         Gen2).[0m
-    [38;2;120;169;255mgcs_bucket                       [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mGoogle Cloud Storage[0m
-[38;2;125;133;144m                                                         bucket.[0m
-    [38;2;120;169;255ms3_bucket                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mS3-compatible bucket[0m
-[38;2;125;133;144m                                                         (IBM COS, AWS S3,[0m
-[38;2;125;133;144m                                                         MinIO, Ceph).[0m
-    [38;2;120;169;255ms3_object                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn object inside an[0m
-[38;2;125;133;144m                                                         `s3_bucket`.[0m
-    [38;2;120;169;255mstorage_connection               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding kind[0m
-[38;2;125;133;144m                                                         for object-store /[0m
-[38;2;125;133;144m                                                         file-system backends.[0m
+    [38;2;120;169;255madls_container                      [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mAzure Data Lake[0m
+[38;2;125;133;144m                                                            Storage container[0m
+[38;2;125;133;144m                                                            (Gen1 or Gen2).[0m
+    [38;2;120;169;255mgcs_bucket                          [0m   [38;2;63;185;80msaas[0m             [38;2;125;133;144mGoogle Cloud Storage[0m
+[38;2;125;133;144m                                                            bucket.[0m
+    [38;2;120;169;255ms3_bucket                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mS3-compatible bucket[0m
+[38;2;125;133;144m                                                            (IBM COS, AWS S3,[0m
+[38;2;125;133;144m                                                            MinIO, Ceph).[0m
+    [38;2;120;169;255ms3_object                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn object inside an[0m
+[38;2;125;133;144m                                                            `s3_bucket`.[0m
+    [38;2;120;169;255mstorage_connection                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding[0m
+[38;2;125;133;144m                                                            kind for[0m
+[38;2;125;133;144m                                                            object-store /[0m
+[38;2;125;133;144m                                                            file-system[0m
+[38;2;125;133;144m                                                            backends.[0m
 
   [38;2;120;169;255m▌[0m [1mData & AI Common Core[0m   [38;2;125;133;144m(common_core · 17 kinds)[0m
-    [38;2;120;169;255masset_promotion                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mPromotes a project-side[0m
-[38;2;125;133;144m                                                         asset — a native model[0m
-[38;2;125;133;144m                                                         the training job stored[0m
-[38;2;125;133;144m                                                         under a known name —[0m
-[38;2;125;133;144m                                                         into a deployment[0m
-[38;2;125;133;144m                                                         space.[0m
-    [38;2;120;169;255mbusiness_term                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Business Term is a[0m
-[38;2;125;133;144m                                                         glossary entry that[0m
-[38;2;125;133;144m                                                         defines standardized[0m
-[38;2;125;133;144m                                                         business vocabulary and[0m
-[38;2;125;133;144m                                                         semantics for data[0m
-[38;2;125;133;144m                                                         governance in Watsonx[0m
-[38;2;125;133;144m                                                         Data.[0m
-    [38;2;120;169;255mbusiness_terms                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mBusiness Terms provides[0m
-[38;2;125;133;144m                                                         bulk creation[0m
-[38;2;125;133;144m                                                         functionality for[0m
-[38;2;125;133;144m                                                         multiple business terms[0m
-[38;2;125;133;144m                                                         in a single API call.[0m
-    [38;2;120;169;255mcatalog                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Catalog is a metadata[0m
-[38;2;125;133;144m                                                         repository that[0m
-[38;2;125;133;144m                                                         organizes and manages[0m
-[38;2;125;133;144m                                                         table schemas,[0m
-[38;2;125;133;144m                                                         partitions, and file[0m
-[38;2;125;133;144m                                                         locations for data lake[0m
-[38;2;125;133;144m                                                         operations in Watsonx[0m
-[38;2;125;133;144m                                                         Data.[0m
-    [38;2;120;169;255mcategory                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Category is a[0m
-[38;2;125;133;144m                                                         hierarchical[0m
-[38;2;125;133;144m                                                         classification[0m
-[38;2;125;133;144m                                                         structure used to[0m
-[38;2;125;133;144m                                                         organize and group data[0m
-[38;2;125;133;144m                                                         assets, business terms,[0m
-[38;2;125;133;144m                                                         and other governance[0m
-[38;2;125;133;144m                                                         artifacts in Watsonx[0m
-[38;2;125;133;144m                                                         Data.[0m
-    [38;2;120;169;255mcommon_core_connection           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection is a data[0m
-[38;2;125;133;144m                                                         source configuration[0m
-[38;2;125;133;144m                                                         that enables Watsonx[0m
-[38;2;125;133;144m                                                         Data to access external[0m
-[38;2;125;133;144m                                                         databases, object[0m
-[38;2;125;133;144m                                                         storage systems, and[0m
-[38;2;125;133;144m                                                         other data[0m
-[38;2;125;133;144m                                                         repositories.[0m
-    [38;2;120;169;255mdata_asset                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Data Asset uploads a[0m
-[38;2;125;133;144m                                                         local file such as a[0m
-[38;2;125;133;144m                                                         CSV into a space or[0m
-[38;2;125;133;144m                                                         project as a CAMS data[0m
-[38;2;125;133;144m                                                         asset and exposes its[0m
-[38;2;125;133;144m                                                         asset id for downstream[0m
-[38;2;125;133;144m                                                         consumers such as an[0m
-[38;2;125;133;144m                                                         AutoAI experiment's[0m
-[38;2;125;133;144m                                                         training_data_references.[0m
-    [38;2;120;169;255menvironment                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA notebook runtime[0m
-[38;2;125;133;144m                                                         environment in a[0m
-[38;2;125;133;144m                                                         watsonx.ai project.[0m
-    [38;2;120;169;255mjob                              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA platform Job[0m
-[38;2;125;133;144m                                                         definition in a[0m
-[38;2;125;133;144m                                                         watsonx.ai project: a[0m
-[38;2;125;133;144m                                                         reusable run[0m
-[38;2;125;133;144m                                                         configuration binding a[0m
-[38;2;125;133;144m                                                         runnable asset (a[0m
-[38;2;125;133;144m                                                         script_asset or a[0m
-[38;2;125;133;144m                                                         notebook) to a runtime[0m
-[38;2;125;133;144m                                                         environment.[0m
-    [38;2;120;169;255mjob_run                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA single execution of a[0m
-[38;2;125;133;144m                                                         platform job.[0m
-    [38;2;120;169;255mpackage_extension                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Package Extension[0m
-[38;2;125;133;144m                                                         defines additional[0m
-[38;2;125;133;144m                                                         Python packages to[0m
-[38;2;125;133;144m                                                         include in a software[0m
-[38;2;125;133;144m                                                         specification.[0m
-    [38;2;120;169;255mproject                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Project is a[0m
-[38;2;125;133;144m                                                         collaborative workspace[0m
-[38;2;125;133;144m                                                         that organizes assets,[0m
-[38;2;125;133;144m                                                         tools, notebooks, jobs,[0m
-[38;2;125;133;144m                                                         and data connections[0m
-[38;2;125;133;144m                                                         for data science and AI[0m
-[38;2;125;133;144m                                                         workflows.[0m
-    [38;2;120;169;255mrule                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Rule is an automated[0m
-[38;2;125;133;144m                                                         policy enforcement[0m
-[38;2;125;133;144m                                                         mechanism that[0m
-[38;2;125;133;144m                                                         implements data[0m
-[38;2;125;133;144m                                                         governance controls in[0m
-[38;2;125;133;144m                                                         Watsonx Data.[0m
-    [38;2;120;169;255mrules                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRules provides bulk[0m
-[38;2;125;133;144m                                                         creation functionality[0m
-[38;2;125;133;144m                                                         for multiple governance[0m
-[38;2;125;133;144m                                                         rules in a single API[0m
-[38;2;125;133;144m                                                         call.[0m
-    [38;2;120;169;255mscript_asset                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Script Asset uploads[0m
-[38;2;125;133;144m                                                         a local Python file[0m
-[38;2;125;133;144m                                                         into a watsonx.ai[0m
-[38;2;125;133;144m                                                         project (or space) as a[0m
-[38;2;125;133;144m                                                         CAMS asset of type[0m
-[38;2;125;133;144m                                                         `script`, exposing its[0m
-[38;2;125;133;144m                                                         asset id for a platform[0m
-[38;2;125;133;144m                                                         job to run.[0m
-    [38;2;120;169;255msoftware_specification           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Software[0m
-[38;2;125;133;144m                                                         Specification defines a[0m
-[38;2;125;133;144m                                                         runtime environment for[0m
-[38;2;125;133;144m                                                         deploying AI services[0m
-[38;2;125;133;144m                                                         and functions.[0m
-    [38;2;120;169;255mspace                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Space is a deployment[0m
-[38;2;125;133;144m                                                         environment for[0m
-[38;2;125;133;144m                                                         promoting and managing[0m
-[38;2;125;133;144m                                                         machine learning[0m
-[38;2;125;133;144m                                                         models, functions, and[0m
-[38;2;125;133;144m                                                         other AI assets.[0m
+    [38;2;120;169;255masset_promotion                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mPromotes a[0m
+[38;2;125;133;144m                                                            project-side asset —[0m
+[38;2;125;133;144m                                                            a native model the[0m
+[38;2;125;133;144m                                                            training job stored[0m
+[38;2;125;133;144m                                                            under a known name —[0m
+[38;2;125;133;144m                                                            into a deployment[0m
+[38;2;125;133;144m                                                            space.[0m
+    [38;2;120;169;255mbusiness_term                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Business Term is a[0m
+[38;2;125;133;144m                                                            glossary entry that[0m
+[38;2;125;133;144m                                                            defines standardized[0m
+[38;2;125;133;144m                                                            business vocabulary[0m
+[38;2;125;133;144m                                                            and semantics for[0m
+[38;2;125;133;144m                                                            data governance in[0m
+[38;2;125;133;144m                                                            Watsonx Data.[0m
+    [38;2;120;169;255mbusiness_terms                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mBusiness Terms[0m
+[38;2;125;133;144m                                                            provides bulk[0m
+[38;2;125;133;144m                                                            creation[0m
+[38;2;125;133;144m                                                            functionality for[0m
+[38;2;125;133;144m                                                            multiple business[0m
+[38;2;125;133;144m                                                            terms in a single[0m
+[38;2;125;133;144m                                                            API call.[0m
+    [38;2;120;169;255mcatalog                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Catalog is a[0m
+[38;2;125;133;144m                                                            metadata repository[0m
+[38;2;125;133;144m                                                            that organizes and[0m
+[38;2;125;133;144m                                                            manages table[0m
+[38;2;125;133;144m                                                            schemas, partitions,[0m
+[38;2;125;133;144m                                                            and file locations[0m
+[38;2;125;133;144m                                                            for data lake[0m
+[38;2;125;133;144m                                                            operations in[0m
+[38;2;125;133;144m                                                            Watsonx Data.[0m
+    [38;2;120;169;255mcategory                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Category is a[0m
+[38;2;125;133;144m                                                            hierarchical[0m
+[38;2;125;133;144m                                                            classification[0m
+[38;2;125;133;144m                                                            structure used to[0m
+[38;2;125;133;144m                                                            organize and group[0m
+[38;2;125;133;144m                                                            data assets,[0m
+[38;2;125;133;144m                                                            business terms, and[0m
+[38;2;125;133;144m                                                            other governance[0m
+[38;2;125;133;144m                                                            artifacts in Watsonx[0m
+[38;2;125;133;144m                                                            Data.[0m
+    [38;2;120;169;255mcommon_core_connection              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection is a[0m
+[38;2;125;133;144m                                                            data source[0m
+[38;2;125;133;144m                                                            configuration that[0m
+[38;2;125;133;144m                                                            enables Watsonx Data[0m
+[38;2;125;133;144m                                                            to access external[0m
+[38;2;125;133;144m                                                            databases, object[0m
+[38;2;125;133;144m                                                            storage systems, and[0m
+[38;2;125;133;144m                                                            other data[0m
+[38;2;125;133;144m                                                            repositories.[0m
+    [38;2;120;169;255mdata_asset                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Data Asset uploads[0m
+[38;2;125;133;144m                                                            a local file such as[0m
+[38;2;125;133;144m                                                            a CSV into a space[0m
+[38;2;125;133;144m                                                            or project as a CAMS[0m
+[38;2;125;133;144m                                                            data asset and[0m
+[38;2;125;133;144m                                                            exposes its asset id[0m
+[38;2;125;133;144m                                                            for downstream[0m
+[38;2;125;133;144m                                                            consumers such as an[0m
+[38;2;125;133;144m                                                            AutoAI experiment's[0m
+[38;2;125;133;144m                                                            training_data_references.[0m
+    [38;2;120;169;255menvironment                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA notebook runtime[0m
+[38;2;125;133;144m                                                            environment in a[0m
+[38;2;125;133;144m                                                            watsonx.ai project.[0m
+    [38;2;120;169;255mjob                                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA platform Job[0m
+[38;2;125;133;144m                                                            definition in a[0m
+[38;2;125;133;144m                                                            watsonx.ai project:[0m
+[38;2;125;133;144m                                                            a reusable run[0m
+[38;2;125;133;144m                                                            configuration[0m
+[38;2;125;133;144m                                                            binding a runnable[0m
+[38;2;125;133;144m                                                            asset (a[0m
+[38;2;125;133;144m                                                            script_asset or a[0m
+[38;2;125;133;144m                                                            notebook) to a[0m
+[38;2;125;133;144m                                                            runtime environment.[0m
+    [38;2;120;169;255mjob_run                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA single execution[0m
+[38;2;125;133;144m                                                            of a platform job.[0m
+    [38;2;120;169;255mpackage_extension                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Package Extension[0m
+[38;2;125;133;144m                                                            defines additional[0m
+[38;2;125;133;144m                                                            Python packages to[0m
+[38;2;125;133;144m                                                            include in a[0m
+[38;2;125;133;144m                                                            software[0m
+[38;2;125;133;144m                                                            specification.[0m
+    [38;2;120;169;255mproject                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Project is a[0m
+[38;2;125;133;144m                                                            collaborative[0m
+[38;2;125;133;144m                                                            workspace that[0m
+[38;2;125;133;144m                                                            organizes assets,[0m
+[38;2;125;133;144m                                                            tools, notebooks,[0m
+[38;2;125;133;144m                                                            jobs, and data[0m
+[38;2;125;133;144m                                                            connections for data[0m
+[38;2;125;133;144m                                                            science and AI[0m
+[38;2;125;133;144m                                                            workflows.[0m
+    [38;2;120;169;255mrule                                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Rule is an[0m
+[38;2;125;133;144m                                                            automated policy[0m
+[38;2;125;133;144m                                                            enforcement[0m
+[38;2;125;133;144m                                                            mechanism that[0m
+[38;2;125;133;144m                                                            implements data[0m
+[38;2;125;133;144m                                                            governance controls[0m
+[38;2;125;133;144m                                                            in Watsonx Data.[0m
+    [38;2;120;169;255mrules                               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRules provides bulk[0m
+[38;2;125;133;144m                                                            creation[0m
+[38;2;125;133;144m                                                            functionality for[0m
+[38;2;125;133;144m                                                            multiple governance[0m
+[38;2;125;133;144m                                                            rules in a single[0m
+[38;2;125;133;144m                                                            API call.[0m
+    [38;2;120;169;255mscript_asset                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Script Asset[0m
+[38;2;125;133;144m                                                            uploads a local[0m
+[38;2;125;133;144m                                                            Python file into a[0m
+[38;2;125;133;144m                                                            watsonx.ai project[0m
+[38;2;125;133;144m                                                            (or space) as a CAMS[0m
+[38;2;125;133;144m                                                            asset of type[0m
+[38;2;125;133;144m                                                            `script`, exposing[0m
+[38;2;125;133;144m                                                            its asset id for a[0m
+[38;2;125;133;144m                                                            platform job to run.[0m
+    [38;2;120;169;255msoftware_specification              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Software[0m
+[38;2;125;133;144m                                                            Specification[0m
+[38;2;125;133;144m                                                            defines a runtime[0m
+[38;2;125;133;144m                                                            environment for[0m
+[38;2;125;133;144m                                                            deploying AI[0m
+[38;2;125;133;144m                                                            services and[0m
+[38;2;125;133;144m                                                            functions.[0m
+    [38;2;120;169;255mspace                               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Space is a[0m
+[38;2;125;133;144m                                                            deployment[0m
+[38;2;125;133;144m                                                            environment for[0m
+[38;2;125;133;144m                                                            promoting and[0m
+[38;2;125;133;144m                                                            managing machine[0m
+[38;2;125;133;144m                                                            learning models,[0m
+[38;2;125;133;144m                                                            functions, and other[0m
+[38;2;125;133;144m                                                            AI assets.[0m
 
   [38;2;120;169;255m▌[0m [1mIBM Concert[0m   [38;2;125;133;144m(concert · 11 kinds)[0m
-    [38;2;120;169;255mconcert_application              [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert application[0m
-[38;2;125;133;144m                                                         is the top-level[0m
-[38;2;125;133;144m                                                         managed entity in IBM[0m
-[38;2;125;133;144m                                                         Concert's inventory —[0m
-[38;2;125;133;144m                                                         the unit Concert tracks[0m
-[38;2;125;133;144m                                                         for risk posture,[0m
-[38;2;125;133;144m                                                         vulnerabilities,[0m
-[38;2;125;133;144m                                                         dependencies, and[0m
-[38;2;125;133;144m                                                         resilience.[0m
-    [38;2;120;169;255mconcert_automation_rule          [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert automation[0m
-[38;2;125;133;144m                                                         rule fires an action[0m
-[38;2;125;133;144m                                                         (e.g. auto-create an[0m
-[38;2;125;133;144m                                                         ITSM ticket) when a[0m
-[38;2;125;133;144m                                                         use-case condition is[0m
-[38;2;125;133;144m                                                         met — the declarative[0m
-[38;2;125;133;144m                                                         half of Concert's[0m
-[38;2;125;133;144m                                                         auto-ticketing.[0m
-    [38;2;120;169;255mconcert_compliance_profile       [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert compliance[0m
-[38;2;125;133;144m                                                         profile is a named,[0m
-[38;2;125;133;144m                                                         versioned set of[0m
-[38;2;125;133;144m                                                         controls (drawn from a[0m
-[38;2;125;133;144m                                                         pre-imported compliance[0m
-[38;2;125;133;144m                                                         catalog) that Concert[0m
-[38;2;125;133;144m                                                         evaluates applications[0m
-[38;2;125;133;144m                                                         against to score[0m
-[38;2;125;133;144m                                                         compliance posture —[0m
-[38;2;125;133;144m                                                         the declarative half of[0m
-[38;2;125;133;144m                                                         Concert's compliance /[0m
-[38;2;125;133;144m                                                         AI-governance surface[0m
-[38;2;125;133;144m                                                         (sovereign, CSCF/ISCF,[0m
-[38;2;125;133;144m                                                         etc.).[0m
-    [38;2;120;169;255mconcert_credential               [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert credential is[0m
-[38;2;125;133;144m                                                         a named key/value[0m
-[38;2;125;133;144m                                                         secret bundle used by[0m
-[38;2;125;133;144m                                                         ingestion jobs to[0m
-[38;2;125;133;144m                                                         authenticate against[0m
-[38;2;125;133;144m                                                         source systems.[0m
-    [38;2;120;169;255mconcert_environment              [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert environment[0m
-[38;2;125;133;144m                                                         is a deployment target[0m
-[38;2;125;133;144m                                                         (e.g. a cluster,[0m
-[38;2;125;133;144m                                                         region, or stage)[0m
-[38;2;125;133;144m                                                         tracked in IBM[0m
-[38;2;125;133;144m                                                         Concert's inventory.[0m
-    [38;2;120;169;255mconcert_ingestion_job            [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert ingestion job[0m
-[38;2;125;133;144m                                                         pulls data from a[0m
-[38;2;125;133;144m                                                         source system[0m
-[38;2;125;133;144m                                                         (authenticating with a[0m
-[38;2;125;133;144m                                                         concert_credential)[0m
-[38;2;125;133;144m                                                         into IBM Concert's[0m
-[38;2;125;133;144m                                                         inventory on a[0m
-[38;2;125;133;144m                                                         schedule.[0m
-    [38;2;120;169;255mconcert_resilience_input_data_key[0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
-[38;2;125;133;144m                                                         input-data key[0m
-[38;2;125;133;144m                                                         (InputDataKeyRequest)[0m
-[38;2;125;133;144m                                                         defines a named metric[0m
-[38;2;125;133;144m                                                         input — its label,[0m
-[38;2;125;133;144m                                                         units, and data type —[0m
-[38;2;125;133;144m                                                         that resilience[0m
-[38;2;125;133;144m                                                         requirements evaluate[0m
-[38;2;125;133;144m                                                         against.[0m
-    [38;2;120;169;255mconcert_resilience_library       [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
-[38;2;125;133;144m                                                         library[0m
-[38;2;125;133;144m                                                         (LibraryRequest) groups[0m
-[38;2;125;133;144m                                                         resilience requirements[0m
-[38;2;125;133;144m                                                         into a reusable set.[0m
-    [38;2;120;169;255mconcert_resilience_posture       [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
-[38;2;125;133;144m                                                         assessment posture[0m
-[38;2;125;133;144m                                                         (GraderPostureRequest)[0m
-[38;2;125;133;144m                                                         binds a[0m
-[38;2;125;133;144m                                                         concert_resilience_profile[0m
-[38;2;125;133;144m                                                         to a target[0m
-[38;2;125;133;144m                                                         (application/deployment)[0m
-[38;2;125;133;144m                                                         and schedules its[0m
-[38;2;125;133;144m                                                         resilience assessment.[0m
-    [38;2;120;169;255mconcert_resilience_profile       [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
-[38;2;125;133;144m                                                         assessment profile[0m
-[38;2;125;133;144m                                                         (GraderProfileRequest)[0m
-[38;2;125;133;144m                                                         is a named set of[0m
-[38;2;125;133;144m                                                         resilience[0m
-[38;2;125;133;144m                                                         requirements, scored[0m
-[38;2;125;133;144m                                                         against metric[0m
-[38;2;125;133;144m                                                         input-data keys, that[0m
-[38;2;125;133;144m                                                         Concert evaluates to[0m
-[38;2;125;133;144m                                                         rate an application's[0m
-[38;2;125;133;144m                                                         resilience posture.[0m
-    [38;2;120;169;255mconcert_source_repo              [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert source[0m
-[38;2;125;133;144m                                                         repository is a[0m
-[38;2;125;133;144m                                                         version-controlled code[0m
-[38;2;125;133;144m                                                         repo tracked in IBM[0m
-[38;2;125;133;144m                                                         Concert's inventory for[0m
-[38;2;125;133;144m                                                         SBOM, CVE, and[0m
-[38;2;125;133;144m                                                         dependency posture.[0m
+    [38;2;120;169;255mconcert_application                 [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert[0m
+[38;2;125;133;144m                                                            application is the[0m
+[38;2;125;133;144m                                                            top-level managed[0m
+[38;2;125;133;144m                                                            entity in IBM[0m
+[38;2;125;133;144m                                                            Concert's inventory[0m
+[38;2;125;133;144m                                                            — the unit Concert[0m
+[38;2;125;133;144m                                                            tracks for risk[0m
+[38;2;125;133;144m                                                            posture,[0m
+[38;2;125;133;144m                                                            vulnerabilities,[0m
+[38;2;125;133;144m                                                            dependencies, and[0m
+[38;2;125;133;144m                                                            resilience.[0m
+    [38;2;120;169;255mconcert_automation_rule             [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert automation[0m
+[38;2;125;133;144m                                                            rule fires an action[0m
+[38;2;125;133;144m                                                            (e.g. auto-create an[0m
+[38;2;125;133;144m                                                            ITSM ticket) when a[0m
+[38;2;125;133;144m                                                            use-case condition[0m
+[38;2;125;133;144m                                                            is met — the[0m
+[38;2;125;133;144m                                                            declarative half of[0m
+[38;2;125;133;144m                                                            Concert's[0m
+[38;2;125;133;144m                                                            auto-ticketing.[0m
+    [38;2;120;169;255mconcert_compliance_profile          [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert compliance[0m
+[38;2;125;133;144m                                                            profile is a named,[0m
+[38;2;125;133;144m                                                            versioned set of[0m
+[38;2;125;133;144m                                                            controls (drawn from[0m
+[38;2;125;133;144m                                                            a pre-imported[0m
+[38;2;125;133;144m                                                            compliance catalog)[0m
+[38;2;125;133;144m                                                            that Concert[0m
+[38;2;125;133;144m                                                            evaluates[0m
+[38;2;125;133;144m                                                            applications against[0m
+[38;2;125;133;144m                                                            to score compliance[0m
+[38;2;125;133;144m                                                            posture — the[0m
+[38;2;125;133;144m                                                            declarative half of[0m
+[38;2;125;133;144m                                                            Concert's compliance[0m
+[38;2;125;133;144m                                                            / AI-governance[0m
+[38;2;125;133;144m                                                            surface (sovereign,[0m
+[38;2;125;133;144m                                                            CSCF/ISCF, etc.).[0m
+    [38;2;120;169;255mconcert_credential                  [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert credential[0m
+[38;2;125;133;144m                                                            is a named key/value[0m
+[38;2;125;133;144m                                                            secret bundle used[0m
+[38;2;125;133;144m                                                            by ingestion jobs to[0m
+[38;2;125;133;144m                                                            authenticate against[0m
+[38;2;125;133;144m                                                            source systems.[0m
+    [38;2;120;169;255mconcert_environment                 [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert[0m
+[38;2;125;133;144m                                                            environment is a[0m
+[38;2;125;133;144m                                                            deployment target[0m
+[38;2;125;133;144m                                                            (e.g. a cluster,[0m
+[38;2;125;133;144m                                                            region, or stage)[0m
+[38;2;125;133;144m                                                            tracked in IBM[0m
+[38;2;125;133;144m                                                            Concert's inventory.[0m
+    [38;2;120;169;255mconcert_ingestion_job               [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert ingestion[0m
+[38;2;125;133;144m                                                            job pulls data from[0m
+[38;2;125;133;144m                                                            a source system[0m
+[38;2;125;133;144m                                                            (authenticating with[0m
+[38;2;125;133;144m                                                            a[0m
+[38;2;125;133;144m                                                            concert_credential)[0m
+[38;2;125;133;144m                                                            into IBM Concert's[0m
+[38;2;125;133;144m                                                            inventory on a[0m
+[38;2;125;133;144m                                                            schedule.[0m
+    [38;2;120;169;255mconcert_resilience_input_data_key   [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
+[38;2;125;133;144m                                                            input-data key[0m
+[38;2;125;133;144m                                                            (InputDataKeyRequest)[0m
+[38;2;125;133;144m                                                            defines a named[0m
+[38;2;125;133;144m                                                            metric input — its[0m
+[38;2;125;133;144m                                                            label, units, and[0m
+[38;2;125;133;144m                                                            data type — that[0m
+[38;2;125;133;144m                                                            resilience[0m
+[38;2;125;133;144m                                                            requirements[0m
+[38;2;125;133;144m                                                            evaluate against.[0m
+    [38;2;120;169;255mconcert_resilience_library          [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
+[38;2;125;133;144m                                                            library[0m
+[38;2;125;133;144m                                                            (LibraryRequest)[0m
+[38;2;125;133;144m                                                            groups resilience[0m
+[38;2;125;133;144m                                                            requirements into a[0m
+[38;2;125;133;144m                                                            reusable set.[0m
+    [38;2;120;169;255mconcert_resilience_posture          [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
+[38;2;125;133;144m                                                            assessment posture[0m
+[38;2;125;133;144m                                                            (GraderPostureRequest)[0m
+[38;2;125;133;144m                                                            binds a[0m
+[38;2;125;133;144m                                                            concert_resilience_profile[0m
+[38;2;125;133;144m                                                            to a target[0m
+[38;2;125;133;144m                                                            (application/deployment)[0m
+[38;2;125;133;144m                                                            and schedules its[0m
+[38;2;125;133;144m                                                            resilience[0m
+[38;2;125;133;144m                                                            assessment.[0m
+    [38;2;120;169;255mconcert_resilience_profile          [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert resilience[0m
+[38;2;125;133;144m                                                            assessment profile[0m
+[38;2;125;133;144m                                                            (GraderProfileRequest)[0m
+[38;2;125;133;144m                                                            is a named set of[0m
+[38;2;125;133;144m                                                            resilience[0m
+[38;2;125;133;144m                                                            requirements, scored[0m
+[38;2;125;133;144m                                                            against metric[0m
+[38;2;125;133;144m                                                            input-data keys,[0m
+[38;2;125;133;144m                                                            that Concert[0m
+[38;2;125;133;144m                                                            evaluates to rate an[0m
+[38;2;125;133;144m                                                            application's[0m
+[38;2;125;133;144m                                                            resilience posture.[0m
+    [38;2;120;169;255mconcert_source_repo                 [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert source[0m
+[38;2;125;133;144m                                                            repository is a[0m
+[38;2;125;133;144m                                                            version-controlled[0m
+[38;2;125;133;144m                                                            code repo tracked in[0m
+[38;2;125;133;144m                                                            IBM Concert's[0m
+[38;2;125;133;144m                                                            inventory for SBOM,[0m
+[38;2;125;133;144m                                                            CVE, and dependency[0m
+[38;2;125;133;144m                                                            posture.[0m
 
   [38;2;120;169;255m▌[0m [1mIBM Concert Workflows[0m   [38;2;125;133;144m(concert_workflows · 5 kinds)[0m
-    [38;2;120;169;255mconcert_worker_group             [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
-[38;2;125;133;144m                                                         (Pliant) worker group —[0m
-[38;2;125;133;144m                                                         a named pool that flow[0m
-[38;2;125;133;144m                                                         runs and schedules[0m
-[38;2;125;133;144m                                                         execute on.[0m
-    [38;2;120;169;255mconcert_workflow                 [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
-[38;2;125;133;144m                                                         (Pliant) flow, imported[0m
-[38;2;125;133;144m                                                         from a local zip.[0m
-    [38;2;120;169;255mconcert_workflow_exposure        [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
-[38;2;125;133;144m                                                         (Pliant) flow exposure[0m
-[38;2;125;133;144m                                                         — publishes a flow at[0m
-[38;2;125;133;144m                                                         an HTTP path so it can[0m
-[38;2;125;133;144m                                                         be triggered.[0m
-    [38;2;120;169;255mconcert_workflow_role            [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
-[38;2;125;133;144m                                                         (Pliant) flow role — a[0m
-[38;2;125;133;144m                                                         named grant bundling[0m
-[38;2;125;133;144m                                                         users, worker groups,[0m
-[38;2;125;133;144m                                                         and per-surface[0m
-[38;2;125;133;144m                                                         policies (flow,[0m
-[38;2;125;133;144m                                                         application,[0m
-[38;2;125;133;144m                                                         auth-storage, schedule,[0m
-[38;2;125;133;144m                                                         automation-panel).[0m
-    [38;2;120;169;255mconcert_workflow_schedule        [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA schedule that runs a[0m
-[38;2;125;133;144m                                                         Concert Workflows[0m
-[38;2;125;133;144m                                                         (Pliant) flow on a cron[0m
-[38;2;125;133;144m                                                         cadence.[0m
+    [38;2;120;169;255mconcert_worker_group                [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
+[38;2;125;133;144m                                                            (Pliant) worker[0m
+[38;2;125;133;144m                                                            group — a named pool[0m
+[38;2;125;133;144m                                                            that flow runs and[0m
+[38;2;125;133;144m                                                            schedules execute[0m
+[38;2;125;133;144m                                                            on.[0m
+    [38;2;120;169;255mconcert_workflow                    [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
+[38;2;125;133;144m                                                            (Pliant) flow,[0m
+[38;2;125;133;144m                                                            imported from a[0m
+[38;2;125;133;144m                                                            local zip.[0m
+    [38;2;120;169;255mconcert_workflow_exposure           [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
+[38;2;125;133;144m                                                            (Pliant) flow[0m
+[38;2;125;133;144m                                                            exposure — publishes[0m
+[38;2;125;133;144m                                                            a flow at an HTTP[0m
+[38;2;125;133;144m                                                            path so it can be[0m
+[38;2;125;133;144m                                                            triggered.[0m
+    [38;2;120;169;255mconcert_workflow_role               [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA Concert Workflows[0m
+[38;2;125;133;144m                                                            (Pliant) flow role —[0m
+[38;2;125;133;144m                                                            a named grant[0m
+[38;2;125;133;144m                                                            bundling users,[0m
+[38;2;125;133;144m                                                            worker groups, and[0m
+[38;2;125;133;144m                                                            per-surface policies[0m
+[38;2;125;133;144m                                                            (flow, application,[0m
+[38;2;125;133;144m                                                            auth-storage,[0m
+[38;2;125;133;144m                                                            schedule,[0m
+[38;2;125;133;144m                                                            automation-panel).[0m
+    [38;2;120;169;255mconcert_workflow_schedule           [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mA schedule that runs[0m
+[38;2;125;133;144m                                                            a Concert Workflows[0m
+[38;2;125;133;144m                                                            (Pliant) flow on a[0m
+[38;2;125;133;144m                                                            cron cadence.[0m
 
-  [38;2;120;169;255m▌[0m [1mIBM Instana[0m   [38;2;125;133;144m(instana · 12 kinds)[0m
-    [38;2;120;169;255minstana_alert                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana alerting[0m
-[38;2;125;133;144m                                                         configuration[0m
-[38;2;125;133;144m                                                         (AlertingConfiguration,[0m
-[38;2;125;133;144m                                                         /api/events/settings/alerts)[0m
-[38;2;125;133;144m                                                         routes events that[0m
-[38;2;125;133;144m                                                         match an event filter[0m
-[38;2;125;133;144m                                                         to one or more alerting[0m
-[38;2;125;133;144m                                                         channels — the only API[0m
-[38;2;125;133;144m                                                         mechanism for[0m
-[38;2;125;133;144m                                                         delivering custom-event[0m
-[38;2;125;133;144m                                                         notifications to an[0m
-[38;2;125;133;144m                                                         external channel.[0m
-    [38;2;120;169;255minstana_alerting_channel         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana alerting[0m
-[38;2;125;133;144m                                                         channel[0m
-[38;2;125;133;144m                                                         (AbstractIntegration)[0m
-[38;2;125;133;144m                                                         is a notification[0m
-[38;2;125;133;144m                                                         target — email, Slack,[0m
-[38;2;125;133;144m                                                         generic webhook,[0m
-[38;2;125;133;144m                                                         PagerDuty, Opsgenie,[0m
-[38;2;125;133;144m                                                         Splunk, and more — that[0m
-[38;2;125;133;144m                                                         smart-alert configs[0m
-[38;2;125;133;144m                                                         route events to.[0m
-    [38;2;120;169;255minstana_application_alert_config [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana application[0m
-[38;2;125;133;144m                                                         smart alert[0m
-[38;2;125;133;144m                                                         (ApplicationAlertConfig)[0m
-[38;2;125;133;144m                                                         evaluates a rule[0m
-[38;2;125;133;144m                                                         (erroneous-call-rate,[0m
-[38;2;125;133;144m                                                         latency, throughput,[0m
-[38;2;125;133;144m                                                         ...) over an[0m
-[38;2;125;133;144m                                                         application[0m
-[38;2;125;133;144m                                                         perspective's calls and[0m
-[38;2;125;133;144m                                                         routes triggered events[0m
-[38;2;125;133;144m                                                         to alerting channels.[0m
-    [38;2;120;169;255minstana_application_perspective  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana application[0m
-[38;2;125;133;144m                                                         perspective is a saved,[0m
-[38;2;125;133;144m                                                         filter-defined view of[0m
-[38;2;125;133;144m                                                         an application's traces[0m
-[38;2;125;133;144m                                                         and calls — the[0m
-[38;2;125;133;144m                                                         top-level unit Instana[0m
-[38;2;125;133;144m                                                         groups service[0m
-[38;2;125;133;144m                                                         monitoring, smart[0m
-[38;2;125;133;144m                                                         alerts, and SLOs[0m
-[38;2;125;133;144m                                                         around.[0m
-    [38;2;120;169;255minstana_custom_event_spec        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana custom event[0m
-[38;2;125;133;144m                                                         specification raises[0m
-[38;2;125;133;144m                                                         events (and optionally[0m
-[38;2;125;133;144m                                                         incidents, via[0m
-[38;2;125;133;144m                                                         `triggering`) when a[0m
-[38;2;125;133;144m                                                         rule over an entity[0m
-[38;2;125;133;144m                                                         type's metrics matches[0m
-[38;2;125;133;144m                                                         — threshold breaches,[0m
-[38;2;125;133;144m                                                         entity verification,[0m
-[38;2;125;133;144m                                                         entity count, and the[0m
-[38;2;125;133;144m                                                         other AbstractRule[0m
-[38;2;125;133;144m                                                         variants.[0m
-    [38;2;120;169;255minstana_maintenance_window       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana maintenance[0m
-[38;2;125;133;144m                                                         window[0m
-[38;2;125;133;144m                                                         (MaintenanceConfigV2)[0m
-[38;2;125;133;144m                                                         suppresses alerting for[0m
-[38;2;125;133;144m                                                         the entities matched by[0m
-[38;2;125;133;144m                                                         its `query` during a[0m
-[38;2;125;133;144m                                                         scheduled window.[0m
-    [38;2;120;169;255minstana_slo_alert_config         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana SLO smart[0m
-[38;2;125;133;144m                                                         alert[0m
-[38;2;125;133;144m                                                         (ServiceLevelsAlertConfig)[0m
-[38;2;125;133;144m                                                         evaluates a rule[0m
-[38;2;125;133;144m                                                         (status / error-budget[0m
-[38;2;125;133;144m                                                         / burn-rate) over one[0m
-[38;2;125;133;144m                                                         or more SLO configs and[0m
-[38;2;125;133;144m                                                         routes triggered events[0m
-[38;2;125;133;144m                                                         to alerting channels.[0m
-    [38;2;120;169;255minstana_slo_config               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana SLO config[0m
-[38;2;125;133;144m                                                         (SLOConfigWithRBACTag)[0m
-[38;2;125;133;144m                                                         defines a service-level[0m
-[38;2;125;133;144m                                                         objective: a target[0m
-[38;2;125;133;144m                                                         attainment over a time[0m
-[38;2;125;133;144m                                                         window for a chosen[0m
-[38;2;125;133;144m                                                         entity and indicator.[0m
-    [38;2;120;169;255minstana_synthetic_alert_config   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana synthetic[0m
-[38;2;125;133;144m                                                         smart alert[0m
-[38;2;125;133;144m                                                         (SyntheticAlertConfig)[0m
-[38;2;125;133;144m                                                         evaluates a rule over[0m
-[38;2;125;133;144m                                                         one or more synthetic[0m
-[38;2;125;133;144m                                                         tests' results and[0m
-[38;2;125;133;144m                                                         routes triggered events[0m
-[38;2;125;133;144m                                                         to alerting channels.[0m
-    [38;2;120;169;255minstana_synthetic_test           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana synthetic[0m
-[38;2;125;133;144m                                                         test (SyntheticTest)[0m
-[38;2;125;133;144m                                                         runs a scripted or HTTP[0m
-[38;2;125;133;144m                                                         probe from one or more[0m
-[38;2;125;133;144m                                                         PoP locations on a[0m
-[38;2;125;133;144m                                                         schedule.[0m
-    [38;2;120;169;255minstana_website_alert_config     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana website[0m
-[38;2;125;133;144m                                                         smart alert[0m
-[38;2;125;133;144m                                                         (WebsiteAlertConfig)[0m
-[38;2;125;133;144m                                                         evaluates a rule over[0m
-[38;2;125;133;144m                                                         an end-user-monitored[0m
-[38;2;125;133;144m                                                         website's beacons and[0m
-[38;2;125;133;144m                                                         routes triggered events[0m
-[38;2;125;133;144m                                                         to alerting channels.[0m
-    [38;2;120;169;255minstana_website_config           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana website[0m
-[38;2;125;133;144m                                                         (End-User Monitoring[0m
-[38;2;125;133;144m                                                         config) is the[0m
-[38;2;125;133;144m                                                         top-level unit Instana[0m
-[38;2;125;133;144m                                                         groups browser/EUM[0m
-[38;2;125;133;144m                                                         beacons and website[0m
-[38;2;125;133;144m                                                         smart alerts around.[0m
+  [38;2;120;169;255m▌[0m [1mIBM Instana[0m   [38;2;125;133;144m(instana · 23 kinds)[0m
+    [38;2;120;169;255minstana_alert                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana alerting[0m
+[38;2;125;133;144m                                                            configuration[0m
+[38;2;125;133;144m                                                            (AlertingConfiguration,[0m
+[38;2;125;133;144m                                                            /api/events/settings/alerts)[0m
+[38;2;125;133;144m                                                            routes events that[0m
+[38;2;125;133;144m                                                            match an event[0m
+[38;2;125;133;144m                                                            filter to one or[0m
+[38;2;125;133;144m                                                            more alerting[0m
+[38;2;125;133;144m                                                            channels — the only[0m
+[38;2;125;133;144m                                                            API mechanism for[0m
+[38;2;125;133;144m                                                            delivering[0m
+[38;2;125;133;144m                                                            custom-event[0m
+[38;2;125;133;144m                                                            notifications to an[0m
+[38;2;125;133;144m                                                            external channel.[0m
+    [38;2;120;169;255minstana_alerting_channel            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana alerting[0m
+[38;2;125;133;144m                                                            channel[0m
+[38;2;125;133;144m                                                            (AbstractIntegration)[0m
+[38;2;125;133;144m                                                            is a notification[0m
+[38;2;125;133;144m                                                            target — email,[0m
+[38;2;125;133;144m                                                            Slack, generic[0m
+[38;2;125;133;144m                                                            webhook, PagerDuty,[0m
+[38;2;125;133;144m                                                            Opsgenie, Splunk,[0m
+[38;2;125;133;144m                                                            and more — that[0m
+[38;2;125;133;144m                                                            smart-alert configs[0m
+[38;2;125;133;144m                                                            route events to.[0m
+    [38;2;120;169;255minstana_api_token                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana API token[0m
+[38;2;125;133;144m                                                            (ApiToken) created[0m
+[38;2;125;133;144m                                                            via[0m
+[38;2;125;133;144m                                                            /api/settings/api-tokens;[0m
+[38;2;125;133;144m                                                            the identity is a[0m
+[38;2;125;133;144m                                                            CLIENT-SUPPLIED[0m
+[38;2;125;133;144m                                                            `internalId` (also[0m
+[38;2;125;133;144m                                                            the path param), the[0m
+[38;2;125;133;144m                                                            human identifier is[0m
+[38;2;125;133;144m                                                            `name`.[0m
+    [38;2;120;169;255minstana_application_alert_config    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            application smart[0m
+[38;2;125;133;144m                                                            alert[0m
+[38;2;125;133;144m                                                            (ApplicationAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            (erroneous-call-rate,[0m
+[38;2;125;133;144m                                                            latency, throughput,[0m
+[38;2;125;133;144m                                                            ...) over an[0m
+[38;2;125;133;144m                                                            application[0m
+[38;2;125;133;144m                                                            perspective's calls[0m
+[38;2;125;133;144m                                                            and routes triggered[0m
+[38;2;125;133;144m                                                            events to alerting[0m
+[38;2;125;133;144m                                                            channels.[0m
+    [38;2;120;169;255minstana_application_perspective     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            application[0m
+[38;2;125;133;144m                                                            perspective is a[0m
+[38;2;125;133;144m                                                            saved,[0m
+[38;2;125;133;144m                                                            filter-defined view[0m
+[38;2;125;133;144m                                                            of an application's[0m
+[38;2;125;133;144m                                                            traces and calls —[0m
+[38;2;125;133;144m                                                            the top-level unit[0m
+[38;2;125;133;144m                                                            Instana groups[0m
+[38;2;125;133;144m                                                            service monitoring,[0m
+[38;2;125;133;144m                                                            smart alerts, and[0m
+[38;2;125;133;144m                                                            SLOs around.[0m
+    [38;2;120;169;255minstana_automation_action           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            automation action[0m
+[38;2;125;133;144m                                                            (Action) is a[0m
+[38;2;125;133;144m                                                            runnable[0m
+[38;2;125;133;144m                                                            script/HTTP/etc.[0m
+    [38;2;120;169;255minstana_automation_policy           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            automation policy[0m
+[38;2;125;133;144m                                                            (Policy) binds a[0m
+[38;2;125;133;144m                                                            trigger (a[0m
+[38;2;125;133;144m                                                            customEvent /[0m
+[38;2;125;133;144m                                                            builtinEvent /[0m
+[38;2;125;133;144m                                                            smart-alert type,[0m
+[38;2;125;133;144m                                                            referencing an event[0m
+[38;2;125;133;144m                                                            spec by id) to one[0m
+[38;2;125;133;144m                                                            or more type[0m
+[38;2;125;133;144m                                                            configurations that[0m
+[38;2;125;133;144m                                                            run automation[0m
+[38;2;125;133;144m                                                            actions or[0m
+[38;2;125;133;144m                                                            workflows.[0m
+    [38;2;120;169;255minstana_builtin_event_spec          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana BUILT-IN[0m
+[38;2;125;133;144m                                                            event specification[0m
+[38;2;125;133;144m                                                            (BuiltInEventSpecification)[0m
+[38;2;125;133;144m                                                            is a shipped,[0m
+[38;2;125;133;144m                                                            catalog-defined[0m
+[38;2;125;133;144m                                                            event rule.[0m
+    [38;2;120;169;255minstana_custom_dashboard            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana custom[0m
+[38;2;125;133;144m                                                            dashboard[0m
+[38;2;125;133;144m                                                            (CustomDashboard) is[0m
+[38;2;125;133;144m                                                            a titled board of[0m
+[38;2;125;133;144m                                                            widgets with access[0m
+[38;2;125;133;144m                                                            rules.[0m
+    [38;2;120;169;255minstana_custom_event_spec           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana custom[0m
+[38;2;125;133;144m                                                            event specification[0m
+[38;2;125;133;144m                                                            raises events (and[0m
+[38;2;125;133;144m                                                            optionally[0m
+[38;2;125;133;144m                                                            incidents, via[0m
+[38;2;125;133;144m                                                            `triggering`) when a[0m
+[38;2;125;133;144m                                                            rule over an entity[0m
+[38;2;125;133;144m                                                            type's metrics[0m
+[38;2;125;133;144m                                                            matches — threshold[0m
+[38;2;125;133;144m                                                            breaches, entity[0m
+[38;2;125;133;144m                                                            verification, entity[0m
+[38;2;125;133;144m                                                            count, and the other[0m
+[38;2;125;133;144m                                                            AbstractRule[0m
+[38;2;125;133;144m                                                            variants.[0m
+    [38;2;120;169;255minstana_custom_payload_configuration[0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mThe Instana GLOBAL[0m
+[38;2;125;133;144m                                                            custom payload[0m
+[38;2;125;133;144m                                                            configuration[0m
+[38;2;125;133;144m                                                            (CustomPayloadConfiguration)[0m
+[38;2;125;133;144m                                                            — a tenant-wide set[0m
+[38;2;125;133;144m                                                            of custom key/type[0m
+[38;2;125;133;144m                                                            fields attached to[0m
+[38;2;125;133;144m                                                            every triggered[0m
+[38;2;125;133;144m                                                            event.[0m
+    [38;2;120;169;255minstana_infra_alert_config          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            infrastructure smart[0m
+[38;2;125;133;144m                                                            alert[0m
+[38;2;125;133;144m                                                            (InfraAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            (entityType +[0m
+[38;2;125;133;144m                                                            metricName +[0m
+[38;2;125;133;144m                                                            aggregation,[0m
+[38;2;125;133;144m                                                            narrowed by a tag[0m
+[38;2;125;133;144m                                                            filter) over[0m
+[38;2;125;133;144m                                                            infrastructure[0m
+[38;2;125;133;144m                                                            entities and routes[0m
+[38;2;125;133;144m                                                            triggered events to[0m
+[38;2;125;133;144m                                                            alerting channels.[0m
+    [38;2;120;169;255minstana_log_alert_config            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana log smart[0m
+[38;2;125;133;144m                                                            alert[0m
+[38;2;125;133;144m                                                            (LogAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            over log events[0m
+[38;2;125;133;144m                                                            (narrowed by a tag[0m
+[38;2;125;133;144m                                                            filter) and routes[0m
+[38;2;125;133;144m                                                            triggered events to[0m
+[38;2;125;133;144m                                                            alerting channels.[0m
+    [38;2;120;169;255minstana_maintenance_window          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana[0m
+[38;2;125;133;144m                                                            maintenance window[0m
+[38;2;125;133;144m                                                            (MaintenanceConfigV2)[0m
+[38;2;125;133;144m                                                            suppresses alerting[0m
+[38;2;125;133;144m                                                            for the entities[0m
+[38;2;125;133;144m                                                            matched by its[0m
+[38;2;125;133;144m                                                            `query` during a[0m
+[38;2;125;133;144m                                                            scheduled window.[0m
+    [38;2;120;169;255minstana_rbac_group                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana RBAC[0m
+[38;2;125;133;144m                                                            access group[0m
+[38;2;125;133;144m                                                            (ApiGroup) binds[0m
+[38;2;125;133;144m                                                            members to a[0m
+[38;2;125;133;144m                                                            permission set[0m
+[38;2;125;133;144m                                                            (ApiPermissionSet: a[0m
+[38;2;125;133;144m                                                            `permissions` string[0m
+[38;2;125;133;144m                                                            array plus optional[0m
+[38;2;125;133;144m                                                            scope filters).[0m
+    [38;2;120;169;255minstana_rbac_team                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana RBAC team[0m
+[38;2;125;133;144m                                                            (ApiTeam) groups[0m
+[38;2;125;133;144m                                                            members under a[0m
+[38;2;125;133;144m                                                            scope for scoped[0m
+[38;2;125;133;144m                                                            access.[0m
+    [38;2;120;169;255minstana_release                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana release[0m
+[38;2;125;133;144m                                                            (Release) marks a[0m
+[38;2;125;133;144m                                                            deployment boundary[0m
+[38;2;125;133;144m                                                            on the timeline,[0m
+[38;2;125;133;144m                                                            optionally scoped to[0m
+[38;2;125;133;144m                                                            applications and[0m
+[38;2;125;133;144m                                                            services, so events[0m
+[38;2;125;133;144m                                                            and analytics can be[0m
+[38;2;125;133;144m                                                            correlated to a[0m
+[38;2;125;133;144m                                                            rollout.[0m
+    [38;2;120;169;255minstana_slo_alert_config            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana SLO smart[0m
+[38;2;125;133;144m                                                            alert[0m
+[38;2;125;133;144m                                                            (ServiceLevelsAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            (status /[0m
+[38;2;125;133;144m                                                            error-budget /[0m
+[38;2;125;133;144m                                                            burn-rate) over one[0m
+[38;2;125;133;144m                                                            or more SLO configs[0m
+[38;2;125;133;144m                                                            and routes triggered[0m
+[38;2;125;133;144m                                                            events to alerting[0m
+[38;2;125;133;144m                                                            channels.[0m
+    [38;2;120;169;255minstana_slo_config                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana SLO[0m
+[38;2;125;133;144m                                                            config[0m
+[38;2;125;133;144m                                                            (SLOConfigWithRBACTag)[0m
+[38;2;125;133;144m                                                            defines a[0m
+[38;2;125;133;144m                                                            service-level[0m
+[38;2;125;133;144m                                                            objective: a target[0m
+[38;2;125;133;144m                                                            attainment over a[0m
+[38;2;125;133;144m                                                            time window for a[0m
+[38;2;125;133;144m                                                            chosen entity and[0m
+[38;2;125;133;144m                                                            indicator.[0m
+    [38;2;120;169;255minstana_synthetic_alert_config      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana synthetic[0m
+[38;2;125;133;144m                                                            smart alert[0m
+[38;2;125;133;144m                                                            (SyntheticAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            over one or more[0m
+[38;2;125;133;144m                                                            synthetic tests'[0m
+[38;2;125;133;144m                                                            results and routes[0m
+[38;2;125;133;144m                                                            triggered events to[0m
+[38;2;125;133;144m                                                            alerting channels.[0m
+    [38;2;120;169;255minstana_synthetic_test              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana synthetic[0m
+[38;2;125;133;144m                                                            test (SyntheticTest)[0m
+[38;2;125;133;144m                                                            runs a scripted or[0m
+[38;2;125;133;144m                                                            HTTP probe from one[0m
+[38;2;125;133;144m                                                            or more PoP[0m
+[38;2;125;133;144m                                                            locations on a[0m
+[38;2;125;133;144m                                                            schedule.[0m
+    [38;2;120;169;255minstana_website_alert_config        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana website[0m
+[38;2;125;133;144m                                                            smart alert[0m
+[38;2;125;133;144m                                                            (WebsiteAlertConfig)[0m
+[38;2;125;133;144m                                                            evaluates a rule[0m
+[38;2;125;133;144m                                                            over an[0m
+[38;2;125;133;144m                                                            end-user-monitored[0m
+[38;2;125;133;144m                                                            website's beacons[0m
+[38;2;125;133;144m                                                            and routes triggered[0m
+[38;2;125;133;144m                                                            events to alerting[0m
+[38;2;125;133;144m                                                            channels.[0m
+    [38;2;120;169;255minstana_website_config              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Instana website[0m
+[38;2;125;133;144m                                                            (End-User Monitoring[0m
+[38;2;125;133;144m                                                            config) is the[0m
+[38;2;125;133;144m                                                            top-level unit[0m
+[38;2;125;133;144m                                                            Instana groups[0m
+[38;2;125;133;144m                                                            browser/EUM beacons[0m
+[38;2;125;133;144m                                                            and website smart[0m
+[38;2;125;133;144m                                                            alerts around.[0m
 
   [38;2;120;169;255m▌[0m [1mIBM Planning Analytics[0m   [38;2;125;133;144m(planning_analytics · 10 kinds)[0m
-    [38;2;120;169;255mpa_chore                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12) chore[0m
-[38;2;125;133;144m                                                         — a schedule that runs[0m
-[38;2;125;133;144m                                                         an ordered list of[0m
-[38;2;125;133;144m                                                         tasks (each executing a[0m
-[38;2;125;133;144m                                                         process) at a start[0m
-[38;2;125;133;144m                                                         time and frequency.[0m
-    [38;2;120;169;255mpa_cube                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12) cube[0m
-[38;2;125;133;144m                                                         — an N-dimensional data[0m
-[38;2;125;133;144m                                                         store defined over an[0m
-[38;2;125;133;144m                                                         ordered list of[0m
-[38;2;125;133;144m                                                         dimensions, with[0m
-[38;2;125;133;144m                                                         optional TM1 rules.[0m
-    [38;2;120;169;255mpa_dimension                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12)[0m
-[38;2;125;133;144m                                                         dimension — a named set[0m
-[38;2;125;133;144m                                                         of members organized[0m
-[38;2;125;133;144m                                                         into one or more[0m
-[38;2;125;133;144m                                                         hierarchies.[0m
-    [38;2;120;169;255mpa_group                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12)[0m
-[38;2;125;133;144m                                                         security group — a[0m
-[38;2;125;133;144m                                                         named role that users[0m
-[38;2;125;133;144m                                                         belong to and that[0m
-[38;2;125;133;144m                                                         cube/dimension security[0m
-[38;2;125;133;144m                                                         is granted against.[0m
-    [38;2;120;169;255mpa_hierarchy                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA hierarchy within a[0m
-[38;2;125;133;144m                                                         Planning Analytics (TM1[0m
-[38;2;125;133;144m                                                         Database 12) dimension[0m
-[38;2;125;133;144m                                                         — a named tree of[0m
-[38;2;125;133;144m                                                         members (`elements`)[0m
-[38;2;125;133;144m                                                         and parent/child[0m
-[38;2;125;133;144m                                                         consolidations[0m
-[38;2;125;133;144m                                                         (`edges`).[0m
-    [38;2;120;169;255mpa_process                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12)[0m
-[38;2;125;133;144m                                                         TurboIntegrator process[0m
-[38;2;125;133;144m                                                         — the scripting unit[0m
-[38;2;125;133;144m                                                         (four procedure stages,[0m
-[38;2;125;133;144m                                                         a data source, typed[0m
-[38;2;125;133;144m                                                         parameters and source[0m
-[38;2;125;133;144m                                                         variables) created via[0m
-[38;2;125;133;144m                                                         the TM1 REST OData API[0m
-[38;2;125;133;144m                                                         (/Processes) and[0m
-[38;2;125;133;144m                                                         identified by its[0m
-[38;2;125;133;144m                                                         `name` (the OData[0m
-[38;2;125;133;144m                                                         entity key).[0m
-    [38;2;120;169;255mpa_sql_data_source               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12) named[0m
-[38;2;125;133;144m                                                         SQL data source — a[0m
-[38;2;125;133;144m                                                         reusable ODBC/SQL[0m
-[38;2;125;133;144m                                                         connection definition[0m
-[38;2;125;133;144m                                                         that TurboIntegrator[0m
-[38;2;125;133;144m                                                         processes read from.[0m
-    [38;2;120;169;255mpa_subset                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA named subset of a[0m
-[38;2;125;133;144m                                                         Planning Analytics (TM1[0m
-[38;2;125;133;144m                                                         Database 12) hierarchy[0m
-[38;2;125;133;144m                                                         — either a static list[0m
-[38;2;125;133;144m                                                         of members (`elements`)[0m
-[38;2;125;133;144m                                                         or a dynamic MDX[0m
-[38;2;125;133;144m                                                         `expression`.[0m
-    [38;2;120;169;255mpa_user                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12) user[0m
-[38;2;125;133;144m                                                         — a security principal[0m
-[38;2;125;133;144m                                                         with a password and a[0m
-[38;2;125;133;144m                                                         set of group[0m
-[38;2;125;133;144m                                                         memberships.[0m
-    [38;2;120;169;255mpa_view                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
-[38;2;125;133;144m                                                         (TM1 Database 12) cube[0m
-[38;2;125;133;144m                                                         view — a saved query[0m
-[38;2;125;133;144m                                                         over a cube, either a[0m
-[38;2;125;133;144m                                                         native axis layout[0m
-[38;2;125;133;144m                                                         (columns/rows/titles)[0m
-[38;2;125;133;144m                                                         or an MDX view.[0m
+    [38;2;120;169;255mpa_chore                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            chore — a schedule[0m
+[38;2;125;133;144m                                                            that runs an ordered[0m
+[38;2;125;133;144m                                                            list of tasks (each[0m
+[38;2;125;133;144m                                                            executing a process)[0m
+[38;2;125;133;144m                                                            at a start time and[0m
+[38;2;125;133;144m                                                            frequency.[0m
+    [38;2;120;169;255mpa_cube                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            cube — an[0m
+[38;2;125;133;144m                                                            N-dimensional data[0m
+[38;2;125;133;144m                                                            store defined over[0m
+[38;2;125;133;144m                                                            an ordered list of[0m
+[38;2;125;133;144m                                                            dimensions, with[0m
+[38;2;125;133;144m                                                            optional TM1 rules.[0m
+    [38;2;120;169;255mpa_dimension                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            dimension — a named[0m
+[38;2;125;133;144m                                                            set of members[0m
+[38;2;125;133;144m                                                            organized into one[0m
+[38;2;125;133;144m                                                            or more hierarchies.[0m
+    [38;2;120;169;255mpa_group                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            security group — a[0m
+[38;2;125;133;144m                                                            named role that[0m
+[38;2;125;133;144m                                                            users belong to and[0m
+[38;2;125;133;144m                                                            that cube/dimension[0m
+[38;2;125;133;144m                                                            security is granted[0m
+[38;2;125;133;144m                                                            against.[0m
+    [38;2;120;169;255mpa_hierarchy                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA hierarchy within a[0m
+[38;2;125;133;144m                                                            Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            dimension — a named[0m
+[38;2;125;133;144m                                                            tree of members[0m
+[38;2;125;133;144m                                                            (`elements`) and[0m
+[38;2;125;133;144m                                                            parent/child[0m
+[38;2;125;133;144m                                                            consolidations[0m
+[38;2;125;133;144m                                                            (`edges`).[0m
+    [38;2;120;169;255mpa_process                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            TurboIntegrator[0m
+[38;2;125;133;144m                                                            process — the[0m
+[38;2;125;133;144m                                                            scripting unit (four[0m
+[38;2;125;133;144m                                                            procedure stages, a[0m
+[38;2;125;133;144m                                                            data source, typed[0m
+[38;2;125;133;144m                                                            parameters and[0m
+[38;2;125;133;144m                                                            source variables)[0m
+[38;2;125;133;144m                                                            created via the TM1[0m
+[38;2;125;133;144m                                                            REST OData API[0m
+[38;2;125;133;144m                                                            (/Processes) and[0m
+[38;2;125;133;144m                                                            identified by its[0m
+[38;2;125;133;144m                                                            `name` (the OData[0m
+[38;2;125;133;144m                                                            entity key).[0m
+    [38;2;120;169;255mpa_sql_data_source                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            named SQL data[0m
+[38;2;125;133;144m                                                            source — a reusable[0m
+[38;2;125;133;144m                                                            ODBC/SQL connection[0m
+[38;2;125;133;144m                                                            definition that[0m
+[38;2;125;133;144m                                                            TurboIntegrator[0m
+[38;2;125;133;144m                                                            processes read from.[0m
+    [38;2;120;169;255mpa_subset                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA named subset of a[0m
+[38;2;125;133;144m                                                            Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            hierarchy — either a[0m
+[38;2;125;133;144m                                                            static list of[0m
+[38;2;125;133;144m                                                            members (`elements`)[0m
+[38;2;125;133;144m                                                            or a dynamic MDX[0m
+[38;2;125;133;144m                                                            `expression`.[0m
+    [38;2;120;169;255mpa_user                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            user — a security[0m
+[38;2;125;133;144m                                                            principal with a[0m
+[38;2;125;133;144m                                                            password and a set[0m
+[38;2;125;133;144m                                                            of group[0m
+[38;2;125;133;144m                                                            memberships.[0m
+    [38;2;120;169;255mpa_view                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            (TM1 Database 12)[0m
+[38;2;125;133;144m                                                            cube view — a saved[0m
+[38;2;125;133;144m                                                            query over a cube,[0m
+[38;2;125;133;144m                                                            either a native axis[0m
+[38;2;125;133;144m                                                            layout[0m
+[38;2;125;133;144m                                                            (columns/rows/titles)[0m
+[38;2;125;133;144m                                                            or an MDX view.[0m
+
+  [38;2;120;169;255m▌[0m [1mIBM Planning Analytics Workspace[0m   [38;2;125;133;144m(pa_workspace · 6 kinds)[0m
+    [38;2;120;169;255mpaw_application                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace[0m
+[38;2;125;133;144m                                                            application (OData[0m
+[38;2;125;133;144m                                                            asset type[0m
+[38;2;125;133;144m                                                            `application`) — an[0m
+[38;2;125;133;144m                                                            authored view /[0m
+[38;2;125;133;144m                                                            exploration document[0m
+[38;2;125;133;144m                                                            stored in the[0m
+[38;2;125;133;144m                                                            /pacontent/v1 Assets[0m
+[38;2;125;133;144m                                                            tree.[0m
+    [38;2;120;169;255mpaw_book                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace book[0m
+[38;2;125;133;144m                                                            (OData asset type[0m
+[38;2;125;133;144m                                                            `dashboard`) — an[0m
+[38;2;125;133;144m                                                            authored view /[0m
+[38;2;125;133;144m                                                            exploration document[0m
+[38;2;125;133;144m                                                            stored in the[0m
+[38;2;125;133;144m                                                            /pacontent/v1 Assets[0m
+[38;2;125;133;144m                                                            tree.[0m
+    [38;2;120;169;255mpaw_folder                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace folder[0m
+[38;2;125;133;144m                                                            (OData asset type[0m
+[38;2;125;133;144m                                                            `folder`) — an[0m
+[38;2;125;133;144m                                                            authored view /[0m
+[38;2;125;133;144m                                                            exploration document[0m
+[38;2;125;133;144m                                                            stored in the[0m
+[38;2;125;133;144m                                                            /pacontent/v1 Assets[0m
+[38;2;125;133;144m                                                            tree.[0m
+    [38;2;120;169;255mpaw_plan                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace plan[0m
+[38;2;125;133;144m                                                            (OData asset type[0m
+[38;2;125;133;144m                                                            `plan`) — an[0m
+[38;2;125;133;144m                                                            authored planning[0m
+[38;2;125;133;144m                                                            process document[0m
+[38;2;125;133;144m                                                            stored in the[0m
+[38;2;125;133;144m                                                            /pacontent/v1 Assets[0m
+[38;2;125;133;144m                                                            tree.[0m
+    [38;2;120;169;255mpaw_view                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace view[0m
+[38;2;125;133;144m                                                            (OData asset type[0m
+[38;2;125;133;144m                                                            `tm1view`) — an[0m
+[38;2;125;133;144m                                                            authored view[0m
+[38;2;125;133;144m                                                            document stored in[0m
+[38;2;125;133;144m                                                            the /pacontent/v1[0m
+[38;2;125;133;144m                                                            Assets tree.[0m
+    [38;2;120;169;255mpaw_workbench                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Planning Analytics[0m
+[38;2;125;133;144m                                                            Workspace workbench[0m
+[38;2;125;133;144m                                                            (OData asset type[0m
+[38;2;125;133;144m                                                            `workbench`) — an[0m
+[38;2;125;133;144m                                                            authored workbench[0m
+[38;2;125;133;144m                                                            document stored in[0m
+[38;2;125;133;144m                                                            the /pacontent/v1[0m
+[38;2;125;133;144m                                                            Assets tree.[0m
 
   [38;2;120;169;255m▌[0m [1mOpenScale[0m   [38;2;125;133;144m(openscale · 8 kinds)[0m
-    [38;2;120;169;255mdata_mart                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn OpenScale data mart[0m
-[38;2;125;133;144m                                                         is the per-instance[0m
-[38;2;125;133;144m                                                         datastore that holds[0m
-[38;2;125;133;144m                                                         monitoring records[0m
-[38;2;125;133;144m                                                         (payload, feedback,[0m
-[38;2;125;133;144m                                                         metrics) for every[0m
-[38;2;125;133;144m                                                         subscribed deployment.[0m
-    [38;2;120;169;255mdata_set                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA data set is a typed[0m
-[38;2;125;133;144m                                                         store within an[0m
-[38;2;125;133;144m                                                         OpenScale data mart[0m
-[38;2;125;133;144m                                                         (payload logging,[0m
-[38;2;125;133;144m                                                         feedback, or business[0m
-[38;2;125;133;144m                                                         payload) that records[0m
-[38;2;125;133;144m                                                         the data used to[0m
-[38;2;125;133;144m                                                         compute a[0m
-[38;2;125;133;144m                                                         subscription's monitor[0m
-[38;2;125;133;144m                                                         metrics.[0m
-    [38;2;120;169;255mguardrails_policy                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA guardrails policy[0m
-[38;2;125;133;144m                                                         defines[0m
-[38;2;125;133;144m                                                         content-filtering and[0m
-[38;2;125;133;144m                                                         safety rules (such as[0m
-[38;2;125;133;144m                                                         PII or HAP detection)[0m
-[38;2;125;133;144m                                                         that OpenScale enforces[0m
-[38;2;125;133;144m                                                         on generative-AI model[0m
-[38;2;125;133;144m                                                         inputs and outputs.[0m
-    [38;2;120;169;255mintegrated_system                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn integrated system[0m
-[38;2;125;133;144m                                                         registers an external[0m
-[38;2;125;133;144m                                                         service (notifications,[0m
-[38;2;125;133;144m                                                         a custom metrics[0m
-[38;2;125;133;144m                                                         provider, or a[0m
-[38;2;125;133;144m                                                         third-party endpoint)[0m
-[38;2;125;133;144m                                                         that OpenScale calls[0m
-[38;2;125;133;144m                                                         during monitoring.[0m
-    [38;2;120;169;255mmonitor_definition               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor definition[0m
-[38;2;125;133;144m                                                         registers a custom[0m
-[38;2;125;133;144m                                                         monitor type in[0m
-[38;2;125;133;144m                                                         OpenScale, declaring[0m
-[38;2;125;133;144m                                                         its metrics,[0m
-[38;2;125;133;144m                                                         thresholds, and tags.[0m
-    [38;2;120;169;255mmonitor_instance                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor instance[0m
-[38;2;125;133;144m                                                         activates a monitor[0m
-[38;2;125;133;144m                                                         (quality, fairness,[0m
-[38;2;125;133;144m                                                         drift, explainability,[0m
-[38;2;125;133;144m                                                         or a custom definition)[0m
-[38;2;125;133;144m                                                         on a subscription, with[0m
-[38;2;125;133;144m                                                         its parameters and[0m
-[38;2;125;133;144m                                                         alert thresholds.[0m
-    [38;2;120;169;255mservice_provider                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA service provider[0m
-[38;2;125;133;144m                                                         binds a[0m
-[38;2;125;133;144m                                                         machine-learning[0m
-[38;2;125;133;144m                                                         serving environment[0m
-[38;2;125;133;144m                                                         (such as a watsonx.ai[0m
-[38;2;125;133;144m                                                         or WML space) to[0m
-[38;2;125;133;144m                                                         OpenScale so its[0m
-[38;2;125;133;144m                                                         deployments can be[0m
-[38;2;125;133;144m                                                         discovered and[0m
-[38;2;125;133;144m                                                         monitored.[0m
-    [38;2;120;169;255msubscription                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA subscription connects[0m
-[38;2;125;133;144m                                                         one deployed model to[0m
-[38;2;125;133;144m                                                         OpenScale for[0m
-[38;2;125;133;144m                                                         monitoring, linking it[0m
-[38;2;125;133;144m                                                         to a service provider[0m
-[38;2;125;133;144m                                                         and data mart and[0m
-[38;2;125;133;144m                                                         capturing its input and[0m
-[38;2;125;133;144m                                                         output schema.[0m
+    [38;2;120;169;255mdata_mart                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn OpenScale data[0m
+[38;2;125;133;144m                                                            mart is the[0m
+[38;2;125;133;144m                                                            per-instance[0m
+[38;2;125;133;144m                                                            datastore that holds[0m
+[38;2;125;133;144m                                                            monitoring records[0m
+[38;2;125;133;144m                                                            (payload, feedback,[0m
+[38;2;125;133;144m                                                            metrics) for every[0m
+[38;2;125;133;144m                                                            subscribed[0m
+[38;2;125;133;144m                                                            deployment.[0m
+    [38;2;120;169;255mdata_set                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA data set is a[0m
+[38;2;125;133;144m                                                            typed store within[0m
+[38;2;125;133;144m                                                            an OpenScale data[0m
+[38;2;125;133;144m                                                            mart (payload[0m
+[38;2;125;133;144m                                                            logging, feedback,[0m
+[38;2;125;133;144m                                                            or business payload)[0m
+[38;2;125;133;144m                                                            that records the[0m
+[38;2;125;133;144m                                                            data used to compute[0m
+[38;2;125;133;144m                                                            a subscription's[0m
+[38;2;125;133;144m                                                            monitor metrics.[0m
+    [38;2;120;169;255mguardrails_policy                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA guardrails policy[0m
+[38;2;125;133;144m                                                            defines[0m
+[38;2;125;133;144m                                                            content-filtering[0m
+[38;2;125;133;144m                                                            and safety rules[0m
+[38;2;125;133;144m                                                            (such as PII or HAP[0m
+[38;2;125;133;144m                                                            detection) that[0m
+[38;2;125;133;144m                                                            OpenScale enforces[0m
+[38;2;125;133;144m                                                            on generative-AI[0m
+[38;2;125;133;144m                                                            model inputs and[0m
+[38;2;125;133;144m                                                            outputs.[0m
+    [38;2;120;169;255mintegrated_system                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn integrated system[0m
+[38;2;125;133;144m                                                            registers an[0m
+[38;2;125;133;144m                                                            external service[0m
+[38;2;125;133;144m                                                            (notifications, a[0m
+[38;2;125;133;144m                                                            custom metrics[0m
+[38;2;125;133;144m                                                            provider, or a[0m
+[38;2;125;133;144m                                                            third-party[0m
+[38;2;125;133;144m                                                            endpoint) that[0m
+[38;2;125;133;144m                                                            OpenScale calls[0m
+[38;2;125;133;144m                                                            during monitoring.[0m
+    [38;2;120;169;255mmonitor_definition                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor definition[0m
+[38;2;125;133;144m                                                            registers a custom[0m
+[38;2;125;133;144m                                                            monitor type in[0m
+[38;2;125;133;144m                                                            OpenScale, declaring[0m
+[38;2;125;133;144m                                                            its metrics,[0m
+[38;2;125;133;144m                                                            thresholds, and[0m
+[38;2;125;133;144m                                                            tags.[0m
+    [38;2;120;169;255mmonitor_instance                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA monitor instance[0m
+[38;2;125;133;144m                                                            activates a monitor[0m
+[38;2;125;133;144m                                                            (quality, fairness,[0m
+[38;2;125;133;144m                                                            drift,[0m
+[38;2;125;133;144m                                                            explainability, or a[0m
+[38;2;125;133;144m                                                            custom definition)[0m
+[38;2;125;133;144m                                                            on a subscription,[0m
+[38;2;125;133;144m                                                            with its parameters[0m
+[38;2;125;133;144m                                                            and alert[0m
+[38;2;125;133;144m                                                            thresholds.[0m
+    [38;2;120;169;255mservice_provider                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA service provider[0m
+[38;2;125;133;144m                                                            binds a[0m
+[38;2;125;133;144m                                                            machine-learning[0m
+[38;2;125;133;144m                                                            serving environment[0m
+[38;2;125;133;144m                                                            (such as a[0m
+[38;2;125;133;144m                                                            watsonx.ai or WML[0m
+[38;2;125;133;144m                                                            space) to OpenScale[0m
+[38;2;125;133;144m                                                            so its deployments[0m
+[38;2;125;133;144m                                                            can be discovered[0m
+[38;2;125;133;144m                                                            and monitored.[0m
+    [38;2;120;169;255msubscription                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA subscription[0m
+[38;2;125;133;144m                                                            connects one[0m
+[38;2;125;133;144m                                                            deployed model to[0m
+[38;2;125;133;144m                                                            OpenScale for[0m
+[38;2;125;133;144m                                                            monitoring, linking[0m
+[38;2;125;133;144m                                                            it to a service[0m
+[38;2;125;133;144m                                                            provider and data[0m
+[38;2;125;133;144m                                                            mart and capturing[0m
+[38;2;125;133;144m                                                            its input and output[0m
+[38;2;125;133;144m                                                            schema.[0m
 
   [38;2;120;169;255m▌[0m [1mvault[0m   [38;2;125;133;144m(vault · 8 kinds)[0m
-    [38;2;120;169;255mvault_audit_device               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault audit[0m
-[38;2;125;133;144m                                                         device[0m
-[38;2;125;133;144m                                                         (sys/audit/{path}) —[0m
-[38;2;125;133;144m                                                         enables audit logging[0m
-[38;2;125;133;144m                                                         of every[0m
-[38;2;125;133;144m                                                         request/response to a[0m
-[38;2;125;133;144m                                                         backend (type `file`[0m
-[38;2;125;133;144m                                                         writes to a log path).[0m
-    [38;2;120;169;255mvault_auth_method                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault auth[0m
-[38;2;125;133;144m                                                         method mount[0m
-[38;2;125;133;144m                                                         (sys/auth/{path}),[0m
-[38;2;125;133;144m                                                         enabled with type `jwt`[0m
-[38;2;125;133;144m                                                         for IBM Verify / OIDC[0m
-[38;2;125;133;144m                                                         federation.[0m
-    [38;2;120;169;255mvault_database_role              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA role on a Vault[0m
-[38;2;125;133;144m                                                         database secrets engine[0m
-[38;2;125;133;144m                                                         ({mount}/roles/{name})[0m
-[38;2;125;133;144m                                                         — binds the SQL[0m
-[38;2;125;133;144m                                                         creation statements and[0m
-[38;2;125;133;144m                                                         lease TTLs Vault uses[0m
-[38;2;125;133;144m                                                         to mint dynamic[0m
-[38;2;125;133;144m                                                         database credentials.[0m
-    [38;2;120;169;255mvault_group_alias                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Vault group alias[0m
-[38;2;125;133;144m                                                         (identity/group-alias)[0m
-[38;2;125;133;144m                                                         that binds an external[0m
-[38;2;125;133;144m                                                         IdP group name to a[0m
-[38;2;125;133;144m                                                         Vault external identity[0m
-[38;2;125;133;144m                                                         group through an auth[0m
-[38;2;125;133;144m                                                         mount accessor.[0m
-    [38;2;120;169;255mvault_identity_group             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Vault external[0m
-[38;2;125;133;144m                                                         identity group[0m
-[38;2;125;133;144m                                                         (identity/group) that[0m
-[38;2;125;133;144m                                                         maps an external IdP[0m
-[38;2;125;133;144m                                                         group (via a[0m
-[38;2;125;133;144m                                                         vault_group_alias) to[0m
-[38;2;125;133;144m                                                         Vault policies.[0m
-    [38;2;120;169;255mvault_jwt_role                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA role on a Vault JWT[0m
-[38;2;125;133;144m                                                         auth backend[0m
-[38;2;125;133;144m                                                         (auth/{backend}/role/{name})[0m
-[38;2;125;133;144m                                                         — binds token[0m
-[38;2;125;133;144m                                                         audiences, the identity[0m
-[38;2;125;133;144m                                                         claim, and token[0m
-[38;2;125;133;144m                                                         policies for OIDC[0m
-[38;2;125;133;144m                                                         logins.[0m
-    [38;2;120;169;255mvault_policy                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault ACL[0m
-[38;2;125;133;144m                                                         policy[0m
-[38;2;125;133;144m                                                         (sys/policies/acl/{name}).[0m
-    [38;2;120;169;255mvault_secret_engine              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault[0m
-[38;2;125;133;144m                                                         database secrets engine[0m
-[38;2;125;133;144m                                                         mount[0m
-[38;2;125;133;144m                                                         (sys/mounts/{path},[0m
-[38;2;125;133;144m                                                         type=database).[0m
+    [38;2;120;169;255mvault_audit_device                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault[0m
+[38;2;125;133;144m                                                            audit device[0m
+[38;2;125;133;144m                                                            (sys/audit/{path}) —[0m
+[38;2;125;133;144m                                                            enables audit[0m
+[38;2;125;133;144m                                                            logging of every[0m
+[38;2;125;133;144m                                                            request/response to[0m
+[38;2;125;133;144m                                                            a backend (type[0m
+[38;2;125;133;144m                                                            `file` writes to a[0m
+[38;2;125;133;144m                                                            log path).[0m
+    [38;2;120;169;255mvault_auth_method                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault[0m
+[38;2;125;133;144m                                                            auth method mount[0m
+[38;2;125;133;144m                                                            (sys/auth/{path}),[0m
+[38;2;125;133;144m                                                            enabled with type[0m
+[38;2;125;133;144m                                                            `jwt` for IBM Verify[0m
+[38;2;125;133;144m                                                            / OIDC federation.[0m
+    [38;2;120;169;255mvault_database_role                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA role on a Vault[0m
+[38;2;125;133;144m                                                            database secrets[0m
+[38;2;125;133;144m                                                            engine[0m
+[38;2;125;133;144m                                                            ({mount}/roles/{name})[0m
+[38;2;125;133;144m                                                            — binds the SQL[0m
+[38;2;125;133;144m                                                            creation statements[0m
+[38;2;125;133;144m                                                            and lease TTLs Vault[0m
+[38;2;125;133;144m                                                            uses to mint dynamic[0m
+[38;2;125;133;144m                                                            database[0m
+[38;2;125;133;144m                                                            credentials.[0m
+    [38;2;120;169;255mvault_group_alias                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Vault group alias[0m
+[38;2;125;133;144m                                                            (identity/group-alias)[0m
+[38;2;125;133;144m                                                            that binds an[0m
+[38;2;125;133;144m                                                            external IdP group[0m
+[38;2;125;133;144m                                                            name to a Vault[0m
+[38;2;125;133;144m                                                            external identity[0m
+[38;2;125;133;144m                                                            group through an[0m
+[38;2;125;133;144m                                                            auth mount accessor.[0m
+    [38;2;120;169;255mvault_identity_group                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Vault external[0m
+[38;2;125;133;144m                                                            identity group[0m
+[38;2;125;133;144m                                                            (identity/group)[0m
+[38;2;125;133;144m                                                            that maps an[0m
+[38;2;125;133;144m                                                            external IdP group[0m
+[38;2;125;133;144m                                                            (via a[0m
+[38;2;125;133;144m                                                            vault_group_alias)[0m
+[38;2;125;133;144m                                                            to Vault policies.[0m
+    [38;2;120;169;255mvault_jwt_role                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA role on a Vault[0m
+[38;2;125;133;144m                                                            JWT auth backend[0m
+[38;2;125;133;144m                                                            (auth/{backend}/role/{name})[0m
+[38;2;125;133;144m                                                            — binds token[0m
+[38;2;125;133;144m                                                            audiences, the[0m
+[38;2;125;133;144m                                                            identity claim, and[0m
+[38;2;125;133;144m                                                            token policies for[0m
+[38;2;125;133;144m                                                            OIDC logins.[0m
+    [38;2;120;169;255mvault_policy                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault[0m
+[38;2;125;133;144m                                                            ACL policy[0m
+[38;2;125;133;144m                                                            (sys/policies/acl/{name}).[0m
+    [38;2;120;169;255mvault_secret_engine                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA HashiCorp Vault[0m
+[38;2;125;133;144m                                                            database secrets[0m
+[38;2;125;133;144m                                                            engine mount[0m
+[38;2;125;133;144m                                                            (sys/mounts/{path},[0m
+[38;2;125;133;144m                                                            type=database).[0m
 
   [38;2;120;169;255m▌[0m [1mwatsonx Orchestrate[0m   [38;2;125;133;144m(watsonx_orchestrate · 7 kinds)[0m
-    [38;2;120;169;255magent                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Agent is a[0m
-[38;2;125;133;144m                                                         configurable AI[0m
-[38;2;125;133;144m                                                         assistant within[0m
-[38;2;125;133;144m                                                         Watsonx Orchestrate[0m
-[38;2;125;133;144m                                                         that can perform tasks[0m
-[38;2;125;133;144m                                                         using tools,[0m
-[38;2;125;133;144m                                                         collaborate with other[0m
-[38;2;125;133;144m                                                         agents, and leverage[0m
-[38;2;125;133;144m                                                         knowledge bases.[0m
-    [38;2;120;169;255magent_release                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mDeploys (releases) a[0m
-[38;2;125;133;144m                                                         watsonx Orchestrate[0m
-[38;2;125;133;144m                                                         agent's current draft[0m
-[38;2;125;133;144m                                                         to the `live`[0m
-[38;2;125;133;144m                                                         environment.[0m
-    [38;2;120;169;255mknowledge_base                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Knowledge Base[0m
-[38;2;125;133;144m                                                         provides document-based[0m
-[38;2;125;133;144m                                                         context and information[0m
-[38;2;125;133;144m                                                         retrieval capabilities[0m
-[38;2;125;133;144m                                                         for agents.[0m
-    [38;2;120;169;255mmodel                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Model Configuration[0m
-[38;2;125;133;144m                                                         defines custom language[0m
-[38;2;125;133;144m                                                         model settings and[0m
-[38;2;125;133;144m                                                         parameters for use[0m
-[38;2;125;133;144m                                                         within Watsonx[0m
-[38;2;125;133;144m                                                         Orchestrate.[0m
-    [38;2;120;169;255morchestrate_connection           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection represents[0m
-[38;2;125;133;144m                                                         authentication[0m
-[38;2;125;133;144m                                                         credentials and[0m
-[38;2;125;133;144m                                                         configuration for[0m
-[38;2;125;133;144m                                                         integrating external[0m
-[38;2;125;133;144m                                                         applications with[0m
-[38;2;125;133;144m                                                         Watsonx Orchestrate.[0m
-    [38;2;120;169;255mtool                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Tool is a[0m
-[38;2;125;133;144m                                                         specification for a[0m
-[38;2;125;133;144m                                                         callable function or[0m
-[38;2;125;133;144m                                                         service that agents can[0m
-[38;2;125;133;144m                                                         invoke to perform[0m
-[38;2;125;133;144m                                                         actions and retrieve[0m
-[38;2;125;133;144m                                                         information.[0m
-    [38;2;120;169;255mtoolkit                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn MCP (Model Context[0m
-[38;2;125;133;144m                                                         Protocol) toolkit[0m
-[38;2;125;133;144m                                                         backed by a local or[0m
-[38;2;125;133;144m                                                         remote MCP server.[0m
+    [38;2;120;169;255magent                               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Agent is a[0m
+[38;2;125;133;144m                                                            configurable AI[0m
+[38;2;125;133;144m                                                            assistant within[0m
+[38;2;125;133;144m                                                            Watsonx Orchestrate[0m
+[38;2;125;133;144m                                                            that can perform[0m
+[38;2;125;133;144m                                                            tasks using tools,[0m
+[38;2;125;133;144m                                                            collaborate with[0m
+[38;2;125;133;144m                                                            other agents, and[0m
+[38;2;125;133;144m                                                            leverage knowledge[0m
+[38;2;125;133;144m                                                            bases.[0m
+    [38;2;120;169;255magent_release                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mDeploys (releases) a[0m
+[38;2;125;133;144m                                                            watsonx Orchestrate[0m
+[38;2;125;133;144m                                                            agent's current[0m
+[38;2;125;133;144m                                                            draft to the `live`[0m
+[38;2;125;133;144m                                                            environment.[0m
+    [38;2;120;169;255mknowledge_base                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Knowledge Base[0m
+[38;2;125;133;144m                                                            provides[0m
+[38;2;125;133;144m                                                            document-based[0m
+[38;2;125;133;144m                                                            context and[0m
+[38;2;125;133;144m                                                            information[0m
+[38;2;125;133;144m                                                            retrieval[0m
+[38;2;125;133;144m                                                            capabilities for[0m
+[38;2;125;133;144m                                                            agents.[0m
+    [38;2;120;169;255mmodel                               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Model[0m
+[38;2;125;133;144m                                                            Configuration[0m
+[38;2;125;133;144m                                                            defines custom[0m
+[38;2;125;133;144m                                                            language model[0m
+[38;2;125;133;144m                                                            settings and[0m
+[38;2;125;133;144m                                                            parameters for use[0m
+[38;2;125;133;144m                                                            within Watsonx[0m
+[38;2;125;133;144m                                                            Orchestrate.[0m
+    [38;2;120;169;255morchestrate_connection              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Connection[0m
+[38;2;125;133;144m                                                            represents[0m
+[38;2;125;133;144m                                                            authentication[0m
+[38;2;125;133;144m                                                            credentials and[0m
+[38;2;125;133;144m                                                            configuration for[0m
+[38;2;125;133;144m                                                            integrating external[0m
+[38;2;125;133;144m                                                            applications with[0m
+[38;2;125;133;144m                                                            Watsonx Orchestrate.[0m
+    [38;2;120;169;255mtool                                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Tool is a[0m
+[38;2;125;133;144m                                                            specification for a[0m
+[38;2;125;133;144m                                                            callable function or[0m
+[38;2;125;133;144m                                                            service that agents[0m
+[38;2;125;133;144m                                                            can invoke to[0m
+[38;2;125;133;144m                                                            perform actions and[0m
+[38;2;125;133;144m                                                            retrieve[0m
+[38;2;125;133;144m                                                            information.[0m
+    [38;2;120;169;255mtoolkit                             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn MCP (Model[0m
+[38;2;125;133;144m                                                            Context Protocol)[0m
+[38;2;125;133;144m                                                            toolkit backed by a[0m
+[38;2;125;133;144m                                                            local or remote MCP[0m
+[38;2;125;133;144m                                                            server.[0m
 
   [38;2;120;169;255m▌[0m [1mwatsonx.ai[0m   [38;2;125;133;144m(watsonx_ai · 7 kinds)[0m
-    [38;2;120;169;255mai_service                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AI Service is a[0m
-[38;2;125;133;144m                                                         deployable code[0m
-[38;2;125;133;144m                                                         artifact for Watson[0m
-[38;2;125;133;144m                                                         Machine Learning.[0m
-    [38;2;120;169;255mautoai_experiment                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AutoAI Experiment[0m
-[38;2;125;133;144m                                                         runs a watsonx.ai[0m
-[38;2;125;133;144m                                                         AutoAI training to[0m
-[38;2;125;133;144m                                                         completion and surfaces[0m
-[38;2;125;133;144m                                                         the ranked pipeline[0m
-[38;2;125;133;144m                                                         leaderboard.[0m
-    [38;2;120;169;255mnotebook                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Notebook asset stored[0m
-[38;2;125;133;144m                                                         in a watsonx.ai[0m
-[38;2;125;133;144m                                                         project.[0m
-    [38;2;120;169;255mwml_deployment                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Deployment[0m
-[38;2;125;133;144m                                                         creates a live online[0m
-[38;2;125;133;144m                                                         endpoint from an AI[0m
-[38;2;125;133;144m                                                         service or model.[0m
-    [38;2;120;169;255mwml_function                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python function asset[0m
-[38;2;125;133;144m                                                         stored in Watson[0m
-[38;2;125;133;144m                                                         Machine Learning.[0m
-    [38;2;120;169;255mwml_model                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Model[0m
-[38;2;125;133;144m                                                         materializes the[0m
-[38;2;125;133;144m                                                         winning pipeline of a[0m
-[38;2;125;133;144m                                                         completed AutoAI[0m
-[38;2;125;133;144m                                                         experiment as a[0m
-[38;2;125;133;144m                                                         deployable[0m
-[38;2;125;133;144m                                                         wml-hybrid_0.1 model.[0m
-    [38;2;120;169;255mwml_script                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python script asset[0m
-[38;2;125;133;144m                                                         stored in Watson[0m
-[38;2;125;133;144m                                                         Machine Learning.[0m
+    [38;2;120;169;255mai_service                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AI Service is a[0m
+[38;2;125;133;144m                                                            deployable code[0m
+[38;2;125;133;144m                                                            artifact for Watson[0m
+[38;2;125;133;144m                                                            Machine Learning.[0m
+    [38;2;120;169;255mautoai_experiment                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn AutoAI Experiment[0m
+[38;2;125;133;144m                                                            runs a watsonx.ai[0m
+[38;2;125;133;144m                                                            AutoAI training to[0m
+[38;2;125;133;144m                                                            completion and[0m
+[38;2;125;133;144m                                                            surfaces the ranked[0m
+[38;2;125;133;144m                                                            pipeline[0m
+[38;2;125;133;144m                                                            leaderboard.[0m
+    [38;2;120;169;255mnotebook                            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Notebook asset[0m
+[38;2;125;133;144m                                                            stored in a[0m
+[38;2;125;133;144m                                                            watsonx.ai project.[0m
+    [38;2;120;169;255mwml_deployment                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Deployment[0m
+[38;2;125;133;144m                                                            creates a live[0m
+[38;2;125;133;144m                                                            online endpoint from[0m
+[38;2;125;133;144m                                                            an AI service or[0m
+[38;2;125;133;144m                                                            model.[0m
+    [38;2;120;169;255mwml_function                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python function[0m
+[38;2;125;133;144m                                                            asset stored in[0m
+[38;2;125;133;144m                                                            Watson Machine[0m
+[38;2;125;133;144m                                                            Learning.[0m
+    [38;2;120;169;255mwml_model                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA WML Model[0m
+[38;2;125;133;144m                                                            materializes the[0m
+[38;2;125;133;144m                                                            winning pipeline of[0m
+[38;2;125;133;144m                                                            a completed AutoAI[0m
+[38;2;125;133;144m                                                            experiment as a[0m
+[38;2;125;133;144m                                                            deployable[0m
+[38;2;125;133;144m                                                            wml-hybrid_0.1[0m
+[38;2;125;133;144m                                                            model.[0m
+    [38;2;120;169;255mwml_script                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Python script[0m
+[38;2;125;133;144m                                                            asset stored in[0m
+[38;2;125;133;144m                                                            Watson Machine[0m
+[38;2;125;133;144m                                                            Learning.[0m
 
   [38;2;120;169;255m▌[0m [1mwatsonx.data[0m   [38;2;125;133;144m(watsonx_data · 17 kinds)[0m
-    [38;2;120;169;255mdatabase_connection              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding kind[0m
-[38;2;125;133;144m                                                         for external database[0m
-[38;2;125;133;144m                                                         connections consumed by[0m
-[38;2;125;133;144m                                                         `database_registration`.[0m
-    [38;2;120;169;255mdatabase_registration            [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an external[0m
-[38;2;125;133;144m                                                         database (Db2,[0m
-[38;2;125;133;144m                                                         PostgreSQL, MySQL,[0m
-[38;2;125;133;144m                                                         Kafka, etc.) with[0m
-[38;2;125;133;144m                                                         watsonx.data and[0m
-[38;2;125;133;144m                                                         atomically creates its[0m
-[38;2;125;133;144m                                                         associated catalog.[0m
-    [38;2;120;169;255mdb2_engine                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Db2 Engine registers[0m
-[38;2;125;133;144m                                                         an external IBM Db2[0m
-[38;2;125;133;144m                                                         instance as a federated[0m
-[38;2;125;133;144m                                                         query engine in[0m
-[38;2;125;133;144m                                                         watsonx.data.[0m
-    [38;2;120;169;255mingestion_job                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Ingestion Job loads[0m
-[38;2;125;133;144m                                                         data from object[0m
-[38;2;125;133;144m                                                         storage (CSV, Parquet,[0m
-[38;2;125;133;144m                                                         JSON, ORC, Avro, or[0m
-[38;2;125;133;144m                                                         txt) into a[0m
-[38;2;125;133;144m                                                         watsonx.data lakehouse[0m
-[38;2;125;133;144m                                                         table.[0m
-    [38;2;120;169;255mintegration                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an external[0m
-[38;2;125;133;144m                                                         governance / lineage[0m
-[38;2;125;133;144m                                                         service with[0m
-[38;2;125;133;144m                                                         watsonx.data — IBM[0m
-[38;2;125;133;144m                                                         Knowledge Catalog[0m
-[38;2;125;133;144m                                                         (`ikc`), Apache Ranger[0m
-[38;2;125;133;144m                                                         (`ranger`), Manta[0m
-[38;2;125;133;144m                                                         lineage (`manta`), or[0m
-[38;2;125;133;144m                                                         Databand (`databand`).[0m
-    [38;2;120;169;255mmilvus_service                   [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Milvus Service is the[0m
-[38;2;125;133;144m                                                         managed Milvus vector[0m
-[38;2;125;133;144m                                                         store in watsonx.data —[0m
-[38;2;125;133;144m                                                         the vector backend for[0m
-[38;2;125;133;144m                                                         embeddings / similarity[0m
-[38;2;125;133;144m                                                         search (e.g. RAG[0m
-[38;2;125;133;144m                                                         knowledge bases).[0m
-    [38;2;120;169;255mother_engine                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Other Engine[0m
-[38;2;125;133;144m                                                         registers a generic[0m
-[38;2;125;133;144m                                                         external query engine[0m
-[38;2;125;133;144m                                                         (anything not covered[0m
-[38;2;125;133;144m                                                         by the typed[0m
-[38;2;125;133;144m                                                         presto/spark/db2 kinds)[0m
-[38;2;125;133;144m                                                         with watsonx.data,[0m
-[38;2;125;133;144m                                                         identified by a display[0m
-[38;2;125;133;144m                                                         name plus a[0m
-[38;2;125;133;144m                                                         `connection_string` and[0m
-[38;2;125;133;144m                                                         an engine `type`.[0m
-    [38;2;120;169;255mprestissimo_engine               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Prestissimo Engine is[0m
-[38;2;125;133;144m                                                         the C++ (Velox-backed)[0m
-[38;2;125;133;144m                                                         distributed SQL query[0m
-[38;2;125;133;144m                                                         engine in watsonx.data[0m
-[38;2;125;133;144m                                                         — the high-performance[0m
-[38;2;125;133;144m                                                         twin of the Java Presto[0m
-[38;2;125;133;144m                                                         engine.[0m
-    [38;2;120;169;255mpresto_engine                    [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Presto Engine is a[0m
-[38;2;125;133;144m                                                         distributed SQL query[0m
-[38;2;125;133;144m                                                         engine in watsonx.data[0m
-[38;2;125;133;144m                                                         that runs analytical[0m
-[38;2;125;133;144m                                                         queries across[0m
-[38;2;125;133;144m                                                         lakehouse catalogs and[0m
-[38;2;125;133;144m                                                         object storage.[0m
-    [38;2;120;169;255msal_enrichment_job               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRuns a Semantic[0m
-[38;2;125;133;144m                                                         Automation Layer (SAL)[0m
-[38;2;125;133;144m                                                         metadata-enrichment job[0m
-[38;2;125;133;144m                                                         over a catalog/schema's[0m
-[38;2;125;133;144m                                                         tables.[0m
-    [38;2;120;169;255msal_enrichment_settings          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mPer-project[0m
-[38;2;125;133;144m                                                         metadata-enrichment[0m
-[38;2;125;133;144m                                                         settings for the[0m
-[38;2;125;133;144m                                                         Semantic Automation[0m
-[38;2;125;133;144m                                                         Layer (SAL) on[0m
-[38;2;125;133;144m                                                         watsonx.data.[0m
-    [38;2;120;169;255msal_global_settings              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mGlobal[0m
-[38;2;125;133;144m                                                         metadata-enrichment[0m
-[38;2;125;133;144m                                                         defaults for the[0m
-[38;2;125;133;144m                                                         Semantic Automation[0m
-[38;2;125;133;144m                                                         Layer (SAL) on[0m
-[38;2;125;133;144m                                                         watsonx.data.[0m
-    [38;2;120;169;255msal_glossary                     [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mUploads a[0m
-[38;2;125;133;144m                                                         business-glossary CSV[0m
-[38;2;125;133;144m                                                         into the watsonx.data[0m
-[38;2;125;133;144m                                                         Semantic Automation[0m
-[38;2;125;133;144m                                                         Layer (SAL) and polls[0m
-[38;2;125;133;144m                                                         the upload process to a[0m
-[38;2;125;133;144m                                                         terminal state, so a[0m
-[38;2;125;133;144m                                                         glossary can be[0m
-[38;2;125;133;144m                                                         uploaded before/around[0m
-[38;2;125;133;144m                                                         enrichment (richer term[0m
-[38;2;125;133;144m                                                         assignment).[0m
-    [38;2;120;169;255msal_integration                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mEnables the Semantic[0m
-[38;2;125;133;144m                                                         Automation Layer (SAL)[0m
-[38;2;125;133;144m                                                         on watsonx.data — the[0m
-[38;2;125;133;144m                                                         metadata-enrichment /[0m
-[38;2;125;133;144m                                                         auto-cataloging[0m
-[38;2;125;133;144m                                                         integration that backs[0m
-[38;2;125;133;144m                                                         IKC governance.[0m
-    [38;2;120;169;255mschema                           [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Schema is a logical[0m
-[38;2;125;133;144m                                                         grouping of tables[0m
-[38;2;125;133;144m                                                         within a watsonx.data[0m
-[38;2;125;133;144m                                                         catalog.[0m
-    [38;2;120;169;255mspark_engine                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Spark Engine is a[0m
-[38;2;125;133;144m                                                         serverless Apache Spark[0m
-[38;2;125;133;144m                                                         execution environment[0m
-[38;2;125;133;144m                                                         in watsonx.data used[0m
-[38;2;125;133;144m                                                         for data ingestion[0m
-[38;2;125;133;144m                                                         jobs, Spark SQL, and[0m
-[38;2;125;133;144m                                                         general Spark[0m
-[38;2;125;133;144m                                                         applications.[0m
-    [38;2;120;169;255mstorage_registration             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an[0m
-[38;2;125;133;144m                                                         object-store bucket[0m
-[38;2;125;133;144m                                                         with watsonx.data and[0m
-[38;2;125;133;144m                                                         atomically creates its[0m
-[38;2;125;133;144m                                                         associated lakehouse[0m
-[38;2;125;133;144m                                                         catalog (iceberg or[0m
-[38;2;125;133;144m                                                         hive).[0m
+    [38;2;120;169;255mdatabase_connection                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mCredential-holding[0m
+[38;2;125;133;144m                                                            kind for external[0m
+[38;2;125;133;144m                                                            database connections[0m
+[38;2;125;133;144m                                                            consumed by[0m
+[38;2;125;133;144m                                                            `database_registration`.[0m
+    [38;2;120;169;255mdatabase_registration               [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an[0m
+[38;2;125;133;144m                                                            external database[0m
+[38;2;125;133;144m                                                            (Db2, PostgreSQL,[0m
+[38;2;125;133;144m                                                            MySQL, Kafka, etc.)[0m
+[38;2;125;133;144m                                                            with watsonx.data[0m
+[38;2;125;133;144m                                                            and atomically[0m
+[38;2;125;133;144m                                                            creates its[0m
+[38;2;125;133;144m                                                            associated catalog.[0m
+    [38;2;120;169;255mdb2_engine                          [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Db2 Engine[0m
+[38;2;125;133;144m                                                            registers an[0m
+[38;2;125;133;144m                                                            external IBM Db2[0m
+[38;2;125;133;144m                                                            instance as a[0m
+[38;2;125;133;144m                                                            federated query[0m
+[38;2;125;133;144m                                                            engine in[0m
+[38;2;125;133;144m                                                            watsonx.data.[0m
+    [38;2;120;169;255mingestion_job                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Ingestion Job[0m
+[38;2;125;133;144m                                                            loads data from[0m
+[38;2;125;133;144m                                                            object storage (CSV,[0m
+[38;2;125;133;144m                                                            Parquet, JSON, ORC,[0m
+[38;2;125;133;144m                                                            Avro, or txt) into a[0m
+[38;2;125;133;144m                                                            watsonx.data[0m
+[38;2;125;133;144m                                                            lakehouse table.[0m
+    [38;2;120;169;255mintegration                         [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an[0m
+[38;2;125;133;144m                                                            external governance[0m
+[38;2;125;133;144m                                                            / lineage service[0m
+[38;2;125;133;144m                                                            with watsonx.data —[0m
+[38;2;125;133;144m                                                            IBM Knowledge[0m
+[38;2;125;133;144m                                                            Catalog (`ikc`),[0m
+[38;2;125;133;144m                                                            Apache Ranger[0m
+[38;2;125;133;144m                                                            (`ranger`), Manta[0m
+[38;2;125;133;144m                                                            lineage (`manta`),[0m
+[38;2;125;133;144m                                                            or Databand[0m
+[38;2;125;133;144m                                                            (`databand`).[0m
+    [38;2;120;169;255mmilvus_service                      [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Milvus Service is[0m
+[38;2;125;133;144m                                                            the managed Milvus[0m
+[38;2;125;133;144m                                                            vector store in[0m
+[38;2;125;133;144m                                                            watsonx.data — the[0m
+[38;2;125;133;144m                                                            vector backend for[0m
+[38;2;125;133;144m                                                            embeddings /[0m
+[38;2;125;133;144m                                                            similarity search[0m
+[38;2;125;133;144m                                                            (e.g. RAG knowledge[0m
+[38;2;125;133;144m                                                            bases).[0m
+    [38;2;120;169;255mother_engine                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mAn Other Engine[0m
+[38;2;125;133;144m                                                            registers a generic[0m
+[38;2;125;133;144m                                                            external query[0m
+[38;2;125;133;144m                                                            engine (anything not[0m
+[38;2;125;133;144m                                                            covered by the typed[0m
+[38;2;125;133;144m                                                            presto/spark/db2[0m
+[38;2;125;133;144m                                                            kinds) with[0m
+[38;2;125;133;144m                                                            watsonx.data,[0m
+[38;2;125;133;144m                                                            identified by a[0m
+[38;2;125;133;144m                                                            display name plus a[0m
+[38;2;125;133;144m                                                            `connection_string`[0m
+[38;2;125;133;144m                                                            and an engine[0m
+[38;2;125;133;144m                                                            `type`.[0m
+    [38;2;120;169;255mprestissimo_engine                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Prestissimo Engine[0m
+[38;2;125;133;144m                                                            is the C++[0m
+[38;2;125;133;144m                                                            (Velox-backed)[0m
+[38;2;125;133;144m                                                            distributed SQL[0m
+[38;2;125;133;144m                                                            query engine in[0m
+[38;2;125;133;144m                                                            watsonx.data — the[0m
+[38;2;125;133;144m                                                            high-performance[0m
+[38;2;125;133;144m                                                            twin of the Java[0m
+[38;2;125;133;144m                                                            Presto engine.[0m
+    [38;2;120;169;255mpresto_engine                       [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Presto Engine is a[0m
+[38;2;125;133;144m                                                            distributed SQL[0m
+[38;2;125;133;144m                                                            query engine in[0m
+[38;2;125;133;144m                                                            watsonx.data that[0m
+[38;2;125;133;144m                                                            runs analytical[0m
+[38;2;125;133;144m                                                            queries across[0m
+[38;2;125;133;144m                                                            lakehouse catalogs[0m
+[38;2;125;133;144m                                                            and object storage.[0m
+    [38;2;120;169;255msal_enrichment_job                  [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRuns a Semantic[0m
+[38;2;125;133;144m                                                            Automation Layer[0m
+[38;2;125;133;144m                                                            (SAL)[0m
+[38;2;125;133;144m                                                            metadata-enrichment[0m
+[38;2;125;133;144m                                                            job over a[0m
+[38;2;125;133;144m                                                            catalog/schema's[0m
+[38;2;125;133;144m                                                            tables.[0m
+    [38;2;120;169;255msal_enrichment_settings             [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mPer-project[0m
+[38;2;125;133;144m                                                            metadata-enrichment[0m
+[38;2;125;133;144m                                                            settings for the[0m
+[38;2;125;133;144m                                                            Semantic Automation[0m
+[38;2;125;133;144m                                                            Layer (SAL) on[0m
+[38;2;125;133;144m                                                            watsonx.data.[0m
+    [38;2;120;169;255msal_global_settings                 [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mGlobal[0m
+[38;2;125;133;144m                                                            metadata-enrichment[0m
+[38;2;125;133;144m                                                            defaults for the[0m
+[38;2;125;133;144m                                                            Semantic Automation[0m
+[38;2;125;133;144m                                                            Layer (SAL) on[0m
+[38;2;125;133;144m                                                            watsonx.data.[0m
+    [38;2;120;169;255msal_glossary                        [0m   [38;2;210;153;34msoftware[0m         [38;2;125;133;144mUploads a[0m
+[38;2;125;133;144m                                                            business-glossary[0m
+[38;2;125;133;144m                                                            CSV into the[0m
+[38;2;125;133;144m                                                            watsonx.data[0m
+[38;2;125;133;144m                                                            Semantic Automation[0m
+[38;2;125;133;144m                                                            Layer (SAL) and[0m
+[38;2;125;133;144m                                                            polls the upload[0m
+[38;2;125;133;144m                                                            process to a[0m
+[38;2;125;133;144m                                                            terminal state, so a[0m
+[38;2;125;133;144m                                                            glossary can be[0m
+[38;2;125;133;144m                                                            uploaded[0m
+[38;2;125;133;144m                                                            before/around[0m
+[38;2;125;133;144m                                                            enrichment (richer[0m
+[38;2;125;133;144m                                                            term assignment).[0m
+    [38;2;120;169;255msal_integration                     [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mEnables the Semantic[0m
+[38;2;125;133;144m                                                            Automation Layer[0m
+[38;2;125;133;144m                                                            (SAL) on[0m
+[38;2;125;133;144m                                                            watsonx.data — the[0m
+[38;2;125;133;144m                                                            metadata-enrichment[0m
+[38;2;125;133;144m                                                            / auto-cataloging[0m
+[38;2;125;133;144m                                                            integration that[0m
+[38;2;125;133;144m                                                            backs IKC[0m
+[38;2;125;133;144m                                                            governance.[0m
+    [38;2;120;169;255mschema                              [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Schema is a[0m
+[38;2;125;133;144m                                                            logical grouping of[0m
+[38;2;125;133;144m                                                            tables within a[0m
+[38;2;125;133;144m                                                            watsonx.data[0m
+[38;2;125;133;144m                                                            catalog.[0m
+    [38;2;120;169;255mspark_engine                        [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mA Spark Engine is a[0m
+[38;2;125;133;144m                                                            serverless Apache[0m
+[38;2;125;133;144m                                                            Spark execution[0m
+[38;2;125;133;144m                                                            environment in[0m
+[38;2;125;133;144m                                                            watsonx.data used[0m
+[38;2;125;133;144m                                                            for data ingestion[0m
+[38;2;125;133;144m                                                            jobs, Spark SQL, and[0m
+[38;2;125;133;144m                                                            general Spark[0m
+[38;2;125;133;144m                                                            applications.[0m
+    [38;2;120;169;255mstorage_registration                [0m   [38;2;63;185;80msaas[0m, [38;2;210;153;34msoftware[0m   [38;2;125;133;144mRegisters an[0m
+[38;2;125;133;144m                                                            object-store bucket[0m
+[38;2;125;133;144m                                                            with watsonx.data[0m
+[38;2;125;133;144m                                                            and atomically[0m
+[38;2;125;133;144m                                                            creates its[0m
+[38;2;125;133;144m                                                            associated lakehouse[0m
+[38;2;125;133;144m                                                            catalog (iceberg or[0m
+[38;2;125;133;144m                                                            hive).[0m

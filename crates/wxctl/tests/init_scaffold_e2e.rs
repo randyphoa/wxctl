@@ -29,7 +29,7 @@ fn write(path: &Path, body: &str) {
 
 /// The current non-local service catalog the no-`-f` scaffold enumerates.
 /// If a new remote service is added, update this list (and the init auth map).
-const EXPECTED_SERVICES: &[&str] = &["cloud_object_storage", "common_core", "concert", "concert_workflows", "factsheets", "instana", "openscale", "planning_analytics", "vault", "watsonx_ai", "watsonx_data", "watsonx_orchestrate"];
+const EXPECTED_SERVICES: &[&str] = &["cloud_object_storage", "common_core", "concert", "concert_workflows", "factsheets", "instana", "openscale", "pa_workspace", "planning_analytics", "vault", "watsonx_ai", "watsonx_data", "watsonx_orchestrate"];
 
 /// AC 1: no `-f` -> valid YAML, active `default` (deployment: saas) enumerating
 /// every non-local service in SaaS shape; `default-software` present only as

@@ -86,3 +86,4 @@ Two ways to drive wxctl programmatically:
 - **Validation failed?** Run `wxctl validate -f config.yaml --fix-prompt` for a ready-to-apply correction prompt, or read `fix_prompt` from the `--output json` document.
 - **Unknown kind?** `wxctl explain <bad-kind>` and `wxctl validate` list the valid kinds.
 - **A run failed?** `wxctl debug` prints an agent-ready diagnosis of the latest failed run (`wxctl debug <run_id>` for a specific one; `-o json` for a bundle).
+- **Hit the same failure twice?** Write a runbook for it. `wxctl debug` matches Markdown files against the failed run's error codes and message keywords, then lists the hits as "Matched troubleshooting docs" in the diagnosis. It reads `docs/troubleshoot/*.md` relative to the working directory, or `WXCTL_TROUBLESHOOT_DIR` when set. A runbook matches on any wxctl error code it mentions verbatim (such as `WXCTL-V005`), so name the codes in the text. The section is skipped when the directory is absent.

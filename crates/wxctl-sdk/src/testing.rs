@@ -523,6 +523,17 @@ async fn detect_asset_type(client: &reqwest::Client, base_url: &str, token: &str
     }
 }
 
+/// Per-request timeout for a live test turn. One turn can drive a full agentic run — several
+/// LLM turns plus tool executions — over a single (often streaming) response, so it is budgeted
+/// like an operation (`WXCTL_CONCURRENCY_TIMEOUT`, default 900s), not like a single API request.
+/// Without this override the turn inherits the borrowed service client's whole-request
+/// `WXCTL_REQUEST_TIMEOUT` (default 30s), which aborts the SSE read mid-run as soon as the
+/// agent's turns plus tool calls exceed it — the answer is lost even though the backend
+/// completes it seconds later.
+fn turn_timeout() -> std::time::Duration {
+    std::time::Duration::from_secs(wxctl_core::ConcurrencyConfig::from_env().default_timeout_secs)
+}
+
 /// POST to a WML deployment endpoint and return the successful response.
 #[allow(clippy::too_many_arguments)]
 async fn post_wml(client: &reqwest::Client, base_url: &str, token: &str, auth_type: &str, deployment_id: &str, space_id: &str, endpoint: &str, payload: &Value) -> Result<reqwest::Response> {
@@ -530,7 +541,7 @@ async fn post_wml(client: &reqwest::Client, base_url: &str, token: &str, auth_ty
 
     tracing::debug!(target: "wxctl::substage::test_turn", %url, "Sending {} request", endpoint);
 
-    let resp = apply_auth_scheme(client.post(&url), auth_type, token)?.json(payload).send().await.with_context(|| format!("Failed to send {} request", endpoint))?;
+    let resp = apply_auth_scheme(client.post(&url).timeout(turn_timeout()), auth_type, token)?.json(payload).send().await.with_context(|| format!("Failed to send {} request", endpoint))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -710,7 +721,7 @@ async fn run_flow(client: &reqwest::Client, base_url: &str, token: &str, auth_ty
     let url = format!("{}/v1/orchestrate/flows/{}/run", base_url, flow_id);
     tracing::debug!(target: "wxctl::substage::test_turn", %url, "Running flow");
 
-    let req = apply_auth_scheme(client.post(&url).header("Content-Type", "application/json").json(payload), auth_type, token)?;
+    let req = apply_auth_scheme(client.post(&url).timeout(turn_timeout()).header("Content-Type", "application/json").json(payload), auth_type, token)?;
 
     let resp = req.send().await.context("Failed to send flow run request")?;
     let status = resp.status();
@@ -795,7 +806,7 @@ async fn run_exposure_test(test_case: TestCase, exposure_path: String, client: r
 async fn trigger_exposure(client: &reqwest::Client, url: &str, token: &str, auth_type: &str, exposure_path: &str, payload: &Value) -> Result<Value> {
     tracing::debug!(target: "wxctl::substage::test_turn", %url, exposure_path, "Triggering exposure");
 
-    let req = apply_auth_scheme(client.post(url).query(&[("path", exposure_path)]).header("Content-Type", "application/json").json(payload), auth_type, token)?;
+    let req = apply_auth_scheme(client.post(url).timeout(turn_timeout()).query(&[("path", exposure_path)]).header("Content-Type", "application/json").json(payload), auth_type, token)?;
 
     let resp = req.send().await.context("Failed to send exposure trigger request")?;
     let status = resp.status();
@@ -861,7 +872,7 @@ async fn chat(client: &reqwest::Client, base_url: &str, token: &str, auth_type: 
         "messages": [{"role": "user", "content": message}]
     });
 
-    let mut req = apply_auth_scheme(client.post(&url).header("Content-Type", "application/json").json(&body), auth_type, token)?;
+    let mut req = apply_auth_scheme(client.post(&url).timeout(turn_timeout()).header("Content-Type", "application/json").json(&body), auth_type, token)?;
 
     if let Some(tid) = thread_id {
         req = req.header("X-Ibm-Thread-Id", tid);
@@ -926,13 +937,13 @@ async fn chat(client: &reqwest::Client, base_url: &str, token: &str, auth_type: 
 ///
 /// A clean stream — or a truncated one that still delivered the assistant's answer —
 /// is returned as-is. A truncation that yielded no answer means the turn never
-/// completed (most often the agent emitted a tool call that never returned, e.g. the
-/// wxO tools-runtime failed to provision the tool); surface an actionable message
-/// instead of an empty/opaque result.
+/// completed: either the turn ran past its budget (`WXCTL_CONCURRENCY_TIMEOUT`) or the
+/// server closed the stream mid-run (e.g. a tool that never returned); surface an
+/// actionable message instead of an empty/opaque result.
 fn finalize_chat(result: ChatResult, truncated: bool, bytes_read: usize) -> Result<ChatResult> {
     if truncated && result.content.trim().is_empty() {
         if !result.tool_calls.is_empty() {
-            bail!("chat SSE stream truncated after tool call(s) [{}] with no assistant answer — the tool likely never returned (check the wxO tools-runtime / tool provisioning)", result.tool_calls.join(", "));
+            bail!("chat SSE stream truncated after tool call(s) [{}] with no assistant answer — the run exceeded the turn budget (WXCTL_CONCURRENCY_TIMEOUT) or the server closed the stream mid-run (tool never returned / backend error)", result.tool_calls.join(", "));
         }
         bail!("chat SSE stream truncated with no assistant answer ({bytes_read} bytes received before the connection closed)");
     }
@@ -1336,8 +1347,8 @@ mod tests {
             ("clean_pass_through", ChatResult { content: "hello".into(), thread_id: None, tool_calls: vec![] }, false, 100, Want::Content("hello")),
             // Truncated but the answer already arrived → kept (terminating chunk merely dropped).
             ("truncated_with_answer", ChatResult { content: "IBM was founded in 1911".into(), thread_id: None, tool_calls: vec!["search".into()] }, true, 500, Want::Content("IBM was founded in 1911")),
-            // cp4d case: tool call emitted, stream stalls, no answer → error names the tool + cause.
-            ("truncated_after_tool_call", ChatResult { content: String::new(), thread_id: None, tool_calls: vec!["calculator".into()] }, true, 426, Want::ErrContains(&["calculator", "tools-runtime"])),
+            // cp4d case: tool call emitted, stream stalls, no answer → error names the tool + causes.
+            ("truncated_after_tool_call", ChatResult { content: String::new(), thread_id: None, tool_calls: vec!["calculator".into()] }, true, 426, Want::ErrContains(&["calculator", "WXCTL_CONCURRENCY_TIMEOUT", "tool never returned"])),
             // Truncated with neither content nor tools → generic truncation error.
             ("truncated_empty", ChatResult { content: "   ".into(), thread_id: None, tool_calls: vec![] }, true, 12, Want::ErrContains(&["truncated"])),
         ];

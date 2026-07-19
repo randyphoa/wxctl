@@ -239,6 +239,12 @@ impl RunSink {
         self.manifest.lock().expect("run-record manifest mutex").counts = counts;
     }
 
+    /// Record the run's deployment (`saas` / `software`) once the profile is resolved.
+    /// The manifest is created before profile load, so this lands late but before finalize.
+    pub fn set_deployment(&self, deployment: Option<String>) {
+        self.manifest.lock().expect("run-record manifest mutex").deployment = deployment;
+    }
+
     /// Set outcome + finished timestamp, flush buffered events, and write
     /// `manifest.json`. Idempotent. This is the events durability point — the
     /// panic/ctrl-c paths reach it via `finalize_active_run` before exit.
@@ -358,6 +364,13 @@ pub fn install_run_sink(sink: Arc<RunSink>) -> RunSinkGuard {
 pub fn finalize_active_run(outcome: &str) {
     if let Some(sink) = current_sink() {
         sink.finalize(outcome);
+    }
+}
+
+/// Set the deployment on the active run record, if one is installed (no-op otherwise).
+pub fn set_active_run_deployment(deployment: Option<String>) {
+    if let Some(sink) = current_sink() {
+        sink.set_deployment(deployment);
     }
 }
 
@@ -527,6 +540,42 @@ mod tests {
         assert_eq!(parsed.outcome.as_deref(), Some("failed"));
         assert_eq!(parsed.errors.len(), 1);
         assert!(parsed.finished.is_some());
+        let _ = fs::remove_dir_all(&tmp);
+        unsafe { std::env::remove_var("WXCTL_RUNS_DIR") };
+    }
+
+    /// `set_deployment` (and its active-run counterpart's underlying sink method) lands
+    /// the run's deployment scope in the persisted manifest — the fix for run-record
+    /// manifests hardcoding `deployment: None` regardless of the profile in use.
+    #[test]
+    fn sink_set_deployment_lands_in_manifest() {
+        let _env = crate::test_env_lock();
+        let tmp = std::env::temp_dir().join(format!("wxctl-runs-test-deployment-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        unsafe { std::env::set_var("WXCTL_RUNS_DIR", &tmp) };
+        let manifest = RunManifest {
+            run_id: generate_run_id("apply"),
+            command: "apply".into(),
+            args: vec!["-f".into(), "x.yaml".into()],
+            profile: Some("itz".into()),
+            deployment: None,
+            config_paths: vec!["x.yaml".into()],
+            started: utc_now_string(),
+            finished: None,
+            outcome: None,
+            counts: RunCounts::default(),
+            errors: vec![],
+            full_trace: false,
+            record_incomplete: false,
+        };
+        let sink = RunSink::new(manifest).unwrap();
+        sink.set_deployment(Some("saas".into()));
+        sink.finalize("success");
+        let dir = sink.dir().to_path_buf();
+        let mtext = fs::read_to_string(dir.join("manifest.json")).unwrap();
+        assert!(mtext.contains("\"deployment\": \"saas\""), "manifest.json should carry the recorded deployment, got: {mtext}");
+        let parsed: RunManifest = serde_json::from_str(&mtext).unwrap();
+        assert_eq!(parsed.deployment.as_deref(), Some("saas"));
         let _ = fs::remove_dir_all(&tmp);
         unsafe { std::env::remove_var("WXCTL_RUNS_DIR") };
     }

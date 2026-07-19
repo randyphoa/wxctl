@@ -1,0 +1,140 @@
+resource:
+  name: instana_infra_alert_config
+  service: instana
+  kind: instana_infra_alert_config
+  version: v1
+  description: >
+    An Instana infrastructure smart alert (InfraAlertConfig) evaluates a rule
+    (entityType + metricName + aggregation, narrowed by a tag filter) over
+    infrastructure entities and routes triggered events to alerting channels.
+    Created via the Events settings API
+    (/api/events/settings/infra-alert-configs) and identified by a
+    server-assigned string id; the human identifier is `name`. Update is the
+    smart-alert quirk POST /{id} with the full config body (update_strategy:
+    replace). DELETE is a SOFT delete — the active-configs list omits destroyed
+    alerts, so discovery never resurrects one. `alertChannelIds` references
+    instana_alerting_channel.id, so channels are ordered before the alert and
+    each id resolves at apply.
+  # Instana's config API is identical on SaaS and self-hosted, so the kind is
+  # deployment-neutral: no unsupported_on -> supported on saas + software.
+  api:
+    base_path: /api/events/settings/infra-alert-configs
+    id_field: id
+    list_endpoint: /api/events/settings/infra-alert-configs
+    get_endpoint: /api/events/settings/infra-alert-configs/{id}
+    create_endpoint: /api/events/settings/infra-alert-configs
+    create_method: POST
+    update_endpoint: /api/events/settings/infra-alert-configs/{id}
+    # Smart-alert family quirk: update is POST /{id}.
+    update_method: POST
+    delete_endpoint: /api/events/settings/infra-alert-configs/{id}
+    delete_method: DELETE
+  schema:
+    fields:
+      # -- Server-assigned / read-model metadata (read-only; excluded from state_fields) --
+      - name: id
+        type: string
+        location: Computed
+        immutable: true
+        description: Server-assigned infra-alert-config id (top-level `id` on create/list/get).
+      # -- Writable (InfraAlertConfig; required set = name, description, granularity, groupBy, tagFilterExpression, timeThreshold, customPayloadFields) --
+      - name: name
+        type: string
+        required: true
+        description: Smart-alert display name; Instana's human identifier (matched on during discovery).
+      - name: description
+        type: string
+        required: true
+        description: Alert description shown on triggered events.
+      - name: alertChannelIds
+        type: array
+        item_type: string
+        required: false
+        references:
+          resource: instana_alerting_channel
+          field: id
+          optional: true
+        description: >
+          Ids of the alerting channels triggered events route to (optional in the
+          infra-alert API). `references` on this array field produces a DAG edge;
+          each ${instana_alerting_channel.<ref>.id} element resolves at apply.
+      - name: granularity
+        type: integer
+        required: true
+        allowed_values: ["60000", "300000", "600000", "900000", "1200000", "1800000"]
+        description: Evaluation window in milliseconds.
+      - name: groupBy
+        type: array
+        item_type: string
+        required: true
+        description: >
+          Metric grouping keys (required by the InfraAlertConfig contract). Live
+          content is confirmed in Phase 3; may be an empty array.
+      - name: tagFilterExpression
+        type: object
+        required: true
+        description: >
+          Tag-filter selector narrowing which infrastructure entities the rule
+          applies to. Server-normalized on read, so excluded from state_fields.
+      - name: timeThreshold
+        type: object
+        required: true
+        description: >
+          InfraTimeThreshold — how long/often the condition must hold to trigger.
+          Server-normalized on read, so excluded from state_fields.
+      - name: customPayloadFields
+        type: array
+        item_type: object
+        required: true
+        description: >
+          Custom key/value fields attached to triggered events (may be an empty
+          array). Server-normalized on read, so excluded from state_fields.
+      - name: rule
+        type: object
+        required: false
+        description: >
+          Single InfraAlertRule (entityType + metricName + aggregation).
+          Server-normalized on read, so excluded from state_fields.
+      - name: rules
+        type: array
+        item_type: object
+        required: false
+        description: Multi-rule variant. Server-normalized on read, so excluded from state_fields.
+      - name: threshold
+        type: object
+        required: false
+        description: Static/adaptive threshold for the rule. Excluded from state_fields.
+      - name: severity
+        type: integer
+        required: false
+        description: Event severity (server may default). Optional -> excluded from state_fields.
+      - name: gracePeriod
+        type: integer
+        required: false
+        description: Grace period in ms before re-triggering. Optional -> excluded from state_fields.
+      - name: evaluationType
+        type: string
+        required: false
+        description: How the rule is evaluated across entities. Optional -> excluded from state_fields.
+      - name: triggering
+        type: boolean
+        required: false
+        description: Whether the alert also opens an incident. Optional -> excluded from state_fields.
+  reconciliation:
+    # GET /api/events/settings/infra-alert-configs returns a BARE ARRAY of
+    # InfraAlertConfigWithMetadata -> no list_field, no ENVELOPE_KEYS change.
+    # Identity match on `name`. Soft-delete: active-configs list omits destroyed.
+    discovery:
+      method: list_and_get
+      id_source: id
+      name_field: name
+    # state_fields = writable scalars only (mirrors instana_website_alert_config):
+    # read-model metadata and all object/array fields excluded to avoid phantom
+    # Update{} drift. Create still POSTs the full declared body; state_fields only
+    # governs discovery-compare + update-body pruning. Phase 3 may widen.
+    state_fields:
+      - name
+      - description
+      - granularity
+    update_strategy: replace
+    immutable_fields: []

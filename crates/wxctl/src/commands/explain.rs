@@ -100,6 +100,36 @@ pub(crate) fn render_table(panel: &Panel, view: &ExplainView) -> Vec<String> {
         }
     }
 
+    // ── consumers: kind ──▶ .field arrows (reverse of Dependencies) ──
+    if !view.consumers.is_empty() {
+        out.extend(section(panel, "Consumers", None));
+        let con_w = view.consumers.iter().map(|c| c.kind.len()).max().unwrap_or(4);
+        for c in &view.consumers {
+            let req = if c.required { panel.paint_color(Color::BoldWhite, "required") } else { panel.paint(Role::Meta, "optional") };
+            out.push(format!("    {:<con_w$}  {}  {}   {}", c.kind, panel.paint(Role::Meta, panel.g("arrow")), panel.paint(Role::Active, &format!(".{}", c.field)), req));
+        }
+    }
+
+    // ── advisories: [tier] severity  date, text ──
+    if !view.advisories.is_empty() {
+        out.extend(section(panel, "Advisories", None));
+        for a in &view.advisories {
+            out.push(format!("    {} {}   {}", panel.paint(Role::Meta, &format!("[{}]", a.tier)), panel.paint(Role::Meta, &format!("{:<4} {}", a.severity, a.date)), a.text));
+        }
+    }
+
+    // ── variants: discriminator-scoped field groups ──
+    if !view.variants.is_empty() {
+        out.extend(section(panel, "Variants", Some("by datasource type")));
+        for v in &view.variants {
+            out.push(format!("    {} {}", panel.paint(Role::Active, &v.name), panel.paint(Role::Meta, &format!("({})", v.applies_to.join(", ")))));
+            for f in &v.fields {
+                let req = if f.required { "required" } else { "optional" };
+                out.push(format!("      {} {}   {}", panel.paint(Role::Meta, &format!("{:<20}", f.name)), panel.paint(Role::Meta, &format!("{:<8}", type_label(f))), panel.paint(Role::Meta, req)));
+            }
+        }
+    }
+
     // ── prompt notes (optional) ──
     if !view.prompt_notes.is_empty() {
         out.extend(section(panel, "Notes", None));

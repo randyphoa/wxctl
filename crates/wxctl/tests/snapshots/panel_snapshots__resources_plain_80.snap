@@ -3,779 +3,1053 @@ source: crates/wxctl/tests/panel_snapshots.rs
 expression: out
 ---
 
-  resource catalog   110 kinds - 12 products
+  resource catalog   127 kinds - 13 products
 
   | AI Factsheets   (factsheets - 3 kinds)
-    inventory                           saas, software   An inventory is an AI
-                                                         Factsheets model
-                                                         inventory: a governance
-                                                         catalog that holds the
-                                                         model use cases tracked
-                                                         for an organization.
-    model_entry                         saas, software   A model entry is an AI
-                                                         Factsheets model use
-                                                         case that groups the
-                                                         tracked models,
-                                                         deployments, and
-                                                         factsheets for one
-                                                         business problem within
-                                                         a model inventory.
-    model_tracking                      saas, software   Associates a trained
-                                                         Watson Machine Learning
-                                                         model (incl. AutoAI)
-                                                         with a governance
-                                                         model_entry (AI use
-                                                         case) so the model is
-                                                         tracked in a model
-                                                         inventory.
+    inventory                              saas, software   An inventory is an
+                                                            AI Factsheets model
+                                                            inventory: a
+                                                            governance catalog
+                                                            that holds the model
+                                                            use cases tracked
+                                                            for an organization.
+    model_entry                            saas, software   A model entry is an
+                                                            AI Factsheets model
+                                                            use case that groups
+                                                            the tracked models,
+                                                            deployments, and
+                                                            factsheets for one
+                                                            business problem
+                                                            within a model
+                                                            inventory.
+    model_tracking                         saas, software   Associates a trained
+                                                            Watson Machine
+                                                            Learning model
+                                                            (incl. AutoAI) with
+                                                            a governance
+                                                            model_entry (AI use
+                                                            case) so the model
+                                                            is tracked in a
+                                                            model inventory.
 
   | Cloud Object Storage   (cloud_object_storage - 5 kinds)
-    adls_container                      saas             Azure Data Lake Storage
-                                                         container (Gen1 or
-                                                         Gen2).
-    gcs_bucket                          saas             Google Cloud Storage
-                                                         bucket.
-    s3_bucket                           saas, software   S3-compatible bucket
-                                                         (IBM COS, AWS S3,
-                                                         MinIO, Ceph).
-    s3_object                           saas, software   An object inside an
-                                                         `s3_bucket`.
-    storage_connection                  saas, software   Credential-holding kind
-                                                         for object-store /
-                                                         file-system backends.
+    adls_container                         saas             Azure Data Lake
+                                                            Storage container
+                                                            (Gen1 or Gen2).
+    gcs_bucket                             saas             Google Cloud Storage
+                                                            bucket.
+    s3_bucket                              saas, software   S3-compatible bucket
+                                                            (IBM COS, AWS S3,
+                                                            MinIO, Ceph).
+    s3_object                              saas, software   An object inside an
+                                                            `s3_bucket`.
+    storage_connection                     saas, software   Credential-holding
+                                                            kind for
+                                                            object-store /
+                                                            file-system
+                                                            backends.
 
   | Data & AI Common Core   (common_core - 17 kinds)
-    asset_promotion                     saas, software   Promotes a project-side
-                                                         asset — a native model
-                                                         the training job stored
-                                                         under a known name —
-                                                         into a deployment
-                                                         space.
-    business_term                       saas, software   A Business Term is a
-                                                         glossary entry that
-                                                         defines standardized
-                                                         business vocabulary and
-                                                         semantics for data
-                                                         governance in Watsonx
-                                                         Data.
-    business_terms                      saas, software   Business Terms provides
-                                                         bulk creation
-                                                         functionality for
-                                                         multiple business terms
-                                                         in a single API call.
-    catalog                             saas, software   A Catalog is a metadata
-                                                         repository that
-                                                         organizes and manages
-                                                         table schemas,
-                                                         partitions, and file
-                                                         locations for data lake
-                                                         operations in Watsonx
-                                                         Data.
-    category                            saas, software   A Category is a
-                                                         hierarchical
-                                                         classification
-                                                         structure used to
-                                                         organize and group data
-                                                         assets, business terms,
-                                                         and other governance
-                                                         artifacts in Watsonx
-                                                         Data.
-    common_core_connection              saas, software   A Connection is a data
-                                                         source configuration
-                                                         that enables Watsonx
-                                                         Data to access external
-                                                         databases, object
-                                                         storage systems, and
-                                                         other data
-                                                         repositories.
-    data_asset                          saas, software   A Data Asset uploads a
-                                                         local file such as a
-                                                         CSV into a space or
-                                                         project as a CAMS data
-                                                         asset and exposes its
-                                                         asset id for downstream
-                                                         consumers such as an
-                                                         AutoAI experiment's
-                                                         training_data_references.
-    environment                         saas, software   A notebook runtime
-                                                         environment in a
-                                                         watsonx.ai project.
-    job                                 saas, software   A platform Job
-                                                         definition in a
-                                                         watsonx.ai project: a
-                                                         reusable run
-                                                         configuration binding a
-                                                         runnable asset (a
-                                                         script_asset or a
-                                                         notebook) to a runtime
-                                                         environment.
-    job_run                             saas, software   A single execution of a
-                                                         platform job.
-    package_extension                   saas, software   A Package Extension
-                                                         defines additional
-                                                         Python packages to
-                                                         include in a software
-                                                         specification.
-    project                             saas, software   A Project is a
-                                                         collaborative workspace
-                                                         that organizes assets,
-                                                         tools, notebooks, jobs,
-                                                         and data connections
-                                                         for data science and AI
-                                                         workflows.
-    rule                                saas, software   A Rule is an automated
-                                                         policy enforcement
-                                                         mechanism that
-                                                         implements data
-                                                         governance controls in
-                                                         Watsonx Data.
-    rules                               saas, software   Rules provides bulk
-                                                         creation functionality
-                                                         for multiple governance
-                                                         rules in a single API
-                                                         call.
-    script_asset                        saas, software   A Script Asset uploads
-                                                         a local Python file
-                                                         into a watsonx.ai
-                                                         project (or space) as a
-                                                         CAMS asset of type
-                                                         `script`, exposing its
-                                                         asset id for a platform
-                                                         job to run.
-    software_specification              saas, software   A Software
-                                                         Specification defines a
-                                                         runtime environment for
-                                                         deploying AI services
-                                                         and functions.
-    space                               saas, software   A Space is a deployment
-                                                         environment for
-                                                         promoting and managing
-                                                         machine learning
-                                                         models, functions, and
-                                                         other AI assets.
+    asset_promotion                        saas, software   Promotes a
+                                                            project-side asset —
+                                                            a native model the
+                                                            training job stored
+                                                            under a known name —
+                                                            into a deployment
+                                                            space.
+    business_term                          saas, software   A Business Term is a
+                                                            glossary entry that
+                                                            defines standardized
+                                                            business vocabulary
+                                                            and semantics for
+                                                            data governance in
+                                                            Watsonx Data.
+    business_terms                         saas, software   Business Terms
+                                                            provides bulk
+                                                            creation
+                                                            functionality for
+                                                            multiple business
+                                                            terms in a single
+                                                            API call.
+    catalog                                saas, software   A Catalog is a
+                                                            metadata repository
+                                                            that organizes and
+                                                            manages table
+                                                            schemas, partitions,
+                                                            and file locations
+                                                            for data lake
+                                                            operations in
+                                                            Watsonx Data.
+    category                               saas, software   A Category is a
+                                                            hierarchical
+                                                            classification
+                                                            structure used to
+                                                            organize and group
+                                                            data assets,
+                                                            business terms, and
+                                                            other governance
+                                                            artifacts in Watsonx
+                                                            Data.
+    common_core_connection                 saas, software   A Connection is a
+                                                            data source
+                                                            configuration that
+                                                            enables Watsonx Data
+                                                            to access external
+                                                            databases, object
+                                                            storage systems, and
+                                                            other data
+                                                            repositories.
+    data_asset                             saas, software   A Data Asset uploads
+                                                            a local file such as
+                                                            a CSV into a space
+                                                            or project as a CAMS
+                                                            data asset and
+                                                            exposes its asset id
+                                                            for downstream
+                                                            consumers such as an
+                                                            AutoAI experiment's
+                                                            training_data_references.
+    environment                            saas, software   A notebook runtime
+                                                            environment in a
+                                                            watsonx.ai project.
+    job                                    saas, software   A platform Job
+                                                            definition in a
+                                                            watsonx.ai project:
+                                                            a reusable run
+                                                            configuration
+                                                            binding a runnable
+                                                            asset (a
+                                                            script_asset or a
+                                                            notebook) to a
+                                                            runtime environment.
+    job_run                                saas, software   A single execution
+                                                            of a platform job.
+    package_extension                      saas, software   A Package Extension
+                                                            defines additional
+                                                            Python packages to
+                                                            include in a
+                                                            software
+                                                            specification.
+    project                                saas, software   A Project is a
+                                                            collaborative
+                                                            workspace that
+                                                            organizes assets,
+                                                            tools, notebooks,
+                                                            jobs, and data
+                                                            connections for data
+                                                            science and AI
+                                                            workflows.
+    rule                                   saas, software   A Rule is an
+                                                            automated policy
+                                                            enforcement
+                                                            mechanism that
+                                                            implements data
+                                                            governance controls
+                                                            in Watsonx Data.
+    rules                                  saas, software   Rules provides bulk
+                                                            creation
+                                                            functionality for
+                                                            multiple governance
+                                                            rules in a single
+                                                            API call.
+    script_asset                           saas, software   A Script Asset
+                                                            uploads a local
+                                                            Python file into a
+                                                            watsonx.ai project
+                                                            (or space) as a CAMS
+                                                            asset of type
+                                                            `script`, exposing
+                                                            its asset id for a
+                                                            platform job to run.
+    software_specification                 saas, software   A Software
+                                                            Specification
+                                                            defines a runtime
+                                                            environment for
+                                                            deploying AI
+                                                            services and
+                                                            functions.
+    space                                  saas, software   A Space is a
+                                                            deployment
+                                                            environment for
+                                                            promoting and
+                                                            managing machine
+                                                            learning models,
+                                                            functions, and other
+                                                            AI assets.
 
   | IBM Concert   (concert - 11 kinds)
-    concert_application                 software         A Concert application
-                                                         is the top-level
-                                                         managed entity in IBM
-                                                         Concert's inventory —
-                                                         the unit Concert tracks
-                                                         for risk posture,
-                                                         vulnerabilities,
-                                                         dependencies, and
-                                                         resilience.
-    concert_automation_rule             software         A Concert automation
-                                                         rule fires an action
-                                                         (e.g. auto-create an
-                                                         ITSM ticket) when a
-                                                         use-case condition is
-                                                         met — the declarative
-                                                         half of Concert's
-                                                         auto-ticketing.
-    concert_compliance_profile          software         A Concert compliance
-                                                         profile is a named,
-                                                         versioned set of
-                                                         controls (drawn from a
-                                                         pre-imported compliance
-                                                         catalog) that Concert
-                                                         evaluates applications
-                                                         against to score
-                                                         compliance posture —
-                                                         the declarative half of
-                                                         Concert's compliance /
-                                                         AI-governance surface
-                                                         (sovereign, CSCF/ISCF,
-                                                         etc.).
-    concert_credential                  software         A Concert credential is
-                                                         a named key/value
-                                                         secret bundle used by
-                                                         ingestion jobs to
-                                                         authenticate against
-                                                         source systems.
-    concert_environment                 software         A Concert environment
-                                                         is a deployment target
-                                                         (e.g. a cluster,
-                                                         region, or stage)
-                                                         tracked in IBM
-                                                         Concert's inventory.
-    concert_ingestion_job               software         A Concert ingestion job
-                                                         pulls data from a
-                                                         source system
-                                                         (authenticating with a
-                                                         concert_credential)
-                                                         into IBM Concert's
-                                                         inventory on a
-                                                         schedule.
-    concert_resilience_input_data_key   software         A Concert resilience
-                                                         input-data key
-                                                         (InputDataKeyRequest)
-                                                         defines a named metric
-                                                         input — its label,
-                                                         units, and data type —
-                                                         that resilience
-                                                         requirements evaluate
-                                                         against.
-    concert_resilience_library          software         A Concert resilience
-                                                         library
-                                                         (LibraryRequest) groups
-                                                         resilience requirements
-                                                         into a reusable set.
-    concert_resilience_posture          software         A Concert resilience
-                                                         assessment posture
-                                                         (GraderPostureRequest)
-                                                         binds a
-                                                         concert_resilience_profile
-                                                         to a target
-                                                         (application/deployment)
-                                                         and schedules its
-                                                         resilience assessment.
-    concert_resilience_profile          software         A Concert resilience
-                                                         assessment profile
-                                                         (GraderProfileRequest)
-                                                         is a named set of
-                                                         resilience
-                                                         requirements, scored
-                                                         against metric
-                                                         input-data keys, that
-                                                         Concert evaluates to
-                                                         rate an application's
-                                                         resilience posture.
-    concert_source_repo                 software         A Concert source
-                                                         repository is a
-                                                         version-controlled code
-                                                         repo tracked in IBM
-                                                         Concert's inventory for
-                                                         SBOM, CVE, and
-                                                         dependency posture.
+    concert_application                    software         A Concert
+                                                            application is the
+                                                            top-level managed
+                                                            entity in IBM
+                                                            Concert's inventory
+                                                            — the unit Concert
+                                                            tracks for risk
+                                                            posture,
+                                                            vulnerabilities,
+                                                            dependencies, and
+                                                            resilience.
+    concert_automation_rule                software         A Concert automation
+                                                            rule fires an action
+                                                            (e.g. auto-create an
+                                                            ITSM ticket) when a
+                                                            use-case condition
+                                                            is met — the
+                                                            declarative half of
+                                                            Concert's
+                                                            auto-ticketing.
+    concert_compliance_profile             software         A Concert compliance
+                                                            profile is a named,
+                                                            versioned set of
+                                                            controls (drawn from
+                                                            a pre-imported
+                                                            compliance catalog)
+                                                            that Concert
+                                                            evaluates
+                                                            applications against
+                                                            to score compliance
+                                                            posture — the
+                                                            declarative half of
+                                                            Concert's compliance
+                                                            / AI-governance
+                                                            surface (sovereign,
+                                                            CSCF/ISCF, etc.).
+    concert_credential                     software         A Concert credential
+                                                            is a named key/value
+                                                            secret bundle used
+                                                            by ingestion jobs to
+                                                            authenticate against
+                                                            source systems.
+    concert_environment                    software         A Concert
+                                                            environment is a
+                                                            deployment target
+                                                            (e.g. a cluster,
+                                                            region, or stage)
+                                                            tracked in IBM
+                                                            Concert's inventory.
+    concert_ingestion_job                  software         A Concert ingestion
+                                                            job pulls data from
+                                                            a source system
+                                                            (authenticating with
+                                                            a
+                                                            concert_credential)
+                                                            into IBM Concert's
+                                                            inventory on a
+                                                            schedule.
+    concert_resilience_input_data_key      software         A Concert resilience
+                                                            input-data key
+                                                            (InputDataKeyRequest)
+                                                            defines a named
+                                                            metric input — its
+                                                            label, units, and
+                                                            data type — that
+                                                            resilience
+                                                            requirements
+                                                            evaluate against.
+    concert_resilience_library             software         A Concert resilience
+                                                            library
+                                                            (LibraryRequest)
+                                                            groups resilience
+                                                            requirements into a
+                                                            reusable set.
+    concert_resilience_posture             software         A Concert resilience
+                                                            assessment posture
+                                                            (GraderPostureRequest)
+                                                            binds a
+                                                            concert_resilience_profile
+                                                            to a target
+                                                            (application/deployment)
+                                                            and schedules its
+                                                            resilience
+                                                            assessment.
+    concert_resilience_profile             software         A Concert resilience
+                                                            assessment profile
+                                                            (GraderProfileRequest)
+                                                            is a named set of
+                                                            resilience
+                                                            requirements, scored
+                                                            against metric
+                                                            input-data keys,
+                                                            that Concert
+                                                            evaluates to rate an
+                                                            application's
+                                                            resilience posture.
+    concert_source_repo                    software         A Concert source
+                                                            repository is a
+                                                            version-controlled
+                                                            code repo tracked in
+                                                            IBM Concert's
+                                                            inventory for SBOM,
+                                                            CVE, and dependency
+                                                            posture.
 
   | IBM Concert Workflows   (concert_workflows - 5 kinds)
-    concert_worker_group                software         A Concert Workflows
-                                                         (Pliant) worker group —
-                                                         a named pool that flow
-                                                         runs and schedules
-                                                         execute on.
-    concert_workflow                    software         A Concert Workflows
-                                                         (Pliant) flow, imported
-                                                         from a local zip.
-    concert_workflow_exposure           software         A Concert Workflows
-                                                         (Pliant) flow exposure
-                                                         — publishes a flow at
-                                                         an HTTP path so it can
-                                                         be triggered.
-    concert_workflow_role               software         A Concert Workflows
-                                                         (Pliant) flow role — a
-                                                         named grant bundling
-                                                         users, worker groups,
-                                                         and per-surface
-                                                         policies (flow,
-                                                         application,
-                                                         auth-storage, schedule,
-                                                         automation-panel).
-    concert_workflow_schedule           software         A schedule that runs a
-                                                         Concert Workflows
-                                                         (Pliant) flow on a cron
-                                                         cadence.
+    concert_worker_group                   software         A Concert Workflows
+                                                            (Pliant) worker
+                                                            group — a named pool
+                                                            that flow runs and
+                                                            schedules execute
+                                                            on.
+    concert_workflow                       software         A Concert Workflows
+                                                            (Pliant) flow,
+                                                            imported from a
+                                                            local zip.
+    concert_workflow_exposure              software         A Concert Workflows
+                                                            (Pliant) flow
+                                                            exposure — publishes
+                                                            a flow at an HTTP
+                                                            path so it can be
+                                                            triggered.
+    concert_workflow_role                  software         A Concert Workflows
+                                                            (Pliant) flow role —
+                                                            a named grant
+                                                            bundling users,
+                                                            worker groups, and
+                                                            per-surface policies
+                                                            (flow, application,
+                                                            auth-storage,
+                                                            schedule,
+                                                            automation-panel).
+    concert_workflow_schedule              software         A schedule that runs
+                                                            a Concert Workflows
+                                                            (Pliant) flow on a
+                                                            cron cadence.
 
-  | IBM Instana   (instana - 12 kinds)
-    instana_alert                       saas, software   An Instana alerting
-                                                         configuration
-                                                         (AlertingConfiguration,
-                                                         /api/events/settings/alerts)
-                                                         routes events that
-                                                         match an event filter
-                                                         to one or more alerting
-                                                         channels — the only API
-                                                         mechanism for
-                                                         delivering custom-event
-                                                         notifications to an
-                                                         external channel.
-    instana_alerting_channel            saas, software   An Instana alerting
-                                                         channel
-                                                         (AbstractIntegration)
-                                                         is a notification
-                                                         target — email, Slack,
-                                                         generic webhook,
-                                                         PagerDuty, Opsgenie,
-                                                         Splunk, and more — that
-                                                         smart-alert configs
-                                                         route events to.
-    instana_application_alert_config    saas, software   An Instana application
-                                                         smart alert
-                                                         (ApplicationAlertConfig)
-                                                         evaluates a rule
-                                                         (erroneous-call-rate,
-                                                         latency, throughput,
-                                                         ...) over an
-                                                         application
-                                                         perspective's calls and
-                                                         routes triggered events
-                                                         to alerting channels.
-    instana_application_perspective     saas, software   An Instana application
-                                                         perspective is a saved,
-                                                         filter-defined view of
-                                                         an application's traces
-                                                         and calls — the
-                                                         top-level unit Instana
-                                                         groups service
-                                                         monitoring, smart
-                                                         alerts, and SLOs
-                                                         around.
-    instana_custom_event_spec           saas, software   An Instana custom event
-                                                         specification raises
-                                                         events (and optionally
-                                                         incidents, via
-                                                         `triggering`) when a
-                                                         rule over an entity
-                                                         type's metrics matches
-                                                         — threshold breaches,
-                                                         entity verification,
-                                                         entity count, and the
-                                                         other AbstractRule
-                                                         variants.
-    instana_maintenance_window          saas, software   An Instana maintenance
-                                                         window
-                                                         (MaintenanceConfigV2)
-                                                         suppresses alerting for
-                                                         the entities matched by
-                                                         its `query` during a
-                                                         scheduled window.
-    instana_slo_alert_config            saas, software   An Instana SLO smart
-                                                         alert
-                                                         (ServiceLevelsAlertConfig)
-                                                         evaluates a rule
-                                                         (status / error-budget
-                                                         / burn-rate) over one
-                                                         or more SLO configs and
-                                                         routes triggered events
-                                                         to alerting channels.
-    instana_slo_config                  saas, software   An Instana SLO config
-                                                         (SLOConfigWithRBACTag)
-                                                         defines a service-level
-                                                         objective: a target
-                                                         attainment over a time
-                                                         window for a chosen
-                                                         entity and indicator.
-    instana_synthetic_alert_config      saas, software   An Instana synthetic
-                                                         smart alert
-                                                         (SyntheticAlertConfig)
-                                                         evaluates a rule over
-                                                         one or more synthetic
-                                                         tests' results and
-                                                         routes triggered events
-                                                         to alerting channels.
-    instana_synthetic_test              saas, software   An Instana synthetic
-                                                         test (SyntheticTest)
-                                                         runs a scripted or HTTP
-                                                         probe from one or more
-                                                         PoP locations on a
-                                                         schedule.
-    instana_website_alert_config        saas, software   An Instana website
-                                                         smart alert
-                                                         (WebsiteAlertConfig)
-                                                         evaluates a rule over
-                                                         an end-user-monitored
-                                                         website's beacons and
-                                                         routes triggered events
-                                                         to alerting channels.
-    instana_website_config              saas, software   An Instana website
-                                                         (End-User Monitoring
-                                                         config) is the
-                                                         top-level unit Instana
-                                                         groups browser/EUM
-                                                         beacons and website
-                                                         smart alerts around.
+  | IBM Instana   (instana - 23 kinds)
+    instana_alert                          saas, software   An Instana alerting
+                                                            configuration
+                                                            (AlertingConfiguration,
+                                                            /api/events/settings/alerts)
+                                                            routes events that
+                                                            match an event
+                                                            filter to one or
+                                                            more alerting
+                                                            channels — the only
+                                                            API mechanism for
+                                                            delivering
+                                                            custom-event
+                                                            notifications to an
+                                                            external channel.
+    instana_alerting_channel               saas, software   An Instana alerting
+                                                            channel
+                                                            (AbstractIntegration)
+                                                            is a notification
+                                                            target — email,
+                                                            Slack, generic
+                                                            webhook, PagerDuty,
+                                                            Opsgenie, Splunk,
+                                                            and more — that
+                                                            smart-alert configs
+                                                            route events to.
+    instana_api_token                      saas, software   An Instana API token
+                                                            (ApiToken) created
+                                                            via
+                                                            /api/settings/api-tokens;
+                                                            the identity is a
+                                                            CLIENT-SUPPLIED
+                                                            `internalId` (also
+                                                            the path param), the
+                                                            human identifier is
+                                                            `name`.
+    instana_application_alert_config       saas, software   An Instana
+                                                            application smart
+                                                            alert
+                                                            (ApplicationAlertConfig)
+                                                            evaluates a rule
+                                                            (erroneous-call-rate,
+                                                            latency, throughput,
+                                                            ...) over an
+                                                            application
+                                                            perspective's calls
+                                                            and routes triggered
+                                                            events to alerting
+                                                            channels.
+    instana_application_perspective        saas, software   An Instana
+                                                            application
+                                                            perspective is a
+                                                            saved,
+                                                            filter-defined view
+                                                            of an application's
+                                                            traces and calls —
+                                                            the top-level unit
+                                                            Instana groups
+                                                            service monitoring,
+                                                            smart alerts, and
+                                                            SLOs around.
+    instana_automation_action              saas, software   An Instana
+                                                            automation action
+                                                            (Action) is a
+                                                            runnable
+                                                            script/HTTP/etc.
+    instana_automation_policy              saas, software   An Instana
+                                                            automation policy
+                                                            (Policy) binds a
+                                                            trigger (a
+                                                            customEvent /
+                                                            builtinEvent /
+                                                            smart-alert type,
+                                                            referencing an event
+                                                            spec by id) to one
+                                                            or more type
+                                                            configurations that
+                                                            run automation
+                                                            actions or
+                                                            workflows.
+    instana_builtin_event_spec             saas, software   An Instana BUILT-IN
+                                                            event specification
+                                                            (BuiltInEventSpecification)
+                                                            is a shipped,
+                                                            catalog-defined
+                                                            event rule.
+    instana_custom_dashboard               saas, software   An Instana custom
+                                                            dashboard
+                                                            (CustomDashboard) is
+                                                            a titled board of
+                                                            widgets with access
+                                                            rules.
+    instana_custom_event_spec              saas, software   An Instana custom
+                                                            event specification
+                                                            raises events (and
+                                                            optionally
+                                                            incidents, via
+                                                            `triggering`) when a
+                                                            rule over an entity
+                                                            type's metrics
+                                                            matches — threshold
+                                                            breaches, entity
+                                                            verification, entity
+                                                            count, and the other
+                                                            AbstractRule
+                                                            variants.
+    instana_custom_payload_configuration   saas, software   The Instana GLOBAL
+                                                            custom payload
+                                                            configuration
+                                                            (CustomPayloadConfiguration)
+                                                            — a tenant-wide set
+                                                            of custom key/type
+                                                            fields attached to
+                                                            every triggered
+                                                            event.
+    instana_infra_alert_config             saas, software   An Instana
+                                                            infrastructure smart
+                                                            alert
+                                                            (InfraAlertConfig)
+                                                            evaluates a rule
+                                                            (entityType +
+                                                            metricName +
+                                                            aggregation,
+                                                            narrowed by a tag
+                                                            filter) over
+                                                            infrastructure
+                                                            entities and routes
+                                                            triggered events to
+                                                            alerting channels.
+    instana_log_alert_config               saas, software   An Instana log smart
+                                                            alert
+                                                            (LogAlertConfig)
+                                                            evaluates a rule
+                                                            over log events
+                                                            (narrowed by a tag
+                                                            filter) and routes
+                                                            triggered events to
+                                                            alerting channels.
+    instana_maintenance_window             saas, software   An Instana
+                                                            maintenance window
+                                                            (MaintenanceConfigV2)
+                                                            suppresses alerting
+                                                            for the entities
+                                                            matched by its
+                                                            `query` during a
+                                                            scheduled window.
+    instana_rbac_group                     saas, software   An Instana RBAC
+                                                            access group
+                                                            (ApiGroup) binds
+                                                            members to a
+                                                            permission set
+                                                            (ApiPermissionSet: a
+                                                            `permissions` string
+                                                            array plus optional
+                                                            scope filters).
+    instana_rbac_team                      saas, software   An Instana RBAC team
+                                                            (ApiTeam) groups
+                                                            members under a
+                                                            scope for scoped
+                                                            access.
+    instana_release                        saas, software   An Instana release
+                                                            (Release) marks a
+                                                            deployment boundary
+                                                            on the timeline,
+                                                            optionally scoped to
+                                                            applications and
+                                                            services, so events
+                                                            and analytics can be
+                                                            correlated to a
+                                                            rollout.
+    instana_slo_alert_config               saas, software   An Instana SLO smart
+                                                            alert
+                                                            (ServiceLevelsAlertConfig)
+                                                            evaluates a rule
+                                                            (status /
+                                                            error-budget /
+                                                            burn-rate) over one
+                                                            or more SLO configs
+                                                            and routes triggered
+                                                            events to alerting
+                                                            channels.
+    instana_slo_config                     saas, software   An Instana SLO
+                                                            config
+                                                            (SLOConfigWithRBACTag)
+                                                            defines a
+                                                            service-level
+                                                            objective: a target
+                                                            attainment over a
+                                                            time window for a
+                                                            chosen entity and
+                                                            indicator.
+    instana_synthetic_alert_config         saas, software   An Instana synthetic
+                                                            smart alert
+                                                            (SyntheticAlertConfig)
+                                                            evaluates a rule
+                                                            over one or more
+                                                            synthetic tests'
+                                                            results and routes
+                                                            triggered events to
+                                                            alerting channels.
+    instana_synthetic_test                 saas, software   An Instana synthetic
+                                                            test (SyntheticTest)
+                                                            runs a scripted or
+                                                            HTTP probe from one
+                                                            or more PoP
+                                                            locations on a
+                                                            schedule.
+    instana_website_alert_config           saas, software   An Instana website
+                                                            smart alert
+                                                            (WebsiteAlertConfig)
+                                                            evaluates a rule
+                                                            over an
+                                                            end-user-monitored
+                                                            website's beacons
+                                                            and routes triggered
+                                                            events to alerting
+                                                            channels.
+    instana_website_config                 saas, software   An Instana website
+                                                            (End-User Monitoring
+                                                            config) is the
+                                                            top-level unit
+                                                            Instana groups
+                                                            browser/EUM beacons
+                                                            and website smart
+                                                            alerts around.
 
   | IBM Planning Analytics   (planning_analytics - 10 kinds)
-    pa_chore                            saas, software   A Planning Analytics
-                                                         (TM1 Database 12) chore
-                                                         — a schedule that runs
-                                                         an ordered list of
-                                                         tasks (each executing a
-                                                         process) at a start
-                                                         time and frequency.
-    pa_cube                             saas, software   A Planning Analytics
-                                                         (TM1 Database 12) cube
-                                                         — an N-dimensional data
-                                                         store defined over an
-                                                         ordered list of
-                                                         dimensions, with
-                                                         optional TM1 rules.
-    pa_dimension                        saas, software   A Planning Analytics
-                                                         (TM1 Database 12)
-                                                         dimension — a named set
-                                                         of members organized
-                                                         into one or more
-                                                         hierarchies.
-    pa_group                            saas, software   A Planning Analytics
-                                                         (TM1 Database 12)
-                                                         security group — a
-                                                         named role that users
-                                                         belong to and that
-                                                         cube/dimension security
-                                                         is granted against.
-    pa_hierarchy                        saas, software   A hierarchy within a
-                                                         Planning Analytics (TM1
-                                                         Database 12) dimension
-                                                         — a named tree of
-                                                         members (`elements`)
-                                                         and parent/child
-                                                         consolidations
-                                                         (`edges`).
-    pa_process                          saas, software   A Planning Analytics
-                                                         (TM1 Database 12)
-                                                         TurboIntegrator process
-                                                         — the scripting unit
-                                                         (four procedure stages,
-                                                         a data source, typed
-                                                         parameters and source
-                                                         variables) created via
-                                                         the TM1 REST OData API
-                                                         (/Processes) and
-                                                         identified by its
-                                                         `name` (the OData
-                                                         entity key).
-    pa_sql_data_source                  saas, software   A Planning Analytics
-                                                         (TM1 Database 12) named
-                                                         SQL data source — a
-                                                         reusable ODBC/SQL
-                                                         connection definition
-                                                         that TurboIntegrator
-                                                         processes read from.
-    pa_subset                           saas, software   A named subset of a
-                                                         Planning Analytics (TM1
-                                                         Database 12) hierarchy
-                                                         — either a static list
-                                                         of members (`elements`)
-                                                         or a dynamic MDX
-                                                         `expression`.
-    pa_user                             saas, software   A Planning Analytics
-                                                         (TM1 Database 12) user
-                                                         — a security principal
-                                                         with a password and a
-                                                         set of group
-                                                         memberships.
-    pa_view                             saas, software   A Planning Analytics
-                                                         (TM1 Database 12) cube
-                                                         view — a saved query
-                                                         over a cube, either a
-                                                         native axis layout
-                                                         (columns/rows/titles)
-                                                         or an MDX view.
+    pa_chore                               saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            chore — a schedule
+                                                            that runs an ordered
+                                                            list of tasks (each
+                                                            executing a process)
+                                                            at a start time and
+                                                            frequency.
+    pa_cube                                saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            cube — an
+                                                            N-dimensional data
+                                                            store defined over
+                                                            an ordered list of
+                                                            dimensions, with
+                                                            optional TM1 rules.
+    pa_dimension                           saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            dimension — a named
+                                                            set of members
+                                                            organized into one
+                                                            or more hierarchies.
+    pa_group                               saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            security group — a
+                                                            named role that
+                                                            users belong to and
+                                                            that cube/dimension
+                                                            security is granted
+                                                            against.
+    pa_hierarchy                           saas, software   A hierarchy within a
+                                                            Planning Analytics
+                                                            (TM1 Database 12)
+                                                            dimension — a named
+                                                            tree of members
+                                                            (`elements`) and
+                                                            parent/child
+                                                            consolidations
+                                                            (`edges`).
+    pa_process                             saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            TurboIntegrator
+                                                            process — the
+                                                            scripting unit (four
+                                                            procedure stages, a
+                                                            data source, typed
+                                                            parameters and
+                                                            source variables)
+                                                            created via the TM1
+                                                            REST OData API
+                                                            (/Processes) and
+                                                            identified by its
+                                                            `name` (the OData
+                                                            entity key).
+    pa_sql_data_source                     saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            named SQL data
+                                                            source — a reusable
+                                                            ODBC/SQL connection
+                                                            definition that
+                                                            TurboIntegrator
+                                                            processes read from.
+    pa_subset                              saas, software   A named subset of a
+                                                            Planning Analytics
+                                                            (TM1 Database 12)
+                                                            hierarchy — either a
+                                                            static list of
+                                                            members (`elements`)
+                                                            or a dynamic MDX
+                                                            `expression`.
+    pa_user                                saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            user — a security
+                                                            principal with a
+                                                            password and a set
+                                                            of group
+                                                            memberships.
+    pa_view                                saas, software   A Planning Analytics
+                                                            (TM1 Database 12)
+                                                            cube view — a saved
+                                                            query over a cube,
+                                                            either a native axis
+                                                            layout
+                                                            (columns/rows/titles)
+                                                            or an MDX view.
+
+  | IBM Planning Analytics Workspace   (pa_workspace - 6 kinds)
+    paw_application                        saas, software   A Planning Analytics
+                                                            Workspace
+                                                            application (OData
+                                                            asset type
+                                                            `application`) — an
+                                                            authored view /
+                                                            exploration document
+                                                            stored in the
+                                                            /pacontent/v1 Assets
+                                                            tree.
+    paw_book                               saas, software   A Planning Analytics
+                                                            Workspace book
+                                                            (OData asset type
+                                                            `dashboard`) — an
+                                                            authored view /
+                                                            exploration document
+                                                            stored in the
+                                                            /pacontent/v1 Assets
+                                                            tree.
+    paw_folder                             saas, software   A Planning Analytics
+                                                            Workspace folder
+                                                            (OData asset type
+                                                            `folder`) — an
+                                                            authored view /
+                                                            exploration document
+                                                            stored in the
+                                                            /pacontent/v1 Assets
+                                                            tree.
+    paw_plan                               saas, software   A Planning Analytics
+                                                            Workspace plan
+                                                            (OData asset type
+                                                            `plan`) — an
+                                                            authored planning
+                                                            process document
+                                                            stored in the
+                                                            /pacontent/v1 Assets
+                                                            tree.
+    paw_view                               saas, software   A Planning Analytics
+                                                            Workspace view
+                                                            (OData asset type
+                                                            `tm1view`) — an
+                                                            authored view
+                                                            document stored in
+                                                            the /pacontent/v1
+                                                            Assets tree.
+    paw_workbench                          saas, software   A Planning Analytics
+                                                            Workspace workbench
+                                                            (OData asset type
+                                                            `workbench`) — an
+                                                            authored workbench
+                                                            document stored in
+                                                            the /pacontent/v1
+                                                            Assets tree.
 
   | OpenScale   (openscale - 8 kinds)
-    data_mart                           saas, software   An OpenScale data mart
-                                                         is the per-instance
-                                                         datastore that holds
-                                                         monitoring records
-                                                         (payload, feedback,
-                                                         metrics) for every
-                                                         subscribed deployment.
-    data_set                            saas, software   A data set is a typed
-                                                         store within an
-                                                         OpenScale data mart
-                                                         (payload logging,
-                                                         feedback, or business
-                                                         payload) that records
-                                                         the data used to
-                                                         compute a
-                                                         subscription's monitor
-                                                         metrics.
-    guardrails_policy                   saas, software   A guardrails policy
-                                                         defines
-                                                         content-filtering and
-                                                         safety rules (such as
-                                                         PII or HAP detection)
-                                                         that OpenScale enforces
-                                                         on generative-AI model
-                                                         inputs and outputs.
-    integrated_system                   saas, software   An integrated system
-                                                         registers an external
-                                                         service (notifications,
-                                                         a custom metrics
-                                                         provider, or a
-                                                         third-party endpoint)
-                                                         that OpenScale calls
-                                                         during monitoring.
-    monitor_definition                  saas, software   A monitor definition
-                                                         registers a custom
-                                                         monitor type in
-                                                         OpenScale, declaring
-                                                         its metrics,
-                                                         thresholds, and tags.
-    monitor_instance                    saas, software   A monitor instance
-                                                         activates a monitor
-                                                         (quality, fairness,
-                                                         drift, explainability,
-                                                         or a custom definition)
-                                                         on a subscription, with
-                                                         its parameters and
-                                                         alert thresholds.
-    service_provider                    saas, software   A service provider
-                                                         binds a
-                                                         machine-learning
-                                                         serving environment
-                                                         (such as a watsonx.ai
-                                                         or WML space) to
-                                                         OpenScale so its
-                                                         deployments can be
-                                                         discovered and
-                                                         monitored.
-    subscription                        saas, software   A subscription connects
-                                                         one deployed model to
-                                                         OpenScale for
-                                                         monitoring, linking it
-                                                         to a service provider
-                                                         and data mart and
-                                                         capturing its input and
-                                                         output schema.
+    data_mart                              saas, software   An OpenScale data
+                                                            mart is the
+                                                            per-instance
+                                                            datastore that holds
+                                                            monitoring records
+                                                            (payload, feedback,
+                                                            metrics) for every
+                                                            subscribed
+                                                            deployment.
+    data_set                               saas, software   A data set is a
+                                                            typed store within
+                                                            an OpenScale data
+                                                            mart (payload
+                                                            logging, feedback,
+                                                            or business payload)
+                                                            that records the
+                                                            data used to compute
+                                                            a subscription's
+                                                            monitor metrics.
+    guardrails_policy                      saas, software   A guardrails policy
+                                                            defines
+                                                            content-filtering
+                                                            and safety rules
+                                                            (such as PII or HAP
+                                                            detection) that
+                                                            OpenScale enforces
+                                                            on generative-AI
+                                                            model inputs and
+                                                            outputs.
+    integrated_system                      saas, software   An integrated system
+                                                            registers an
+                                                            external service
+                                                            (notifications, a
+                                                            custom metrics
+                                                            provider, or a
+                                                            third-party
+                                                            endpoint) that
+                                                            OpenScale calls
+                                                            during monitoring.
+    monitor_definition                     saas, software   A monitor definition
+                                                            registers a custom
+                                                            monitor type in
+                                                            OpenScale, declaring
+                                                            its metrics,
+                                                            thresholds, and
+                                                            tags.
+    monitor_instance                       saas, software   A monitor instance
+                                                            activates a monitor
+                                                            (quality, fairness,
+                                                            drift,
+                                                            explainability, or a
+                                                            custom definition)
+                                                            on a subscription,
+                                                            with its parameters
+                                                            and alert
+                                                            thresholds.
+    service_provider                       saas, software   A service provider
+                                                            binds a
+                                                            machine-learning
+                                                            serving environment
+                                                            (such as a
+                                                            watsonx.ai or WML
+                                                            space) to OpenScale
+                                                            so its deployments
+                                                            can be discovered
+                                                            and monitored.
+    subscription                           saas, software   A subscription
+                                                            connects one
+                                                            deployed model to
+                                                            OpenScale for
+                                                            monitoring, linking
+                                                            it to a service
+                                                            provider and data
+                                                            mart and capturing
+                                                            its input and output
+                                                            schema.
 
   | vault   (vault - 8 kinds)
-    vault_audit_device                  saas, software   A HashiCorp Vault audit
-                                                         device
-                                                         (sys/audit/{path}) —
-                                                         enables audit logging
-                                                         of every
-                                                         request/response to a
-                                                         backend (type `file`
-                                                         writes to a log path).
-    vault_auth_method                   saas, software   A HashiCorp Vault auth
-                                                         method mount
-                                                         (sys/auth/{path}),
-                                                         enabled with type `jwt`
-                                                         for IBM Verify / OIDC
-                                                         federation.
-    vault_database_role                 saas, software   A role on a Vault
-                                                         database secrets engine
-                                                         ({mount}/roles/{name})
-                                                         — binds the SQL
-                                                         creation statements and
-                                                         lease TTLs Vault uses
-                                                         to mint dynamic
-                                                         database credentials.
-    vault_group_alias                   saas, software   A Vault group alias
-                                                         (identity/group-alias)
-                                                         that binds an external
-                                                         IdP group name to a
-                                                         Vault external identity
-                                                         group through an auth
-                                                         mount accessor.
-    vault_identity_group                saas, software   A Vault external
-                                                         identity group
-                                                         (identity/group) that
-                                                         maps an external IdP
-                                                         group (via a
-                                                         vault_group_alias) to
-                                                         Vault policies.
-    vault_jwt_role                      saas, software   A role on a Vault JWT
-                                                         auth backend
-                                                         (auth/{backend}/role/{name})
-                                                         — binds token
-                                                         audiences, the identity
-                                                         claim, and token
-                                                         policies for OIDC
-                                                         logins.
-    vault_policy                        saas, software   A HashiCorp Vault ACL
-                                                         policy
-                                                         (sys/policies/acl/{name}).
-    vault_secret_engine                 saas, software   A HashiCorp Vault
-                                                         database secrets engine
-                                                         mount
-                                                         (sys/mounts/{path},
-                                                         type=database).
+    vault_audit_device                     saas, software   A HashiCorp Vault
+                                                            audit device
+                                                            (sys/audit/{path}) —
+                                                            enables audit
+                                                            logging of every
+                                                            request/response to
+                                                            a backend (type
+                                                            `file` writes to a
+                                                            log path).
+    vault_auth_method                      saas, software   A HashiCorp Vault
+                                                            auth method mount
+                                                            (sys/auth/{path}),
+                                                            enabled with type
+                                                            `jwt` for IBM Verify
+                                                            / OIDC federation.
+    vault_database_role                    saas, software   A role on a Vault
+                                                            database secrets
+                                                            engine
+                                                            ({mount}/roles/{name})
+                                                            — binds the SQL
+                                                            creation statements
+                                                            and lease TTLs Vault
+                                                            uses to mint dynamic
+                                                            database
+                                                            credentials.
+    vault_group_alias                      saas, software   A Vault group alias
+                                                            (identity/group-alias)
+                                                            that binds an
+                                                            external IdP group
+                                                            name to a Vault
+                                                            external identity
+                                                            group through an
+                                                            auth mount accessor.
+    vault_identity_group                   saas, software   A Vault external
+                                                            identity group
+                                                            (identity/group)
+                                                            that maps an
+                                                            external IdP group
+                                                            (via a
+                                                            vault_group_alias)
+                                                            to Vault policies.
+    vault_jwt_role                         saas, software   A role on a Vault
+                                                            JWT auth backend
+                                                            (auth/{backend}/role/{name})
+                                                            — binds token
+                                                            audiences, the
+                                                            identity claim, and
+                                                            token policies for
+                                                            OIDC logins.
+    vault_policy                           saas, software   A HashiCorp Vault
+                                                            ACL policy
+                                                            (sys/policies/acl/{name}).
+    vault_secret_engine                    saas, software   A HashiCorp Vault
+                                                            database secrets
+                                                            engine mount
+                                                            (sys/mounts/{path},
+                                                            type=database).
 
   | watsonx Orchestrate   (watsonx_orchestrate - 7 kinds)
-    agent                               saas, software   An Agent is a
-                                                         configurable AI
-                                                         assistant within
-                                                         Watsonx Orchestrate
-                                                         that can perform tasks
-                                                         using tools,
-                                                         collaborate with other
-                                                         agents, and leverage
-                                                         knowledge bases.
-    agent_release                       saas, software   Deploys (releases) a
-                                                         watsonx Orchestrate
-                                                         agent's current draft
-                                                         to the `live`
-                                                         environment.
-    knowledge_base                      saas, software   A Knowledge Base
-                                                         provides document-based
-                                                         context and information
-                                                         retrieval capabilities
-                                                         for agents.
-    model                               saas, software   A Model Configuration
-                                                         defines custom language
-                                                         model settings and
-                                                         parameters for use
-                                                         within Watsonx
-                                                         Orchestrate.
-    orchestrate_connection              saas, software   A Connection represents
-                                                         authentication
-                                                         credentials and
-                                                         configuration for
-                                                         integrating external
-                                                         applications with
-                                                         Watsonx Orchestrate.
-    tool                                saas, software   A Tool is a
-                                                         specification for a
-                                                         callable function or
-                                                         service that agents can
-                                                         invoke to perform
-                                                         actions and retrieve
-                                                         information.
-    toolkit                             saas, software   An MCP (Model Context
-                                                         Protocol) toolkit
-                                                         backed by a local or
-                                                         remote MCP server.
+    agent                                  saas, software   An Agent is a
+                                                            configurable AI
+                                                            assistant within
+                                                            Watsonx Orchestrate
+                                                            that can perform
+                                                            tasks using tools,
+                                                            collaborate with
+                                                            other agents, and
+                                                            leverage knowledge
+                                                            bases.
+    agent_release                          saas, software   Deploys (releases) a
+                                                            watsonx Orchestrate
+                                                            agent's current
+                                                            draft to the `live`
+                                                            environment.
+    knowledge_base                         saas, software   A Knowledge Base
+                                                            provides
+                                                            document-based
+                                                            context and
+                                                            information
+                                                            retrieval
+                                                            capabilities for
+                                                            agents.
+    model                                  saas, software   A Model
+                                                            Configuration
+                                                            defines custom
+                                                            language model
+                                                            settings and
+                                                            parameters for use
+                                                            within Watsonx
+                                                            Orchestrate.
+    orchestrate_connection                 saas, software   A Connection
+                                                            represents
+                                                            authentication
+                                                            credentials and
+                                                            configuration for
+                                                            integrating external
+                                                            applications with
+                                                            Watsonx Orchestrate.
+    tool                                   saas, software   A Tool is a
+                                                            specification for a
+                                                            callable function or
+                                                            service that agents
+                                                            can invoke to
+                                                            perform actions and
+                                                            retrieve
+                                                            information.
+    toolkit                                saas, software   An MCP (Model
+                                                            Context Protocol)
+                                                            toolkit backed by a
+                                                            local or remote MCP
+                                                            server.
 
   | watsonx.ai   (watsonx_ai - 7 kinds)
-    ai_service                          saas, software   An AI Service is a
-                                                         deployable code
-                                                         artifact for Watson
-                                                         Machine Learning.
-    autoai_experiment                   saas, software   An AutoAI Experiment
-                                                         runs a watsonx.ai
-                                                         AutoAI training to
-                                                         completion and surfaces
-                                                         the ranked pipeline
-                                                         leaderboard.
-    notebook                            saas, software   A Notebook asset stored
-                                                         in a watsonx.ai
-                                                         project.
-    wml_deployment                      saas, software   A WML Deployment
-                                                         creates a live online
-                                                         endpoint from an AI
-                                                         service or model.
-    wml_function                        saas, software   A Python function asset
-                                                         stored in Watson
-                                                         Machine Learning.
-    wml_model                           saas, software   A WML Model
-                                                         materializes the
-                                                         winning pipeline of a
-                                                         completed AutoAI
-                                                         experiment as a
-                                                         deployable
-                                                         wml-hybrid_0.1 model.
-    wml_script                          saas, software   A Python script asset
-                                                         stored in Watson
-                                                         Machine Learning.
+    ai_service                             saas, software   An AI Service is a
+                                                            deployable code
+                                                            artifact for Watson
+                                                            Machine Learning.
+    autoai_experiment                      saas, software   An AutoAI Experiment
+                                                            runs a watsonx.ai
+                                                            AutoAI training to
+                                                            completion and
+                                                            surfaces the ranked
+                                                            pipeline
+                                                            leaderboard.
+    notebook                               saas, software   A Notebook asset
+                                                            stored in a
+                                                            watsonx.ai project.
+    wml_deployment                         saas, software   A WML Deployment
+                                                            creates a live
+                                                            online endpoint from
+                                                            an AI service or
+                                                            model.
+    wml_function                           saas, software   A Python function
+                                                            asset stored in
+                                                            Watson Machine
+                                                            Learning.
+    wml_model                              saas, software   A WML Model
+                                                            materializes the
+                                                            winning pipeline of
+                                                            a completed AutoAI
+                                                            experiment as a
+                                                            deployable
+                                                            wml-hybrid_0.1
+                                                            model.
+    wml_script                             saas, software   A Python script
+                                                            asset stored in
+                                                            Watson Machine
+                                                            Learning.
 
   | watsonx.data   (watsonx_data - 17 kinds)
-    database_connection                 saas, software   Credential-holding kind
-                                                         for external database
-                                                         connections consumed by
-                                                         `database_registration`.
-    database_registration               saas, software   Registers an external
-                                                         database (Db2,
-                                                         PostgreSQL, MySQL,
-                                                         Kafka, etc.) with
-                                                         watsonx.data and
-                                                         atomically creates its
-                                                         associated catalog.
-    db2_engine                          saas, software   A Db2 Engine registers
-                                                         an external IBM Db2
-                                                         instance as a federated
-                                                         query engine in
-                                                         watsonx.data.
-    ingestion_job                       saas, software   An Ingestion Job loads
-                                                         data from object
-                                                         storage (CSV, Parquet,
-                                                         JSON, ORC, Avro, or
-                                                         txt) into a
-                                                         watsonx.data lakehouse
-                                                         table.
-    integration                         saas, software   Registers an external
-                                                         governance / lineage
-                                                         service with
-                                                         watsonx.data — IBM
-                                                         Knowledge Catalog
-                                                         (`ikc`), Apache Ranger
-                                                         (`ranger`), Manta
-                                                         lineage (`manta`), or
-                                                         Databand (`databand`).
-    milvus_service                      saas, software   A Milvus Service is the
-                                                         managed Milvus vector
-                                                         store in watsonx.data —
-                                                         the vector backend for
-                                                         embeddings / similarity
-                                                         search (e.g. RAG
-                                                         knowledge bases).
-    other_engine                        saas, software   An Other Engine
-                                                         registers a generic
-                                                         external query engine
-                                                         (anything not covered
-                                                         by the typed
-                                                         presto/spark/db2 kinds)
-                                                         with watsonx.data,
-                                                         identified by a display
-                                                         name plus a
-                                                         `connection_string` and
-                                                         an engine `type`.
-    prestissimo_engine                  saas, software   A Prestissimo Engine is
-                                                         the C++ (Velox-backed)
-                                                         distributed SQL query
-                                                         engine in watsonx.data
-                                                         — the high-performance
-                                                         twin of the Java Presto
-                                                         engine.
-    presto_engine                       saas, software   A Presto Engine is a
-                                                         distributed SQL query
-                                                         engine in watsonx.data
-                                                         that runs analytical
-                                                         queries across
-                                                         lakehouse catalogs and
-                                                         object storage.
-    sal_enrichment_job                  saas, software   Runs a Semantic
-                                                         Automation Layer (SAL)
-                                                         metadata-enrichment job
-                                                         over a catalog/schema's
-                                                         tables.
-    sal_enrichment_settings             saas, software   Per-project
-                                                         metadata-enrichment
-                                                         settings for the
-                                                         Semantic Automation
-                                                         Layer (SAL) on
-                                                         watsonx.data.
-    sal_global_settings                 saas, software   Global
-                                                         metadata-enrichment
-                                                         defaults for the
-                                                         Semantic Automation
-                                                         Layer (SAL) on
-                                                         watsonx.data.
-    sal_glossary                        software         Uploads a
-                                                         business-glossary CSV
-                                                         into the watsonx.data
-                                                         Semantic Automation
-                                                         Layer (SAL) and polls
-                                                         the upload process to a
-                                                         terminal state, so a
-                                                         glossary can be
-                                                         uploaded before/around
-                                                         enrichment (richer term
-                                                         assignment).
-    sal_integration                     saas, software   Enables the Semantic
-                                                         Automation Layer (SAL)
-                                                         on watsonx.data — the
-                                                         metadata-enrichment /
-                                                         auto-cataloging
-                                                         integration that backs
-                                                         IKC governance.
-    schema                              saas, software   A Schema is a logical
-                                                         grouping of tables
-                                                         within a watsonx.data
-                                                         catalog.
-    spark_engine                        saas, software   A Spark Engine is a
-                                                         serverless Apache Spark
-                                                         execution environment
-                                                         in watsonx.data used
-                                                         for data ingestion
-                                                         jobs, Spark SQL, and
-                                                         general Spark
-                                                         applications.
-    storage_registration                saas, software   Registers an
-                                                         object-store bucket
-                                                         with watsonx.data and
-                                                         atomically creates its
-                                                         associated lakehouse
-                                                         catalog (iceberg or
-                                                         hive).
+    database_connection                    saas, software   Credential-holding
+                                                            kind for external
+                                                            database connections
+                                                            consumed by
+                                                            `database_registration`.
+    database_registration                  saas, software   Registers an
+                                                            external database
+                                                            (Db2, PostgreSQL,
+                                                            MySQL, Kafka, etc.)
+                                                            with watsonx.data
+                                                            and atomically
+                                                            creates its
+                                                            associated catalog.
+    db2_engine                             saas, software   A Db2 Engine
+                                                            registers an
+                                                            external IBM Db2
+                                                            instance as a
+                                                            federated query
+                                                            engine in
+                                                            watsonx.data.
+    ingestion_job                          saas, software   An Ingestion Job
+                                                            loads data from
+                                                            object storage (CSV,
+                                                            Parquet, JSON, ORC,
+                                                            Avro, or txt) into a
+                                                            watsonx.data
+                                                            lakehouse table.
+    integration                            saas, software   Registers an
+                                                            external governance
+                                                            / lineage service
+                                                            with watsonx.data —
+                                                            IBM Knowledge
+                                                            Catalog (`ikc`),
+                                                            Apache Ranger
+                                                            (`ranger`), Manta
+                                                            lineage (`manta`),
+                                                            or Databand
+                                                            (`databand`).
+    milvus_service                         saas, software   A Milvus Service is
+                                                            the managed Milvus
+                                                            vector store in
+                                                            watsonx.data — the
+                                                            vector backend for
+                                                            embeddings /
+                                                            similarity search
+                                                            (e.g. RAG knowledge
+                                                            bases).
+    other_engine                           saas, software   An Other Engine
+                                                            registers a generic
+                                                            external query
+                                                            engine (anything not
+                                                            covered by the typed
+                                                            presto/spark/db2
+                                                            kinds) with
+                                                            watsonx.data,
+                                                            identified by a
+                                                            display name plus a
+                                                            `connection_string`
+                                                            and an engine
+                                                            `type`.
+    prestissimo_engine                     saas, software   A Prestissimo Engine
+                                                            is the C++
+                                                            (Velox-backed)
+                                                            distributed SQL
+                                                            query engine in
+                                                            watsonx.data — the
+                                                            high-performance
+                                                            twin of the Java
+                                                            Presto engine.
+    presto_engine                          saas, software   A Presto Engine is a
+                                                            distributed SQL
+                                                            query engine in
+                                                            watsonx.data that
+                                                            runs analytical
+                                                            queries across
+                                                            lakehouse catalogs
+                                                            and object storage.
+    sal_enrichment_job                     saas, software   Runs a Semantic
+                                                            Automation Layer
+                                                            (SAL)
+                                                            metadata-enrichment
+                                                            job over a
+                                                            catalog/schema's
+                                                            tables.
+    sal_enrichment_settings                saas, software   Per-project
+                                                            metadata-enrichment
+                                                            settings for the
+                                                            Semantic Automation
+                                                            Layer (SAL) on
+                                                            watsonx.data.
+    sal_global_settings                    saas, software   Global
+                                                            metadata-enrichment
+                                                            defaults for the
+                                                            Semantic Automation
+                                                            Layer (SAL) on
+                                                            watsonx.data.
+    sal_glossary                           software         Uploads a
+                                                            business-glossary
+                                                            CSV into the
+                                                            watsonx.data
+                                                            Semantic Automation
+                                                            Layer (SAL) and
+                                                            polls the upload
+                                                            process to a
+                                                            terminal state, so a
+                                                            glossary can be
+                                                            uploaded
+                                                            before/around
+                                                            enrichment (richer
+                                                            term assignment).
+    sal_integration                        saas, software   Enables the Semantic
+                                                            Automation Layer
+                                                            (SAL) on
+                                                            watsonx.data — the
+                                                            metadata-enrichment
+                                                            / auto-cataloging
+                                                            integration that
+                                                            backs IKC
+                                                            governance.
+    schema                                 saas, software   A Schema is a
+                                                            logical grouping of
+                                                            tables within a
+                                                            watsonx.data
+                                                            catalog.
+    spark_engine                           saas, software   A Spark Engine is a
+                                                            serverless Apache
+                                                            Spark execution
+                                                            environment in
+                                                            watsonx.data used
+                                                            for data ingestion
+                                                            jobs, Spark SQL, and
+                                                            general Spark
+                                                            applications.
+    storage_registration                   saas, software   Registers an
+                                                            object-store bucket
+                                                            with watsonx.data
+                                                            and atomically
+                                                            creates its
+                                                            associated lakehouse
+                                                            catalog (iceberg or
+                                                            hive).

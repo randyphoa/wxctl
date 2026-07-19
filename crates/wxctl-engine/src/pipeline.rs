@@ -84,7 +84,7 @@ impl Pipeline {
     fn compile_plan(&self, operation_id: &str, reconciliation_plan: ReconciliationPlan) -> CompiledPlan {
         let span = tracing::info_span!(target: "wxctl::stage::planning", "planning", operation_id = %operation_id, resource_count = reconciliation_plan.operations.len());
         let _enter = span.enter();
-        let plan = CompiledPlan { operations: reconciliation_plan.operations };
+        let plan = CompiledPlan { operations: reconciliation_plan.operations, advisories: reconciliation_plan.advisories };
         tracing::debug!(target: "wxctl::substage::planning", operation_id = %operation_id, "execution plan compiled");
         plan
     }
@@ -176,7 +176,12 @@ impl Pipeline {
     /// using `plan_for_apply` (default `NoOpObserver`), so they are unaffected.
     pub async fn plan_for_apply_with(&self, config: &mut Config, is_apply: bool, observer: Arc<dyn ExecutionObserver>) -> Result<(String, CompiledPlan, IndexGraph<ResourceKey>)> {
         let operation_id = Uuid::new_v4().to_string();
-        let (resources, graph, _edges) = self.run_validation(&operation_id, config).await?;
+        let (resources, graph, edges) = self.run_validation(&operation_id, config).await?;
+        // Real apply only: `is_apply` is false for `wxctl plan`, and `dry_run` short-circuits
+        // execution — neither exercises the edges, so their records stay free of graph evidence.
+        if is_apply && !self.config.dry_run {
+            emit_graph_event(&operation_id, &edges);
+        }
         self.validate_services(&resources)?;
         let resources = Self::sort_topologically(resources, &graph)?;
         let reconciliation_plan = self.run_reconciliation_raw(&operation_id, resources, is_apply, observer).await?;
@@ -194,7 +199,11 @@ impl Pipeline {
     /// observer is later handed to `DagExecutor::with_observer` for the execution stage.
     pub async fn plan_for_destroy_with(&self, config: &mut Config, observer: Arc<dyn ExecutionObserver>) -> Result<(String, CompiledPlan, IndexGraph<ResourceKey>, RuntimeIdStore)> {
         let operation_id = Uuid::new_v4().to_string();
-        let (resources, graph, _edges) = self.run_validation(&operation_id, config).await?;
+        let (resources, graph, edges) = self.run_validation(&operation_id, config).await?;
+        // Destroy always executes when reached (dry-run short-circuits earlier); guard it anyway.
+        if !self.config.dry_run {
+            emit_graph_event(&operation_id, &edges);
+        }
         self.validate_services(&resources)?;
         // Discovery needs the forward DAG order so each resource's templates
         // resolve against the store populated by already-discovered parents;
@@ -215,4 +224,28 @@ impl Pipeline {
         // the executor's store with the reconciliation cache so lookups hit.
         Ok((operation_id, plan, filtered_graph, runtime_store))
     }
+}
+
+/// Record the executed dependency edges into the run record for the knowledge
+/// plane's run-evidence ingester (`wxctl-knowledge`). One INFO event, target
+/// `wxctl::graph`; edges carry kinds, ref names, and field paths only — no
+/// resource values or bodies — so the event is safe in concise (non-full-trace)
+/// records and needs no redaction. Captured by the existing `RunRecordLayer`
+/// (INFO passes its concise filter; target `wxctl::graph` matches the run-record
+/// `wxctl=trace` EnvFilter) with no layer changes.
+fn emit_graph_event(operation_id: &str, edges: &[DependencyEdge]) {
+    let arr: Vec<serde_json::Value> = edges
+        .iter()
+        .map(|e| {
+            serde_json::json!({
+                "from_kind": e.from.kind.as_ref(),
+                "from_name": e.from.name.as_ref(),
+                "to_kind": e.to.kind.as_ref(),
+                "to_name": e.to.name.as_ref(),
+                "field": e.field_path.as_ref(),
+            })
+        })
+        .collect();
+    let edges_json = serde_json::Value::Array(arr).to_string();
+    tracing::info!(target: "wxctl::graph", operation_id = %operation_id, edge_count = edges.len(), edges = %edges_json, "executed dependency edges");
 }

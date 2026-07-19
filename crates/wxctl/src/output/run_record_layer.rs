@@ -4,4 +4,4 @@
 //! same global subscriber. This module re-exports them so `main.rs` and
 //! `commands/common.rs` keep their `crate::output::…` import paths unchanged.
 
-pub use wxctl_core::logging::run_record::{RunRecordLayer, RunSinkGuard, finalize_active_run, install_run_sink, set_full_trace};
+pub use wxctl_core::logging::run_record::{RunRecordLayer, RunSinkGuard, finalize_active_run, install_run_sink, set_active_run_deployment, set_full_trace};

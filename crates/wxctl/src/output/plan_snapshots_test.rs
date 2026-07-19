@@ -8,7 +8,7 @@
 use crate::output::panel::glyphs::GlyphSet;
 use crate::output::panel::layout::Panel;
 use crate::output::panel::theme::{ColorMode, Theme};
-use crate::output::panel_render::{render_changes, render_errors, render_footer, render_pipeline};
+use crate::output::panel_render::{render_advisories, render_changes, render_errors, render_footer, render_pipeline};
 use crate::output::sections::*;
 
 /// Build a fixed-width panel for snapshots. `glyphs`: unicode | ascii.
@@ -42,6 +42,37 @@ fn success_screen(p: &Panel) -> String {
     ));
     lines
         .extend(render_footer(p, &Footer { outcome: Outcome::PlanOk, command: "plan".into(), created: 2, updated: 1, deleted: 0, retained: 0, skipped: 0, undetermined: 0, duration_ms: 975, run_id: "RUNID".into(), config_hint: "examples/products/watsonx-orchestrate/hr-chatbot/config.yaml".into() }));
+    lines.join("\n")
+}
+
+/// A plan that raised a reconcile advisory: success screen + a warn-level `▌ Advisories`
+/// section carrying one R501 cross-type collision.
+fn advisory_screen(p: &Panel) -> String {
+    let mut lines = Vec::new();
+    lines.extend(render_pipeline(
+        p,
+        &PipelineSection {
+            rows: vec![
+                PipelineRow { stage: "validation".into(), status: "completed".into(), duration_ms: Some(120), detail: None },
+                PipelineRow { stage: "reconciliation".into(), status: "completed".into(), duration_ms: Some(840), detail: Some("3 reconciled".into()) },
+                PipelineRow { stage: "planning".into(), status: "completed".into(), duration_ms: Some(15), detail: None },
+            ],
+        },
+    ));
+    lines.push(String::new());
+    lines.extend(render_changes(p, &ChangesSection { rows: vec![ChangeRow { marker: ChangeMarker::Add, kind: "paw_book".into(), name: "Reports".into(), action: "create".into(), changed_fields: vec![] }] }));
+    lines.extend(render_advisories(
+        p,
+        &AdvisoriesSection {
+            blocks: vec![AdvisoryBlock {
+                code: "WXCTL-R501".into(),
+                resource: "paw_book/Reports".into(),
+                message: "a same-named item exists with asset_type='folder' (expected 'dashboard'); 'Reports' is absent and will be created — a backend enforcing cross-type name uniqueness may then reject the create".into(),
+                suggestion: "If the create is rejected, rename this resource so its name does not collide with the existing item of a different type.".into(),
+            }],
+        },
+    ));
+    lines.extend(render_footer(p, &Footer { outcome: Outcome::PlanOk, command: "plan".into(), created: 1, updated: 0, deleted: 0, retained: 0, skipped: 0, undetermined: 0, duration_ms: 975, run_id: "RUNID".into(), config_hint: "x".into() }));
     lines.join("\n")
 }
 
@@ -121,6 +152,11 @@ fn reconcile_error_screen(p: &Panel) -> String {
 #[test]
 fn plan_success_dark_80() {
     insta::assert_snapshot!("plan_success_dark_80", success_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode)));
+}
+
+#[test]
+fn plan_with_advisory_dark_80() {
+    insta::assert_snapshot!("plan_with_advisory_dark_80", advisory_screen(&panel(80, ColorMode::Dark, GlyphSet::Unicode)));
 }
 
 #[test]

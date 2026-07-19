@@ -1,0 +1,85 @@
+resource:
+  name: paw_application
+  service: pa_workspace
+  kind: paw_application
+  version: v1
+  description: >
+    A Planning Analytics Workspace application (OData asset type `application`) — an authored
+    view / exploration document stored in the /pacontent/v1 Assets tree. Identity is parent
+    folder + name; the server mints the id. `content` is an opaque JSON document authored by
+    clone-and-mutate (server-schemaless). Created POST /Assets (leading-slash path); updated in
+    place by a content-only PUT to the composite key Assets(id,type); rename/move is a recreate.
+  api:
+    base_path: /Assets
+    id_field: id
+    list_endpoint: /Assets(id='{folder}',type='folder')?$expand=Assets
+    get_endpoint: /Assets(id='{id}',type='{type}')?$expand=content
+    create_endpoint: /Assets
+    create_method: POST
+    update_endpoint: /Assets(id='{id}',type='{type}')
+    update_method: PUT
+    delete_endpoint: /Assets(id='{id}',type='{type}')
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+        validation:
+          min_length: 1
+        description: Application name — natural identity within the parent folder. Immutable (rename = recreate).
+      - name: folder
+        type: string
+        required: true
+        location: Path
+        description: >
+          Parent folder's id, not a path (see below), interpolated into the id-based
+          folder-listing endpoint's `{folder}` segment (location: Path; the engine only
+          interpolates Path fields into list endpoints). A managed parent is
+          `${paw_folder.<ref>.id}`; the unmanaged root `shared` is `${env:PA_SHARED_FOLDER_ID}`. Id,
+          not path: `/pacontent/v1` Assets accepts only `id=`/`path=`/`ids=`, and `path=` 500s below
+          the root (`Assets(path='shared/Sub')` -> "Unexpected character at 7"; the `%252F`
+          double-encoding workaround is a rejected, proxy-dependent hack), while `id=` works
+          uniformly at every depth including root. The AssetHandler `pre_create` resolves this id to
+          the parent's `.path` with one extra GET, for the create body. Not in immutable_fields: a
+          Path parent is never echoed back, so a different folder is structurally a different
+          identity (not found -> Create).
+        references:
+          resource: paw_folder
+          field: id
+      - name: content
+        type: string
+        required: false
+        location: LocalOnly
+        is_path: true
+        description: >
+          Path to the exported asset `content` JSON document (clone-and-mutate authoring).
+          clone-probe 2026-07-17: POST accepts authored `content` (Q1); re-GET verbatim (Q2). The
+          AssetHandler post_validate parses the file into the opaque content object used verbatim
+          in the create/update body and compared as a state field (server stores it verbatim for
+          `dashboard` and `application`, live-proven).
+      - name: description
+        type: string
+        required: false
+        location: LocalOnly
+        description: Optional description. Create-only — PUT rejects it (spec Q3), so it is not a state field.
+      - name: id
+        type: string
+        required: false
+        location: Computed
+        immutable: true
+        description: Server-minted asset id. Discovered off the folder listing; keys the content-only PUT and DELETE.
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+      list_filter:
+        field: type
+        equals: application
+    state_fields:
+      - name
+      - content
+    update_strategy: replace
+    use_json_patch: false
+    immutable_fields:
+      - name

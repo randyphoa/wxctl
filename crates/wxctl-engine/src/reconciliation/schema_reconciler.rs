@@ -5,12 +5,13 @@ use anyhow::{Context, Result, bail};
 use reqwest::Method;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 use wxctl_core::client::{BodyKind, BodyKindSelector, HttpClient, RequestMaterializer, RequestSpec, error_has_status, lookup_nested};
-use wxctl_core::traits::{Reconciler, StateComparison};
+use wxctl_core::traits::{AdvisorySink, NoOpAdvisorySink, Reconciler, StateComparison};
 use wxctl_core::types::{RemoteResource, ValidatedResource};
-use wxctl_schema::schema::{AbsentWhen, DiscoveryMethod, FieldLocation, HashStorage, IdentityMatch, ResourceSchema, SchemaDefinition};
+use wxctl_schema::schema::{AbsentWhen, DiscoveryMethod, FieldLocation, HashStorage, IdentityMatch, ListFilter, ResourceSchema, SchemaDefinition};
 
 /// Stateless schema-driven reconciler. All schema reads come from
 /// `ValidatedResource.descriptor.schema`, which the validation pipeline
@@ -252,7 +253,8 @@ fn is_absent_sentinel(data: &Value, absent_when: Option<&AbsentWhen>) -> bool {
 /// `configuration.env_variables`; matches are ordered Completed-first (then
 /// in-flight, then failed) so `discover`'s first-match pick and post_discover's
 /// enrichment adopt the stable run when the pre-fix create-loop left duplicates.
-fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field: &str, resource_name: Option<&str>, identity: Option<&IdentityMatch>, run_hash: Option<&str>, env_marker_hash: Option<&str>) -> Vec<&'a Value> {
+#[allow(clippy::too_many_arguments)]
+fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field: &str, resource_name: Option<&str>, identity: Option<&IdentityMatch>, run_hash: Option<&str>, env_marker_hash: Option<&str>, list_filter: Option<&ListFilter>) -> Vec<&'a Value> {
     if let Some(hash) = env_marker_hash {
         let mut matched: Vec<&Value> = items.iter().filter(|item| wxctl_providers::extract_identity_env_marker(item) == Some(hash)).collect();
         matched.sort_by_key(|item| wxctl_providers::job_run_state_rank(item));
@@ -267,7 +269,27 @@ fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field:
     let Some(resource_name) = resource_name else {
         return Vec::new();
     };
-    items.iter().filter(|item| name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h))).collect()
+    items.iter().filter(|item| name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && list_filter.is_none_or(|lf| get_nested_field(item, &lf.field).as_str() == Some(lf.equals.as_str()))).collect()
+}
+
+/// R501: within a `list_filter` kind's discovery, a same-named item whose filter
+/// field holds a different value is a cross-type name collision. Emit the warn-level
+/// tracing event per colliding item (telemetry, byte-identical to before) and push
+/// one deduped advisory per (resource, conflicting value) onto `sink`.
+#[allow(clippy::too_many_arguments)]
+fn push_list_filter_advisories(items: &[Value], lf: &ListFilter, resource_name: &str, name_field: &str, run_hash: Option<&str>, key_kind: &str, key_name: &str, sink: &dyn AdvisorySink) {
+    const R501_SUGGESTION: &str = "If the create is rejected, rename this resource so its name does not collide with the existing item of a different type.";
+    let mut seen: HashSet<String> = HashSet::new();
+    for item in items {
+        if name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && get_nested_field(item, &lf.field).as_str() != Some(lf.equals.as_str()) {
+            let found = render_value(get_nested_field(item, &lf.field));
+            let message = format!("a same-named item exists with {}='{}' (expected '{}'); '{}' is absent and will be created — a backend enforcing cross-type name uniqueness may then reject the create", lf.field, found, lf.equals, key_name);
+            wxctl_core::log_warn_resource_field!(wxctl_core::logging::error_codes::R501, key_kind, key_name, lf.field, found, std::slice::from_ref(&lf.equals), message);
+            if seen.insert(found.clone()) {
+                sink.push(wxctl_core::logging::error_codes::R501, &format!("{}/{}", key_kind, key_name), &message, R501_SUGGESTION);
+            }
+        }
+    }
 }
 
 /// For identity-hash kinds, stamp `identity_hash` on a matched+denormalized remote
@@ -362,7 +384,7 @@ impl Reconciler for SchemaBasedReconciler {
                     // list/match/normalize path (list_field handling, POST-search, 404/403
                     // quirks) — and take the first match. Keeping one implementation means
                     // every list-path fix applies to both entry points.
-                    let mut matches = self.discover_all(operation_id, resource, client).await?;
+                    let mut matches = self.discover_all(operation_id, resource, client, &NoOpAdvisorySink).await?;
                     if matches.is_empty() { Ok(RemoteResource { key: resource.key.clone(), data: Value::Null, exists: false }) } else { Ok(matches.swap_remove(0)) }
                 }
                 DiscoveryMethod::GetById => {
@@ -469,7 +491,7 @@ impl Reconciler for SchemaBasedReconciler {
         })
     }
 
-    fn discover_all<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient) -> Pin<Box<dyn Future<Output = Result<Vec<RemoteResource>>> + Send + 'a>> {
+    fn discover_all<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient, advisories: &'a dyn AdvisorySink) -> Pin<Box<dyn Future<Output = Result<Vec<RemoteResource>>> + Send + 'a>> {
         Box::pin(async move {
             let descriptor_schema = &resource.descriptor.schema;
             let def = &descriptor_schema.resource;
@@ -600,7 +622,18 @@ impl Reconciler for SchemaBasedReconciler {
 
                     // Find ALL resources matching the identity (not just first)
                     let field_schema = &descriptor_schema.resource.schema;
-                    let matched_items = match_remote_items(&items, &resource.data, name_field, resource_name, discovery.identity_match.as_ref(), run_hash, env_marker_hash);
+                    let matched_items = match_remote_items(&items, &resource.data, name_field, resource_name, discovery.identity_match.as_ref(), run_hash, env_marker_hash, discovery.list_filter.as_ref());
+
+                    // list_filter cross-type collision: an item shares the name but is a
+                    // different type. The resource is correctly absent (plan Create), but warn
+                    // — a backend enforcing cross-type name uniqueness (paw_* has a
+                    // parent-id+name unique index) may reject the create. Only the
+                    // name-matching path carries list_filter; identity/env-marker kinds never
+                    // declare it, so `resource_name` is Some here whenever `list_filter` is.
+                    if let (Some(lf), Some(name)) = (discovery.list_filter.as_ref(), resource_name) {
+                        push_list_filter_advisories(&items, lf, name, name_field, run_hash, resource.key.kind.as_ref(), resource.key.name.as_ref(), advisories);
+                    }
+
                     // A matched item can still be a leftover husk rather than a live resource
                     // (e.g. an undeployed wxO Environment record with `current_version: null`
                     // left in place by undeploy). `absent_when` marks that shape; drop such
@@ -953,7 +986,7 @@ mod tests {
         let items = vec![json!({"display_name": "A", "associated_catalogs": [{"catalog_name": "cat_x"}]}), json!({"display_name": "B", "associated_catalogs": [{"catalog_name": "cat_y"}]})];
         let local = json!({"display_name": "ignored", "associated_catalog": {"catalog_name": "cat_y"}});
         let identity = IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalogs.0.catalog_name".into() };
-        let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None);
+        let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None, None);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].get("display_name").and_then(|v| v.as_str()), Some("B"), "identity_match selects by catalog name, not display_name");
 
@@ -961,16 +994,63 @@ mod tests {
         let items = vec![json!({"display_name": "same", "associated_catalog": {"catalog_name": "cat_x"}}), json!({"display_name": "other", "associated_catalog": {"catalog_name": "cat_y"}})];
         let local = json!({"display_name": "same", "associated_catalog": {"catalog_name": "cat_y"}});
         let identity = IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalog.catalog_name".into() };
-        let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None);
+        let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None, None);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].get("display_name").and_then(|v| v.as_str()), Some("other"), "identity_match ignores a matching display_name");
 
         // Falls back to name_field when identity_match is absent.
         let items = vec![json!({"name": "alpha"}), json!({"name": "beta"})];
         let local = json!({"name": "beta"});
-        let hits = match_remote_items(&items, &local, "name", Some("beta"), None, None, None);
+        let hits = match_remote_items(&items, &local, "name", Some("beta"), None, None, None, None);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].get("name").and_then(|v| v.as_str()), Some("beta"));
+    }
+
+    #[test]
+    fn match_remote_items_list_filter_selects_by_type() {
+        // A folder and a book share the name; the paw_book kind filters on type=dashboard.
+        let items = vec![json!({"name": "Reports", "type": "folder"}), json!({"name": "Reports", "type": "dashboard"})];
+        let local = json!({"name": "Reports"});
+        let lf = ListFilter { field: "type".into(), equals: "dashboard".into() };
+        // AC1: only the dashboard item matches — the folder is never adopted.
+        let hits = match_remote_items(&items, &local, "name", Some("Reports"), None, None, None, Some(&lf));
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].get("type").and_then(|v| v.as_str()), Some("dashboard"));
+        // A book named Reports that does NOT exist (only the folder does) → no match → absent → Create.
+        let only_folder = vec![json!({"name": "Reports", "type": "folder"})];
+        assert!(match_remote_items(&only_folder, &local, "name", Some("Reports"), None, None, None, Some(&lf)).is_empty());
+        // AC4: no list_filter → name-only match, both items selected (unchanged behavior).
+        let both = match_remote_items(&items, &local, "name", Some("Reports"), None, None, None, None);
+        assert_eq!(both.len(), 2);
+    }
+
+    /// Records every advisory pushed, for assertion in tests below.
+    struct RecordingSink(std::sync::Mutex<Vec<(String, String, String)>>);
+    impl AdvisorySink for RecordingSink {
+        fn push(&self, code: &str, resource: &str, message: &str, _suggestion: &str) {
+            self.0.lock().unwrap().push((code.to_string(), resource.to_string(), message.to_string()));
+        }
+    }
+
+    /// R501 dedup requirement: two colliding items sharing one conflicting `found`
+    /// value push exactly one advisory (deduped by (resource, conflicting value)); a
+    /// same-named item that matches the kind's own `list_filter` value is not a
+    /// collision at all.
+    #[test]
+    fn push_list_filter_advisories_dedupes_by_conflicting_value() {
+        let lf = ListFilter { field: "asset_type".into(), equals: "dashboard".into() };
+        let items = vec![
+            json!({ "name": "Reports", "asset_type": "folder" }),    // collision
+            json!({ "name": "Reports", "asset_type": "folder" }),    // same conflicting value → deduped
+            json!({ "name": "Reports", "asset_type": "dashboard" }), // own type → not a collision
+        ];
+        let sink = RecordingSink(std::sync::Mutex::new(Vec::new()));
+        push_list_filter_advisories(&items, &lf, "Reports", "name", None, "paw_book", "Reports", &sink);
+        let got = sink.0.lock().unwrap();
+        assert_eq!(got.len(), 1, "one advisory per (resource, conflicting value): {got:?}");
+        assert_eq!(got[0].0, "WXCTL-R501");
+        assert_eq!(got[0].1, "paw_book/Reports");
+        assert!(got[0].2.contains("asset_type='folder'"), "names the conflicting value: {}", got[0].2);
     }
 
     #[test]
@@ -1134,7 +1214,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: field_defs, ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: name_field.map(str::to_string), identity_match: identity, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: name_field.map(str::to_string), identity_match: identity, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     identity_hash: None,
                     state_fields: Some(vec![]),
                     update_strategy: UpdateStrategy::Patch,
@@ -1204,7 +1284,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![mk_field("dimension", FieldLocation::Path), mk_field("name", FieldLocation::Body)], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "name".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "name".into(), list_filter: None },
                     identity_hash: None,
                     state_fields: Some(vec![]),
                     update_strategy: UpdateStrategy::Patch,
@@ -1391,7 +1471,7 @@ mod tests {
                     ..Default::default()
                 },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     identity_hash: None,
                     state_fields: Some(vec![]),
                     update_strategy: UpdateStrategy::Patch,
@@ -1453,7 +1533,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![field("app_id", FieldType::String, true, None), field("configured_environments", FieldType::Array, false, Some(FieldType::String))], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "app_id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "app_id".into(), list_filter: None },
                     identity_hash: None,
                     state_fields: Some(vec!["configured_environments".into()]),
                     update_strategy: UpdateStrategy::Recreate,
@@ -1584,6 +1664,7 @@ mod tests {
                         list_body: None,
                         list_map: false,
                         id_source: "id".into(),
+                        list_filter: None,
                     },
                     identity_hash: None,
                     state_fields: Some(vec!["display_name".into(), "description".into(), "tags".into()]),
@@ -1841,7 +1922,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     identity_hash: Some(IdentityHash { fields: vec!["training_data".into(), "scoring".into()], nonce_field: Some("generation".into()), storage: HashStorage::NameSuffix, length: 8 }),
                     state_fields: Some(vec!["identity_hash".into()]),
                     update_strategy: UpdateStrategy::Recreate,
@@ -1868,7 +1949,7 @@ mod tests {
         let items = vec![json!({"name": "exp-abc12345", "id": "t1"}), json!({"name": "exp-99999999", "id": "t2"})];
 
         // Same hash → discovery matches the suffixed name (run_hash None for name_suffix).
-        let matched = match_remote_items(&items, &json!({"name": "exp-abc12345"}), "name", Some("exp-abc12345"), None, None, None);
+        let matched = match_remote_items(&items, &json!({"name": "exp-abc12345"}), "name", Some("exp-abc12345"), None, None, None, None);
         assert_eq!(matched.len(), 1, "suffixed name matches exactly one remote");
         let mut remote_data = matched[0].clone();
         normalize_identity_hash(&mut remote_data, &schema);
@@ -1879,7 +1960,7 @@ mod tests {
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange), "matching hash → NoChange");
 
         // Different hash → no discovery match → RemoteResource exists:false → Create (NOT Recreate).
-        let no_match = match_remote_items(&items, &json!({"name": "exp-def67890"}), "name", Some("exp-def67890"), None, None, None);
+        let no_match = match_remote_items(&items, &json!({"name": "exp-def67890"}), "name", Some("exp-def67890"), None, None, None, None);
         assert!(no_match.is_empty(), "a differing hash yields a different suffixed name → no match");
         let (lv2, rv2) = make_test_resources(json!({"name": "exp-def67890", "identity_hash": "def67890"}), Value::Null, &schema);
         let absent = RemoteResource { exists: false, ..rv2 };
@@ -1913,7 +1994,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: Some("results".into()), name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: Some("results".into()), name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     identity_hash: Some(IdentityHash { fields: vec!["job".into(), "env_variables".into(), "project_id".into()], nonce_field: Some("generation".into()), storage: HashStorage::EnvMarker, length: 8 }),
                     state_fields: Some(vec!["identity_hash".into()]),
                     update_strategy: UpdateStrategy::Recreate,
@@ -1949,7 +2030,7 @@ mod tests {
 
         // Marker-only matching: the local name plays no role (it can't — the server
         // clobbers it), exact current hash only, Completed ordered first.
-        let matched = match_remote_items(&items, &json!({"name": "train-run"}), "name", None, None, None, Some("abc12345"));
+        let matched = match_remote_items(&items, &json!({"name": "train-run"}), "name", None, None, None, Some("abc12345"), None);
         assert_eq!(matched.len(), 2, "both duplicates of the current marker match; other generations and unmarked runs do not");
         assert_eq!(matched[0].pointer("/metadata/asset_id").and_then(|v| v.as_str()), Some("r-2"), "Completed run ordered first (stable adopt for discover/post_discover)");
 
@@ -1965,7 +2046,7 @@ mod tests {
 
         // Changed input / bumped generation → different hash → no marker match →
         // exists:false → Create (a new run), never Recreate.
-        let no_match = match_remote_items(&items, &json!({"name": "train-run"}), "name", None, None, None, Some("def67890"));
+        let no_match = match_remote_items(&items, &json!({"name": "train-run"}), "name", None, None, None, Some("def67890"), None);
         assert!(no_match.is_empty(), "a differing hash matches no remote marker");
         let (lv2, rv2) = make_test_resources(json!({"name": "train-run", "identity_hash": "def67890"}), Value::Null, &schema);
         let absent = RemoteResource { exists: false, ..rv2 };
@@ -2000,7 +2081,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::Skip, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::Skip, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     identity_hash: Some(IdentityHash { fields: vec!["changes".into()], nonce_field: Some("generation".into()), storage: HashStorage::Local, length: 8 }),
                     state_fields: Some(vec![]),
                     update_strategy: UpdateStrategy::Recreate,
@@ -2099,7 +2180,7 @@ mod tests {
                 },
                 schema: SchemaDefinition { fields: vec![], ..Default::default() },
                 reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: Some("id".into()), identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into() },
+                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: Some("id".into()), identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
                     state_fields: Some(vec!["id".into()]),
                     update_strategy: UpdateStrategy::Recreate,
                     immutable_fields: vec![],

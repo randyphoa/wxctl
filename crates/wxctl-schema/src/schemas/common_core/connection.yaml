@@ -24,6 +24,325 @@ resource:
     delete_method: DELETE
 
   schema:
+    variants:
+      lakehouse:
+        applies_to:
+          - lakehouse
+        fields:
+          - name: api_key
+            type: string
+            required: true
+          - name: auth_method
+            type: string
+            required: false
+          - name: cloud_resource_name
+            type: string
+            required: true
+          - name: cluster_access_token
+            type: string
+            required: false
+          - name: cluster_user_account_id
+            type: string
+            required: false
+          - name: cluster_user_name
+            type: string
+            required: false
+          - name: crn
+            type: string
+            required: false
+          - name: defer_credentials
+            type: boolean
+            required: false
+          - name: deployment_type
+            type: string
+            required: false
+          - name: engine_host
+            type: string
+            required: false
+          - name: engine_id
+            type: string
+            required: false
+          - name: engine_port
+            type: integer
+            required: false
+          - name: engine_ssl
+            type: boolean
+            required: false
+          - name: engine_ssl_certificate
+            type: string
+            required: false
+          - name: host
+            type: string
+            required: true
+          - name: instance_id
+            type: string
+            required: true
+          - name: instance_name
+            type: string
+            required: true
+          - name: is_cpd
+            type: boolean
+            required: false
+          - name: password
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: prepare_statement_support
+            type: boolean
+            required: false
+          - name: s2s
+            type: boolean
+            required: false
+          - name: ssl
+            type: boolean
+            required: false
+          - name: ssl_certificate
+            type: string
+            required: false
+          - name: ssl_certificate_validation
+            type: boolean
+            required: false
+          - name: username
+            type: string
+            required: true
+      mysql:
+        applies_to:
+          - mysql
+        fields:
+          - name: auto_discovery
+            type: boolean
+            required: false
+          - name: cluster_access_token
+            type: string
+            required: false
+          - name: cluster_user_account_id
+            type: string
+            required: false
+          - name: cluster_user_name
+            type: string
+            required: false
+          - name: database
+            type: string
+            required: false
+          - name: defer_credentials
+            type: boolean
+            required: false
+          - name: encoding
+            type: string
+            required: false
+          - name: host
+            type: string
+            required: true
+          - name: password
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: proxy
+            type: boolean
+            required: false
+          - name: proxy_host
+            type: string
+            required: true
+          - name: proxy_password
+            type: string
+            required: false
+          - name: proxy_port
+            type: integer
+            required: true
+          - name: proxy_user
+            type: string
+            required: false
+          - name: sg_gateway_id
+            type: string
+            required: false
+          - name: sg_host_original
+            type: string
+            required: false
+          - name: sg_http_proxy
+            type: boolean
+            required: false
+          - name: sg_security_token
+            type: string
+            required: false
+          - name: sg_service_url
+            type: string
+            required: false
+          - name: sl_client_cert
+            type: string
+            required: false
+          - name: sl_client_private_key
+            type: string
+            required: false
+          - name: sl_connector_id
+            type: string
+            required: false
+          - name: sl_endpoint_host
+            type: string
+            required: false
+          - name: sl_endpoint_name
+            type: string
+            required: false
+          - name: sl_endpoint_port
+            type: integer
+            required: false
+          - name: sl_host_original
+            type: string
+            required: false
+          - name: sl_http_proxy
+            type: boolean
+            required: false
+          - name: sl_location_id
+            type: string
+            required: false
+          - name: sl_service_url
+            type: string
+            required: false
+          - name: ssl
+            type: boolean
+            required: false
+          - name: ssl_certificate
+            type: string
+            required: false
+          - name: ssl_certificate_host
+            type: string
+            required: false
+          - name: ssl_certificate_validation
+            type: boolean
+            required: false
+          - name: username
+            type: string
+            required: true
+          - name: zero_date_time_conversion
+            type: boolean
+            required: false
+      postgresql:
+        applies_to:
+          - postgresql
+        fields:
+          - name: alternate_servers
+            type: string
+            required: false
+          - name: auto_discovery
+            type: boolean
+            required: false
+          - name: cluster_access_token
+            type: string
+            required: false
+          - name: cluster_user_account_id
+            type: string
+            required: false
+          - name: cluster_user_name
+            type: string
+            required: false
+          - name: database
+            type: string
+            required: true
+          - name: defer_credentials
+            type: boolean
+            required: false
+          - name: host
+            type: string
+            required: true
+          - name: key_certificate
+            type: string
+            required: false
+          - name: login_timeout
+            type: integer
+            required: false
+          - name: password
+            type: string
+            required: true
+          - name: port
+            type: integer
+            required: true
+          - name: private_key
+            type: string
+            required: false
+          - name: proxy
+            type: boolean
+            required: false
+          - name: proxy_host
+            type: string
+            required: true
+          - name: proxy_password
+            type: string
+            required: false
+          - name: proxy_port
+            type: integer
+            required: true
+          - name: proxy_user
+            type: string
+            required: false
+          - name: query_timeout
+            type: integer
+            required: false
+          - name: retry_limit
+            type: integer
+            required: false
+          - name: sg_gateway_id
+            type: string
+            required: false
+          - name: sg_host_original
+            type: string
+            required: false
+          - name: sg_http_proxy
+            type: boolean
+            required: false
+          - name: sg_security_token
+            type: string
+            required: false
+          - name: sg_service_url
+            type: string
+            required: false
+          - name: sl_client_cert
+            type: string
+            required: false
+          - name: sl_client_private_key
+            type: string
+            required: false
+          - name: sl_connector_id
+            type: string
+            required: false
+          - name: sl_endpoint_host
+            type: string
+            required: false
+          - name: sl_endpoint_name
+            type: string
+            required: false
+          - name: sl_endpoint_port
+            type: integer
+            required: false
+          - name: sl_host_original
+            type: string
+            required: false
+          - name: sl_http_proxy
+            type: boolean
+            required: false
+          - name: sl_location_id
+            type: string
+            required: false
+          - name: sl_service_url
+            type: string
+            required: false
+          - name: ssl
+            type: boolean
+            required: false
+          - name: ssl_certificate
+            type: string
+            required: false
+          - name: ssl_certificate_host
+            type: string
+            required: false
+          - name: ssl_certificate_validation
+            type: boolean
+            required: false
+          - name: username
+            type: string
+            required: true
     fields:
       - name: asset_id
         type: string
@@ -286,3 +605,43 @@ resource:
       # kind is supported on this deployment without altering the base block.
       api: {}
   unsupported_on: []
+
+advisories:
+  - severity: warn
+    tier: doc_cited
+    date: "2026-05-08"
+    text: >-
+      In Data Refinery flows, the IBM watsonx.data Presto connection (and the plain Presto, Apache
+      Hive, Cognos Analytics, and several other connections) can be used as a source only, not as
+      a target. Data Refinery also cannot connect to data sources that use Kerberos
+      authentication.
+  - severity: info
+    tier: doc_cited
+    date: "2026-05-08"
+    text: >-
+      In SPSS Modeler, SQL pushback offloads supported operations to the source database.
+      Connections that support SQL pushback include PostgreSQL, MySQL, Db2, Oracle, Microsoft SQL
+      Server, Snowflake, Teradata, and the IBM watsonx.data Presto connection (which is read-only
+      inside SPSS Modeler). Object-storage and file connectors, which have no SQL engine, do not
+      support SQL pushback.
+  - severity: info
+    tier: doc_cited
+    date: "2026-05-08"
+    text: >-
+      The IBM watsonx.data Presto connection targets one of three deployment types (Developer
+      edition, as a Service, on Red Hat OpenShift). All three take a hostname, a port (default
+      443), and an instance ID, except as a Service which takes a Cloud Resource Name (CRN) in
+      place of the instance ID. Credentials vary by deployment: Developer edition uses a username
+      and password; as a Service uses an API key (the username is ibmlhapikey_<account-email> and
+      the password is the API key); on Red Hat OpenShift uses either a username and password or a
+      username and API key. SSL is enabled by default and any certificate must be in PEM format.
+  - severity: warn
+    tier: doc_cited
+    date: "2026-05-08"
+    text: >-
+      Engine connection details on the IBM watsonx.data Presto connection are deprecated. You can
+      still add and update them, but they will be discontinued in a future release. The
+      watsonx.data Presto connection can read from watsonx.data and write Iceberg and Delta Lake
+      tables to object storage; the plain Presto connection is read-only. Known limitations: TIME
+      and TIMESTAMP data types are unsupported on the Presto C++ engine, and writing Delta Lake
+      tables to Azure Data Lake Storage is unsupported.
