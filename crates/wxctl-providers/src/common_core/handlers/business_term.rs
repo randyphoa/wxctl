@@ -6,7 +6,7 @@ use std::pin::Pin;
 use wxctl_core::client::{BodyKind, HttpClient, Method, RequestSpec};
 use wxctl_core::registry::FieldDescriptor;
 use wxctl_core::traits::{HookOutcome, ResourceHandler};
-use wxctl_schema::schema::FieldLocation;
+use wxctl_schema::ir::FieldLocationIr;
 
 use crate::util::{extract_artifact_id, fetch_all_pages};
 
@@ -32,7 +32,7 @@ pub struct BusinessTermHandler;
 /// `metadata`, `ref_name`, Computed/LocalOnly fields) before building the POST
 /// body, mirroring the materializer which excludes Computed/LocalOnly.
 fn body_field_names(fields: &[FieldDescriptor]) -> HashSet<&str> {
-    fields.iter().filter(|f| f.location == FieldLocation::Body).map(|f| f.name.as_str()).collect()
+    fields.iter().filter(|f| matches!(f.location, FieldLocationIr::Body)).map(|f| f.name.as_str()).collect()
 }
 
 /// Build the 1-element term array the API expects from a resolved resource,
@@ -166,15 +166,15 @@ mod tests {
     use super::*;
     use serde_json::json;
     use wxctl_core::registry::FieldDescriptor;
-    use wxctl_schema::schema::FieldLocation;
+    use wxctl_schema::ir::FieldLocationIr;
 
-    fn field(name: &str, location: FieldLocation) -> FieldDescriptor {
+    fn field(name: &str, location: FieldLocationIr) -> FieldDescriptor {
         FieldDescriptor { name: name.to_string(), required: false, immutable: false, location }
     }
 
     #[test]
     fn wrap_term_keeps_only_body_fields_and_wraps_in_array() {
-        let fields = vec![field("name", FieldLocation::Body), field("short_description", FieldLocation::Body), field("artifact_id", FieldLocation::Computed)];
+        let fields = vec![field("name", FieldLocationIr::Body), field("short_description", FieldLocationIr::Body), field("artifact_id", FieldLocationIr::Computed)];
         let resource = json!({"kind": "business_term", "name": "Email", "short_description": "an email", "artifact_id": "should-drop", "ref_name": "term_email"});
         let wrapped = wrap_term_as_array(&resource, &fields);
         let arr = wrapped.as_array().expect("array");
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn wrap_term_preserves_parent_category_object() {
-        let fields = vec![field("name", FieldLocation::Body), field("parent_category", FieldLocation::Body)];
+        let fields = vec![field("name", FieldLocationIr::Body), field("parent_category", FieldLocationIr::Body)];
         let resource = json!({"name": "Email", "parent_category": {"id": "cat-1"}});
         let wrapped = wrap_term_as_array(&resource, &fields);
         assert_eq!(wrapped[0].get("parent_category"), Some(&json!({"id": "cat-1"})));

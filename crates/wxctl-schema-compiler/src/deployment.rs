@@ -305,21 +305,6 @@ fn score_specificity(key: &str) -> u32 {
     if dots >= 1 { 70 } else { 50 }
 }
 
-/// Resolve the effective `SchemaIr` for the active deployment via static
-/// overlay selection: no deployments -> base; else the most-specific matching
-/// overlay key looked up in the pre-baked `RESOURCE_IR_EFFECTIVE` table (falls
-/// back to `base` if the key was somehow not baked).
-pub fn effective_ir(base: &'static crate::ir::SchemaIr, deployment: &Deployment) -> &'static crate::ir::SchemaIr {
-    let Some(pairs) = base.resource.deployments else { return base };
-    let Some(key) = select_overlay_key(pairs.iter().map(|(k, _)| *k), deployment) else { return base };
-    crate::ir::RESOURCE_IR_EFFECTIVE.iter().find(|(name, k, _)| *name == base.resource.name && *k == key).map(|(_, _, ir)| *ir).unwrap_or(base)
-}
-
-/// Returns true when this resource kind is unsupported on the active deployment.
-pub fn is_unsupported_on_ir(unsupported_on: &[&'static str], deployment: &Deployment) -> bool {
-    unsupported_on.iter().any(|c| DeploymentConstraint::from_str(c).map(|dc| deployment.matches(&dc)).unwrap_or(false))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

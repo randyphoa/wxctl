@@ -54,10 +54,9 @@ mod parity {
     /// compiled schema set so a newly added `paw_*` schema is covered automatically.
     #[test]
     fn paw_asset_type_matches_schema_list_filter() {
-        let schemas = wxctl_schema::load_all_schemas().expect("load schemas");
         let mut checked = 0;
-        for schema in &schemas {
-            let kind = schema.resource.name.as_str();
+        for schema in wxctl_schema::ir::RESOURCE_IR.values() {
+            let kind = schema.resource.kind;
             if !kind.starts_with("paw_") {
                 continue;
             }

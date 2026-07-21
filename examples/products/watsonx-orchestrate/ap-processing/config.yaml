@@ -55,7 +55,7 @@ binding:
   python:
     function: duplicate_detection:main
     connections:
-      erp: ${orchestrate_connection.erp_connection}
+      northwind-erp: ${orchestrate_connection.erp_connection}
 ---
 kind: agent
 ref_name: ap_processing_agent

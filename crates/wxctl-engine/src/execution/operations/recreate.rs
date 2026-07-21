@@ -16,8 +16,8 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     let operation_id = &state.operation_id;
     let client = state.clients.get(&descriptor.service).ok_or_else(|| anyhow!("No client for service: {}", descriptor.service))?;
 
-    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, &descriptor.schema)?;
-    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, &descriptor.schema, &state.registry);
+    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, descriptor.schema)?;
+    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, descriptor.schema, &state.registry);
 
     // Step 1: delete existing resource. Materialize so `also_query: true` fields
     // (e.g. wml_deployment.space_id) reach the bodyless DELETE as query params.
@@ -26,7 +26,7 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
         && let Some(resource_id) = extract_resource_id(&remote.data, &descriptor.id_field)
     {
         let materializer = RequestMaterializer::new(Method::DELETE, &endpoints.delete);
-        let mut spec = materializer.materialize(&resolved_data, &descriptor.schema.resource.schema.fields, BodyKindSelector::None)?;
+        let mut spec = materializer.materialize(&resolved_data, descriptor.schema.resource.schema.fields, BodyKindSelector::None)?;
         spec.path_vars.insert(descriptor.id_field.clone(), resource_id);
         // Mirror delete.rs: a 404 means the remote vanished between plan and execute
         // (already gone) — tolerate it and proceed to the create step.

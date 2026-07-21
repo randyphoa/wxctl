@@ -7,8 +7,47 @@ mod config;
 mod output;
 mod update;
 
-#[tokio::main]
-async fn main() {
+/// Whole-`main` trampoline (the uv `main2` / rustc `run_in_thread_with_globals` /
+/// rust-analyzer `with_extra_thread` pattern). The entire program — clap `Command`
+/// construction, the tokio runtime, and every command — runs on one explicitly
+/// sized thread, so the OS main-thread stack limit never gates wxctl. Windows
+/// reserves only 1 MiB for the main thread and unoptimized `wxctl` needs more than
+/// that just to build clap's `Command` tower; on Unix `ulimit -s` can set it lower
+/// still. `RUST_MIN_STACK` overrides the 8 MiB default (matching rustc);
+/// `/STACK:8388608` in `.cargo/config.toml` is the Windows backstop for the rare
+/// inline-fallback path.
+fn main() {
+    let stack_size = std::env::var("RUST_MIN_STACK").ok().and_then(|v| v.parse::<usize>().ok()).filter(|&n| n > 0).unwrap_or(8 * 1024 * 1024);
+
+    // Build the tokio runtime *inside* the thread so `block_on` (and the clap tower
+    // + first schema access that run before the first await) execute on the sized
+    // stack, not the OS main thread.
+    let run = || {
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("build tokio runtime");
+        rt.block_on(run_main());
+    };
+
+    match std::thread::Builder::new().name("wxctl-main".into()).stack_size(stack_size).spawn(run) {
+        Ok(handle) => {
+            // Normal completion returns `()`. `run_main`'s error/panic paths call
+            // `std::process::exit` directly, so they never reach here; a panic that
+            // escapes before the in-`run_main` hook is installed surfaces as a join
+            // `Err` payload — re-raise it on the main thread so the process still aborts.
+            if let Err(payload) = handle.join() {
+                std::panic::resume_unwind(payload);
+            }
+        }
+        Err(e) => {
+            // Spawn failure (resource exhaustion) is rare: run inline on the OS main
+            // thread. Degraded — Windows leans on the `/STACK` link-arg — but the
+            // program still runs rather than aborting at startup.
+            eprintln!("wxctl: could not spawn main thread ({e}); running inline");
+            run();
+        }
+    }
+}
+
+async fn run_main() {
     // Global logging subscriber. Two layers run independently with their own filters:
     //   - OutputCollectorLayer: drives the CLI rendering. Always on for wxctl::* targets at trace
     //     so the user sees stage / substage / decision events regardless of RUST_LOG. The active

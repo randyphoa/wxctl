@@ -276,15 +276,15 @@ fn print_validation_table(theme: &Theme, profile: &str, results: &[(String, Serv
 /// If config files are provided, parse YAML and extract resource kinds, then map to services.
 /// If no config files, return all non-local services from the schema registry.
 fn determine_services(config_paths: &[String]) -> Result<Vec<String>> {
-    let schemas = wxctl_providers::load_all_schemas()?;
+    let schemas: Vec<&'static wxctl_schema::ir::SchemaIr> = wxctl_schema::ir::RESOURCE_IR.values().copied().collect();
 
     if config_paths.is_empty() {
         // No files: collect all unique services, filter out "local"
         let mut services: BTreeSet<String> = BTreeSet::new();
         for schema in &schemas {
-            let svc = &schema.resource.service;
+            let svc = schema.resource.service;
             if svc != "local" {
-                services.insert(svc.clone());
+                services.insert(svc.to_string());
             }
         }
         return Ok(services.into_iter().collect());
@@ -293,7 +293,7 @@ fn determine_services(config_paths: &[String]) -> Result<Vec<String>> {
     // Build kind → service mapping
     let mut kind_to_service: BTreeMap<String, String> = BTreeMap::new();
     for schema in &schemas {
-        kind_to_service.insert(schema.resource.kind.clone(), schema.resource.service.clone());
+        kind_to_service.insert(schema.resource.kind.to_string(), schema.resource.service.to_string());
     }
 
     // Parse config sources and extract kinds

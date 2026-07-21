@@ -24,8 +24,6 @@ mod watsonx_orchestrate; // was: orchestrate
 pub use wxctl_schema::dependency_graph;
 pub use wxctl_schema::dependency_graph::PATH_FIELDS;
 
-pub use wxctl_schema::load_all_schemas;
-
 /// Resolve relative local file paths in config resources against `config_dir`.
 ///
 /// Path fields are schema-declared (`is_path: true`) and surfaced via the
@@ -149,17 +147,16 @@ pub fn get_reconciler(resource_name: &str) -> Option<Arc<dyn wxctl_core::traits:
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use wxctl_core::registry::ResourceDescriptor;
 
     #[test]
     fn test_all_schemas_parse_into_descriptors() {
-        let schemas = load_all_schemas().expect("All schemas should parse via SchemaParser");
+        let schemas: Vec<&'static wxctl_schema::ir::SchemaIr> = wxctl_schema::ir::RESOURCE_IR.values().copied().collect();
 
         assert!(!schemas.is_empty(), "Expected at least one schema to parse, got none");
 
         for schema in &schemas {
-            let descriptor = ResourceDescriptor::from_schema(schema).unwrap_or_else(|e| panic!("Schema '{}' failed to produce ResourceDescriptor: {}", schema.resource.name, e));
+            let descriptor = ResourceDescriptor::from_ir(schema);
 
             assert!(!descriptor.name.is_empty(), "Schema has empty name");
             assert!(!descriptor.service.is_empty(), "Schema '{}' has empty service", descriptor.name);
@@ -170,11 +167,14 @@ mod tests {
             assert!(!descriptor.endpoints.delete.is_empty(), "Schema '{}' has empty delete endpoint", descriptor.name);
         }
 
-        let mut kinds: Vec<_> = schemas.iter().map(|s| s.resource.kind.clone()).collect();
-        kinds.sort();
+        // Duplicate-kind detection moved to build time: `RESOURCE_IR` is a `phf::Map`
+        // keyed by kind, so key uniqueness is structural, not something this test can
+        // observe going wrong. Kept as a light sanity echo of the old assertion's intent.
+        let mut kinds: Vec<_> = schemas.iter().map(|s| s.resource.kind).collect();
+        kinds.sort_unstable();
         let len = kinds.len();
         kinds.dedup();
-        assert_eq!(kinds.len(), len, "Duplicate kind values found across schemas: {:?}", schemas.iter().map(|s| (s.resource.name.clone(), s.resource.kind.clone())).collect::<Vec<_>>());
+        assert_eq!(kinds.len(), len, "Duplicate kind values found across schemas");
     }
 
     /// AC6: the secret in `concert_credential.credentials[].value` must be redacted at
@@ -185,8 +185,7 @@ mod tests {
     /// live-emission check (grep of run records / WXCTL_LOG_PATH) is the Phase-4 live E2E.
     #[test]
     fn concert_credential_marks_credentials_value_sensitive() {
-        let schemas = load_all_schemas().expect("All schemas should parse via SchemaParser");
-        let cred = schemas.iter().find(|s| s.resource.kind == "concert_credential").expect("concert_credential schema should be present");
+        let cred = wxctl_schema::ir::RESOURCE_IR.get("concert_credential").copied().expect("concert_credential in RESOURCE_IR");
         let paths = cred.resource.schema.sensitive_paths();
         assert!(paths.iter().any(|p| p == "credentials.value"), "expected 'credentials.value' in concert_credential sensitive_paths, got {:?}", paths);
     }
@@ -197,8 +196,7 @@ mod tests {
     /// live-emission grep (run records / WXCTL_LOG_PATH) is the Phase-4 live E2E.
     #[test]
     fn pa_user_marks_password_sensitive() {
-        let schemas = load_all_schemas().expect("All schemas should parse via SchemaParser");
-        let user = schemas.iter().find(|s| s.resource.kind == "pa_user").expect("pa_user schema should be present");
+        let user = wxctl_schema::ir::RESOURCE_IR.get("pa_user").copied().expect("pa_user in RESOURCE_IR");
         let paths = user.resource.schema.sensitive_paths();
         assert!(paths.iter().any(|p| p == "password"), "expected 'password' in pa_user sensitive_paths, got {:?}", paths);
     }

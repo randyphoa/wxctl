@@ -1,5 +1,4 @@
-use crate::schema::{FieldLocation, HttpMethod, ResourceSchema};
-use anyhow::Result;
+use crate::ir::{FieldLocationIr, HttpMethodIr, SchemaIr};
 
 #[derive(Debug)]
 pub struct ResourceDescriptor {
@@ -9,7 +8,7 @@ pub struct ResourceDescriptor {
     pub id_field: String,
     pub endpoints: Endpoints,
     pub fields: Vec<FieldDescriptor>,
-    pub schema: ResourceSchema,
+    pub schema: &'static SchemaIr,
 }
 
 #[derive(Debug)]
@@ -19,7 +18,7 @@ pub struct Endpoints {
     pub get: String,
     pub create: String,
     pub update: Option<String>,
-    pub update_method: Option<HttpMethod>,
+    pub update_method: Option<HttpMethodIr>,
     pub delete: String,
 }
 
@@ -28,120 +27,105 @@ pub struct FieldDescriptor {
     pub name: String,
     pub required: bool,
     pub immutable: bool,
-    pub location: FieldLocation,
+    pub location: FieldLocationIr,
 }
 
 impl ResourceDescriptor {
-    pub fn from_schema(schema: &ResourceSchema) -> Result<Self> {
+    pub fn from_ir(schema: &'static SchemaIr) -> Self {
         let def = &schema.resource;
-        Ok(Self {
-            name: def.name.clone(),
-            service: def.service.clone(),
-            kind: def.kind.clone(),
-            id_field: def.api.id_field.clone(),
+        Self {
+            name: def.name.to_string(),
+            service: def.service.to_string(),
+            kind: def.kind.to_string(),
+            id_field: def.api.id_field.to_string(),
             endpoints: Endpoints {
-                base_path: def.api.base_path.clone(),
-                list: def.api.list_endpoint.clone(),
-                get: def.api.get_endpoint.clone(),
+                base_path: def.api.base_path.to_string(),
+                list: def.api.list_endpoint.map(str::to_string),
+                get: def.api.get_endpoint.to_string(),
 
                 // Use custom create_endpoint or fall back to base_path
-                create: def.api.create_endpoint.as_ref().unwrap_or(&def.api.base_path).clone(),
+                create: def.api.create_endpoint.unwrap_or(def.api.base_path).to_string(),
 
                 // Use custom update_endpoint or fall back to get_endpoint
-                update: def.api.update_method.as_ref().map(|_| def.api.update_endpoint.as_ref().unwrap_or(&def.api.get_endpoint).clone()),
+                update: def.api.update_method.map(|_| def.api.update_endpoint.unwrap_or(def.api.get_endpoint).to_string()),
 
-                update_method: def.api.update_method.clone(),
+                update_method: def.api.update_method,
 
                 // Use custom delete_endpoint or fall back to get_endpoint
-                delete: def.api.delete_endpoint.as_ref().unwrap_or(&def.api.get_endpoint).clone(),
+                delete: def.api.delete_endpoint.unwrap_or(def.api.get_endpoint).to_string(),
             },
-            fields: def.schema.fields.iter().map(|f| FieldDescriptor { name: f.name.clone(), required: f.required, immutable: f.immutable, location: f.location.clone() }).collect(),
-            schema: schema.clone(),
-        })
+            fields: def.schema.fields.iter().map(|f| FieldDescriptor { name: f.name.to_string(), required: f.required, immutable: f.immutable, location: f.location }).collect(),
+            schema,
+        }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests {
     use super::*;
-    use crate::schema::*;
 
-    fn make_minimal_schema() -> ResourceSchema {
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "test_resource".to_string(),
-                service: "test_service".to_string(),
-                kind: "test_kind".to_string(),
-                version: "v1".to_string(),
-                api: ApiDefinition {
-                    base_path: "/v1/resources".to_string(),
-                    id_field: "resource_id".to_string(),
-                    list_endpoint: None,
-                    get_endpoint: "/v1/resources/{id}".to_string(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: Some(HttpMethod::Patch),
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition {
-                    fields: vec![FieldDefinition {
-                        name: "name".to_string(),
-                        field_type: FieldType::String,
-                        required: true,
-                        immutable: false,
-                        location: FieldLocation::Body,
-                        description: None,
-                        validation: None,
-                        schema: None,
-                        item_type: None,
-                        default: None,
-                        allowed_values: None,
-                        references: None,
-                        api_field: None,
-                        sensitive: false,
-                        also_query: false,
-                        properties: None,
-                        is_path: false,
-                        synthesize: None,
-                        synth_shape: None,
-                    }],
-                    ..Default::default()
-                },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".to_string() },
-                    state_fields: None,
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: true,
-                    json_patch_path_prefix: None,
-                    identity_hash: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
-    }
+    const MINIMAL_YAML: &str = r#"
+resource:
+  name: test_resource
+  service: test_service
+  kind: test_kind
+  version: v1
+  api:
+    base_path: /v1/resources
+    id_field: resource_id
+    get_endpoint: /v1/resources/{id}
+    create_method: POST
+    update_method: PATCH
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+    update_strategy: patch
+"#;
+
+    const MINIMAL_YAML_NO_UPDATE: &str = r#"
+resource:
+  name: test_resource
+  service: test_service
+  kind: test_kind
+  version: v1
+  api:
+    base_path: /v1/resources
+    id_field: resource_id
+    get_endpoint: /v1/resources/{id}
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: name
+        type: string
+        required: true
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+    update_strategy: patch
+"#;
 
     #[test]
     fn test_endpoint_fallbacks() {
         // With an update_method: create falls back to base_path, update/delete
         // fall back to get_endpoint.
-        let desc = ResourceDescriptor::from_schema(&make_minimal_schema()).unwrap();
+        let schema = crate::ir_support::compile_to_static_ir(MINIMAL_YAML).unwrap();
+        let desc = ResourceDescriptor::from_ir(schema);
         assert_eq!(desc.endpoints.create, "/v1/resources");
         assert_eq!(desc.endpoints.update.unwrap(), "/v1/resources/{id}");
         assert_eq!(desc.endpoints.delete, "/v1/resources/{id}");
 
         // No update_method → no update endpoint at all.
-        let mut no_update = make_minimal_schema();
-        no_update.resource.api.update_method = None;
-        let desc = ResourceDescriptor::from_schema(&no_update).unwrap();
+        let no_update = crate::ir_support::compile_to_static_ir(MINIMAL_YAML_NO_UPDATE).unwrap();
+        let desc = ResourceDescriptor::from_ir(no_update);
         assert!(desc.endpoints.update.is_none());
     }
 }

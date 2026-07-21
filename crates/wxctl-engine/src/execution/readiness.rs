@@ -14,7 +14,7 @@ use std::time::Duration;
 use wxctl_core::client::{BodyKind, RequestSpec};
 use wxctl_core::logging::error_codes;
 use wxctl_core::registry::ResourceDescriptor;
-use wxctl_schema::schema::ReadinessDefinition;
+use wxctl_schema::ir::ReadinessIr;
 
 /// A referenced resource whose readiness gates the consumer's create.
 struct ReadyTarget {
@@ -23,7 +23,7 @@ struct ReadyTarget {
     id: String,
     get_endpoint: String,
     id_field: String,
-    readiness: ReadinessDefinition,
+    readiness: &'static ReadinessIr,
 }
 
 enum ReadyOutcome {
@@ -49,10 +49,10 @@ fn read_state_path(response: &Value, state_path: &str) -> Option<String> {
 }
 
 /// Classify an observed state against the readiness contract.
-fn classify(state: &str, readiness: &ReadinessDefinition, kind: &str, id: &str) -> ReadyOutcome {
-    if readiness.ready.iter().any(|s| s == state) {
+fn classify(state: &str, readiness: &ReadinessIr, kind: &str, id: &str) -> ReadyOutcome {
+    if readiness.ready.contains(&state) {
         ReadyOutcome::Ready
-    } else if readiness.failed.iter().any(|s| s == state) {
+    } else if readiness.failed.contains(&state) {
         ReadyOutcome::Failed(format!("[{}/readiness] {} {} entered failure state '{}'", error_codes::H002, kind, id, state))
     } else {
         ReadyOutcome::Pending
@@ -61,8 +61,8 @@ fn classify(state: &str, readiness: &ReadinessDefinition, kind: &str, id: &str) 
 
 /// Resolve the poll budget: env override (if set, parseable, > 0) else the
 /// schema default; interval floored to 1s; at least one attempt.
-fn poll_budget(readiness: &ReadinessDefinition) -> Budget {
-    let secs = readiness.timeout_env.as_deref().and_then(|var| std::env::var(var).ok()).and_then(|raw| raw.parse::<u32>().ok()).filter(|&n| n > 0).unwrap_or(readiness.timeout_default);
+fn poll_budget(readiness: &ReadinessIr) -> Budget {
+    let secs = readiness.timeout_env.and_then(|var| std::env::var(var).ok()).and_then(|raw| raw.parse::<u32>().ok()).filter(|&n| n > 0).unwrap_or(readiness.timeout_default);
     let interval_secs = readiness.interval_secs.max(1);
     let max_attempts = (secs / interval_secs).max(1);
     Budget { secs, interval: Duration::from_secs(interval_secs as u64), max_attempts }
@@ -76,16 +76,16 @@ where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<Value>>,
 {
-    let budget = poll_budget(&target.readiness);
+    let budget = poll_budget(target.readiness);
     let mut last: Option<String> = None;
     for attempt in 1..=budget.max_attempts {
         let response = fetch().await?;
-        let state = read_state_path(&response, &target.readiness.state_path).unwrap_or_else(|| "unknown".to_string());
+        let state = read_state_path(&response, target.readiness.state_path).unwrap_or_else(|| "unknown".to_string());
         if last.as_deref() != Some(state.as_str()) {
             tracing::debug!(target: "wxctl::substage::execution", kind = %target.kind, id = %target.id, status = %state, attempt, max_attempts = budget.max_attempts, "readiness gate: state observed");
             last = Some(state.clone());
         }
-        match classify(&state, &target.readiness, &target.kind, &target.id) {
+        match classify(&state, target.readiness, &target.kind, &target.id) {
             ReadyOutcome::Ready => return Ok(()),
             ReadyOutcome::Failed(msg) => bail!(msg),
             ReadyOutcome::Pending => {
@@ -103,12 +103,12 @@ where
 /// declares no readiness block, or has no non-empty resolved id.
 fn collect_ready_targets(descriptor: &ResourceDescriptor, resolved_data: &Value, lookup: &dyn Fn(&str) -> Option<Arc<ResourceDescriptor>>) -> Vec<ReadyTarget> {
     let mut targets = Vec::new();
-    for field in &descriptor.schema.resource.schema.fields {
+    for field in descriptor.schema.resource.schema.fields {
         let Some(refs) = field.references.as_ref() else { continue };
         if !refs.require_ready {
             continue;
         }
-        let Some(ref_desc) = lookup(&refs.resource) else {
+        let Some(ref_desc) = lookup(refs.resource) else {
             tracing::debug!(target: "wxctl::substage::execution", consumer = %descriptor.name, field = %field.name, ref_kind = %refs.resource, "readiness gate: referenced kind not in registry; skipping");
             continue;
         };
@@ -116,11 +116,11 @@ fn collect_ready_targets(descriptor: &ResourceDescriptor, resolved_data: &Value,
             tracing::debug!(target: "wxctl::substage::execution", consumer = %descriptor.name, field = %field.name, ref_kind = %refs.resource, "readiness gate: referenced kind declares no readiness block; skipping");
             continue;
         };
-        let Some(id) = resolved_data.get(&field.name).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) else {
+        let Some(id) = resolved_data.get(field.name).and_then(|v| v.as_str()).filter(|s| !s.is_empty()) else {
             tracing::debug!(target: "wxctl::substage::execution", consumer = %descriptor.name, field = %field.name, ref_kind = %refs.resource, "readiness gate: no resolved id for reference; skipping");
             continue;
         };
-        targets.push(ReadyTarget { kind: ref_desc.name.clone(), service: ref_desc.service.clone(), id: id.to_string(), get_endpoint: ref_desc.endpoints.get.clone(), id_field: ref_desc.id_field.clone(), readiness: readiness.clone() });
+        targets.push(ReadyTarget { kind: ref_desc.name.clone(), service: ref_desc.service.clone(), id: id.to_string(), get_endpoint: ref_desc.endpoints.get.clone(), id_field: ref_desc.id_field.clone(), readiness });
     }
     targets
 }
@@ -151,18 +151,19 @@ mod tests {
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use wxctl_core::registry::ResourceDescriptor;
-    use wxctl_schema::schema::{ReadinessDefinition, SchemaParser};
 
-    fn readiness(ready: &[&str], failed: &[&str], timeout_default: u32, interval_secs: u32) -> ReadinessDefinition {
-        ReadinessDefinition { state_path: "entity.status.state".to_string(), ready: ready.iter().map(|s| s.to_string()).collect(), failed: failed.iter().map(|s| s.to_string()).collect(), timeout_env: None, timeout_default, interval_secs }
+    fn readiness(ready: &'static [&'static str], failed: &'static [&'static str], timeout_default: u32, interval_secs: u32) -> ReadinessIr {
+        ReadinessIr { state_path: "entity.status.state", ready, failed, timeout_env: None, timeout_default, interval_secs }
     }
 
-    fn target(readiness: ReadinessDefinition) -> ReadyTarget {
-        ReadyTarget { kind: "data_mart".to_string(), service: "openscale".to_string(), id: "dm-1".to_string(), get_endpoint: "/v2/data_marts/{id}".to_string(), id_field: "id".to_string(), readiness }
+    /// Leaks the owned `ReadinessIr` to `'static` so it fits `ReadyTarget.readiness`
+    /// (test-only; mirrors the leak pattern in `wxctl_schema::ir_support`).
+    fn target(readiness: ReadinessIr) -> ReadyTarget {
+        ReadyTarget { kind: "data_mart".to_string(), service: "openscale".to_string(), id: "dm-1".to_string(), get_endpoint: "/v2/data_marts/{id}".to_string(), id_field: "id".to_string(), readiness: Box::leak(Box::new(readiness)) }
     }
 
     fn desc(yaml: &str) -> Arc<ResourceDescriptor> {
-        Arc::new(ResourceDescriptor::from_schema(&SchemaParser::parse_str(yaml).unwrap()).unwrap())
+        Arc::new(ResourceDescriptor::from_ir(wxctl_schema::ir_support::compile_to_static_ir(yaml).unwrap()))
     }
 
     const DATA_MART_YAML: &str = r#"

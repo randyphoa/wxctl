@@ -9,7 +9,7 @@ use tracing::{Instrument, info_span};
 use wxctl_core::client::{BodyKind, BodyKindSelector, RequestMaterializer};
 use wxctl_core::logging::redact_for_log;
 use wxctl_core::traits::{HookOutcome, StateComparison};
-use wxctl_schema::schema::FieldDefinition;
+use wxctl_schema::ir::FieldIr;
 
 /// Prune a materialized request body down to the keys that `state_fields`
 /// allows on plain-JSON PATCH/PUT updates.
@@ -33,12 +33,12 @@ use wxctl_schema::schema::FieldDefinition;
 /// first segment is ever a real body key. A state_field with no matching
 /// schema field keeps the previous defensive behavior of allowing the raw
 /// name through unchanged.
-fn prune_body_to_state_fields(map: &mut Map<String, Value>, state_fields: &[String], fields: &[FieldDefinition]) {
-    let allowed_keys: std::collections::HashSet<&str> = state_fields
+fn prune_body_to_state_fields(map: &mut Map<String, Value>, state_fields: &[&str], fields: &[FieldIr]) {
+    let allowed_keys: std::collections::HashSet<String> = state_fields
         .iter()
-        .map(|s| match fields.iter().find(|f| &f.name == s) {
-            Some(f) => f.api_field.as_deref().unwrap_or(s.as_str()).split('.').next().unwrap_or(s.as_str()),
-            None => s.as_str(),
+        .map(|s| match fields.iter().find(|f| f.name == *s) {
+            Some(f) => f.api_field.map(|api| api.split('.').next().unwrap_or(api).to_string()).unwrap_or_else(|| s.to_string()),
+            None => s.to_string(),
         })
         .collect();
     map.retain(|k, _| allowed_keys.contains(k.as_str()));
@@ -57,7 +57,7 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
         _ => return Err(anyhow!("Expected Update operation")),
     };
 
-    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, &descriptor.schema)?;
+    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, descriptor.schema)?;
 
     // Reconciliation emits `Update { fields: vec![] }` when compare() couldn't
     // run because a dependency wasn't yet created. The DAG executor has since
@@ -80,7 +80,7 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
         }
     }
 
-    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, &descriptor.schema, &state.registry);
+    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, descriptor.schema, &state.registry);
     let current = op.remote.as_ref().map(|r| &r.data).ok_or_else(|| anyhow!("No remote data for update"))?;
 
     let endpoint_template = endpoints.update.as_ref().unwrap_or(&endpoints.get);
@@ -116,24 +116,24 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     // Default path — only reached when no handler Handled the update above.
     let resource_id = extract_resource_id(current, &descriptor.id_field).ok_or_else(|| anyhow!("Missing ID field for update"))?;
 
-    let method = match &endpoints.update_method {
-        Some(wxctl_schema::schema::HttpMethod::Put) => Method::PUT,
-        Some(wxctl_schema::schema::HttpMethod::Patch) => Method::PATCH,
-        Some(wxctl_schema::schema::HttpMethod::Post) => Method::POST,
+    let method = match endpoints.update_method {
+        Some(wxctl_schema::ir::HttpMethodIr::Put) => Method::PUT,
+        Some(wxctl_schema::ir::HttpMethodIr::Patch) => Method::PATCH,
+        Some(wxctl_schema::ir::HttpMethodIr::Post) => Method::POST,
         _ => Method::PATCH,
     };
 
     let use_json_patch = descriptor.schema.resource.reconciliation.use_json_patch;
     let body_selector = if method == Method::PATCH && use_json_patch {
-        let path_prefix = descriptor.schema.resource.reconciliation.json_patch_path_prefix.as_ref().ok_or_else(|| anyhow!("json_patch_path_prefix required"))?.clone();
-        BodyKindSelector::JsonPatch { changed_fields: fields.clone(), path_prefix, fields: &descriptor.schema.resource.schema.fields }
+        let path_prefix = descriptor.schema.resource.reconciliation.json_patch_path_prefix.map(str::to_string).ok_or_else(|| anyhow!("json_patch_path_prefix required"))?;
+        BodyKindSelector::JsonPatch { changed_fields: fields.clone(), path_prefix, fields: descriptor.schema.resource.schema.fields }
     } else {
         BodyKindSelector::Json
     };
 
     // Materialize from handler-modified body (includes injected fields like input_schema)
     let materializer = RequestMaterializer::new(method.clone(), endpoint_template);
-    let mut final_spec = materializer.materialize(&body, &descriptor.schema.resource.schema.fields, body_selector)?;
+    let mut final_spec = materializer.materialize(&body, descriptor.schema.resource.schema.fields, body_selector)?;
 
     // For non-JSON-Patch PATCH/PUT updates, prune the body to schema state_fields so
     // that immutable / computed fields aren't re-sent on update. Without this filter
@@ -152,9 +152,9 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     if !use_json_patch
         && (method == Method::PATCH || method == Method::PUT)
         && let BodyKind::Json(Value::Object(ref mut map)) = final_spec.body
-        && let Some(allowed) = descriptor.schema.resource.reconciliation.state_fields.as_ref()
+        && let Some(allowed) = descriptor.schema.resource.reconciliation.state_fields
     {
-        prune_body_to_state_fields(map, allowed, &descriptor.schema.resource.schema.fields);
+        prune_body_to_state_fields(map, allowed, descriptor.schema.resource.schema.fields);
     }
 
     // Some APIs require the resource's own id to ride the update BODY (not
@@ -205,15 +205,15 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
 mod tests {
     use super::*;
     use serde_json::json;
-    use wxctl_schema::schema::FieldLocation;
+    use wxctl_schema::ir::{FieldLocationIr, FieldTypeIr};
 
-    fn make_field(name: &str, api_field: Option<&str>) -> FieldDefinition {
-        FieldDefinition {
-            name: name.to_string(),
-            field_type: wxctl_schema::schema::FieldType::String,
+    fn make_field(name: &'static str, api_field: Option<&'static str>) -> FieldIr {
+        FieldIr {
+            name,
+            field_type: FieldTypeIr::String,
             required: false,
             immutable: false,
-            location: FieldLocation::Body,
+            location: FieldLocationIr::Body,
             description: None,
             validation: None,
             schema: None,
@@ -221,13 +221,12 @@ mod tests {
             default: None,
             allowed_values: None,
             references: None,
-            api_field: api_field.map(|s| s.to_string()),
+            api_field,
             sensitive: false,
             also_query: false,
             is_path: false,
             synthesize: None,
             synth_shape: None,
-            properties: None,
         }
     }
 
@@ -238,7 +237,7 @@ mod tests {
     #[test]
     fn prune_body_to_state_fields_translates_api_field_names() {
         let fields = vec![make_field("name", Some("Name")), make_field("rules", Some("Rules")), make_field("dimensions", None)];
-        let state_fields = vec!["name".to_string(), "rules".to_string()];
+        let state_fields: Vec<&str> = vec!["name", "rules"];
 
         let mut body = json!({
             "Name": "x",
@@ -259,7 +258,7 @@ mod tests {
     #[test]
     fn prune_body_to_state_fields_keeps_unmatched_state_field_raw() {
         let fields = vec![make_field("name", Some("Name"))];
-        let state_fields = vec!["name".to_string(), "ghost_field".to_string()];
+        let state_fields: Vec<&str> = vec!["name", "ghost_field"];
 
         let mut body = json!({"Name": "x", "ghost_field": "keep-me", "other": "drop-me"}).as_object().unwrap().clone();
 
@@ -273,7 +272,7 @@ mod tests {
     #[test]
     fn prune_body_to_state_fields_uses_first_segment_of_dotted_api_field() {
         let fields = vec![make_field("icon", Some("additional_properties.icon")), make_field("color", Some("additional_properties.color"))];
-        let state_fields = vec!["icon".to_string()];
+        let state_fields: Vec<&str> = vec!["icon"];
 
         let mut body = json!({
             "additional_properties": {"icon": "star", "color": "blue"},

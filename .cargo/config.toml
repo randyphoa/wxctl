@@ -1,0 +1,12 @@
+# Windows PE binaries default to a 1 MiB main-thread stack reserve; Linux and
+# macOS give 8 MiB. wxctl's unoptimized startup path (clap Command construction
+# plus recursive YAML schema parsing) needs more than 1 MiB in debug builds, so
+# test-spawned wxctl.exe binaries crashed with a stack overflow on Windows CI.
+# Reserve 8 MiB to match the other platforms. Keep these flags in sync if a
+# windows-gnu target is ever added (gnu spelling: -Wl,--stack,8388608).
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/STACK:8388608"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/STACK:8388608"]

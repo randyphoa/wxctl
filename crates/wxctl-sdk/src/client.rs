@@ -11,13 +11,11 @@ pub struct WxctlClient {
 impl WxctlClient {
     pub fn new(profile: &str, profile_path: Option<&str>) -> Result<Self> {
         let mut registry = ResourceRegistry::new();
-        let schemas = wxctl_providers::load_all_schemas()?;
-
-        for schema in schemas {
-            let handler = wxctl_providers::get_handler(&schema.resource.name);
+        for ir in wxctl_schema::ir::RESOURCE_IR.values().copied() {
+            let handler = wxctl_providers::get_handler(ir.resource.name);
             // Per-kind custom reconcilers first (e.g. asset_promotion); the generic
             // schema-driven reconciler covers everything else.
-            registry.register_from_schema(schema, handler, |s| wxctl_providers::get_reconciler(&s.resource.name).unwrap_or_else(|| Arc::new(SchemaBasedReconciler::new())))?;
+            registry.register_from_schema(ir, handler, |ir| wxctl_providers::get_reconciler(ir.resource.name).unwrap_or_else(|| Arc::new(SchemaBasedReconciler::new())))?;
         }
 
         let concurrency_config = ConcurrencyConfig::from_env();

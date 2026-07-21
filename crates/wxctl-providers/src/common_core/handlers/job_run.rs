@@ -456,19 +456,19 @@ mod tests {
     // the derived superset reaches the CAMS response envelope.
     #[test]
     fn job_run_schema_sensitive_paths_cover_response_envelope() {
-        let schema = wxctl_schema::load_all_schemas().unwrap().into_iter().find(|s| s.resource.kind == "job_run").expect("job_run schema present");
-        let paths = schema.resource.sensitive_paths();
+        let ir = wxctl_schema::ir::RESOURCE_IR.get("job_run").copied().expect("kind in RESOURCE_IR");
+        let paths = ir.resource.sensitive_paths();
         for expected in ["env_variables", "configuration.env_variables", "entity.job_run.configuration.env_variables", "results.entity.job_run.configuration.env_variables"] {
             assert!(paths.contains(&expected.to_string()), "missing {expected}: {paths:?}");
         }
         // Identity is the env marker: storage env_marker, and the clobbered name must
         // not be diffed (no immutable name → no Recreate loop; parser drops name from
         // state_fields for identity-hash kinds).
-        let ih = schema.resource.reconciliation.identity_hash.as_ref().expect("identity_hash block");
-        assert!(matches!(ih.storage, wxctl_schema::schema::HashStorage::EnvMarker));
-        assert!(!schema.resource.reconciliation.immutable_fields.contains(&"name".to_string()), "name must not be immutable-compared — the server clobbers it to 'Notebook Job'");
-        let sf = schema.resource.reconciliation.state_fields.as_ref().expect("state_fields computed");
-        assert!(!sf.contains(&"name".to_string()), "name must not be a state field");
-        assert!(sf.contains(&"identity_hash".to_string()), "synthetic identity_hash state field expected");
+        let ih = ir.resource.reconciliation.identity_hash.as_ref().expect("identity_hash block");
+        assert!(matches!(ih.storage, wxctl_schema::ir::HashStorageIr::EnvMarker));
+        assert!(!ir.resource.reconciliation.immutable_fields.contains(&"name"), "name must not be immutable-compared — the server clobbers it to 'Notebook Job'");
+        let sf = ir.resource.reconciliation.state_fields.expect("state_fields computed");
+        assert!(!sf.contains(&"name"), "name must not be a state field");
+        assert!(sf.contains(&"identity_hash"), "synthetic identity_hash state field expected");
     }
 }

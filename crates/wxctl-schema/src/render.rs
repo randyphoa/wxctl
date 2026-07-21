@@ -1,6 +1,6 @@
 //! Deterministic schema-reference markdown for the LLM generation/fix prompts,
-//! rendered from the compiled provider schemas (`load_all_schemas`) — the same
-//! single source of truth `wxctl explain` reads.
+//! rendered from the compiled provider schemas (`crate::ir::RESOURCE_IR`) — the
+//! same single source of truth `wxctl explain` reads.
 //!
 //! This replaces the hand-authored `compose/schema/reference.md` +
 //! `compose/resources/<service>/<kind>.md` (the old "Manual Step 1"), which
@@ -12,17 +12,17 @@ use anyhow::Result;
 use std::collections::HashSet;
 
 /// Render markdown reference docs for the requested kinds — or every kind when
-/// `only` is `None` or empty — sourced from `load_all_schemas()`. Output is
+/// `only` is `None` or empty — sourced from `crate::ir::RESOURCE_IR`. Output is
 /// stable (kinds sorted alphabetically) and `---`-separated, matching the layout
 /// the prompt templates expect.
 pub fn render_kinds_markdown(only: Option<&HashSet<&str>>) -> Result<String> {
-    let mut schemas = crate::load_all_schemas()?;
-    schemas.sort_by(|a, b| a.resource.kind.cmp(&b.resource.kind));
+    let mut schemas: Vec<&'static crate::ir::SchemaIr> = crate::ir::RESOURCE_IR.values().copied().collect();
+    schemas.sort_by(|a, b| a.resource.kind.cmp(b.resource.kind));
 
     let select_all = only.is_none_or(|kinds| kinds.is_empty());
     let mut out = String::new();
     for schema in &schemas {
-        if !select_all && !only.unwrap().contains(schema.resource.kind.as_str()) {
+        if !select_all && !only.unwrap().contains(schema.resource.kind) {
             continue;
         }
         // Serialize back to the `{ resource: {...} }` shape the renderer indexes,
@@ -280,7 +280,7 @@ mod tests {
     /// kind from the live schema set, with no serialization noise leaking through.
     #[test]
     fn renders_all_kinds_without_serialization_noise() {
-        let total = crate::load_all_schemas().unwrap().len();
+        let total = crate::ir::RESOURCE_IR.len();
         let empty: HashSet<&str> = HashSet::new();
         // None (no-arg) and Some(&empty) both mean "all kinds".
         for md in [render_kinds_markdown(None).expect("renders"), render_kinds_markdown(Some(&empty)).expect("renders")] {

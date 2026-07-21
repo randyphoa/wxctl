@@ -48,7 +48,7 @@ pub(in crate::execution) async fn execute_create<'a>(resolved_data: &'a Value, d
         }
     }
 
-    let final_spec = materializer.materialize(&body, &descriptor.schema.resource.schema.fields, BodyKindSelector::Json)?;
+    let final_spec = materializer.materialize(&body, descriptor.schema.resource.schema.fields, BodyKindSelector::Json)?;
 
     let mut response: Value = match client.execute(operation_id, final_spec).await {
         Ok(response) => response,
@@ -78,8 +78,8 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     let descriptor = &local.descriptor;
     let client = state.clients.get(&descriptor.service).ok_or_else(|| anyhow::anyhow!("No client for service: {}", descriptor.service))?;
 
-    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, &descriptor.schema)?;
-    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, &descriptor.schema, &state.registry);
+    let mut resolved_data = resolve_dependencies(&local.data, &state.runtime_ids, descriptor.schema)?;
+    enrich_with_linked_refs(&mut resolved_data, &local.data, &state.runtime_ids, descriptor.schema, &state.registry);
     super::super::readiness::gate_references_ready(&resolved_data, descriptor, state).await?;
     let merged = execute_create(&resolved_data, descriptor, client, &state.registry, &state.operation_id).await?;
 

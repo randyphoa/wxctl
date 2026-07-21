@@ -1,10 +1,10 @@
 //! Pure, sans-IO config validation — the offline subset of the engine's
-//! `ValidationPipeline`. Resolves descriptors from the compiled schema set
-//! (`load_all_schemas`), runs schema/dependency/cross-resource checks with
-//! `client_factory = None` and `skip_post_validate = true`, and returns a
-//! structured `{ valid, errors }` report. No deployment-overlay resolution,
-//! no `post_validate`, no `ClientFactory`/`ResourceRegistry`, no timing —
-//! this is what the remote MCP `validate_config` tool calls.
+//! `ValidationPipeline`. Resolves schemas from the static IR (`crate::ir::RESOURCE_IR`),
+//! runs schema/dependency/cross-resource checks with `client_factory = None` and
+//! `skip_post_validate = true`, and returns a structured `{ valid, errors }` report.
+//! No deployment-overlay resolution, no `post_validate`, no
+//! `ClientFactory`/`ResourceRegistry`, no timing — this is what the remote MCP
+//! `validate_config` tool calls.
 
 use super::dependency::extract_dependencies;
 use super::schema::{apply_defaults, check_duplicate_names, validate_schema};
@@ -13,8 +13,8 @@ use super::{cross_resource, dereference_id_field, normalize_raw_resource_fields}
 use crate::descriptor::ResourceDescriptor;
 use crate::resource::{OnDestroyPolicy, RawResource, ValidatedResource};
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, LazyLock};
+use std::collections::HashSet;
+use std::sync::Arc;
 use wxctl_graph::ResourceKey;
 
 /// Structured result of an offline `validate_config` run.
@@ -37,7 +37,6 @@ fn resource_label(resource: &RawResource) -> String {
 /// (a successful validation that found problems).
 pub fn validate_config(yaml: &str) -> anyhow::Result<ValidationReport> {
     let mut resources: Vec<RawResource> = parse_resources(yaml)?;
-    let descriptors = descriptor_map()?;
     let mut errors: Vec<AnnotatedValidationError> = Vec::new();
 
     // Stage 1: duplicate names.
@@ -47,22 +46,21 @@ pub fn validate_config(yaml: &str) -> anyhow::Result<ValidationReport> {
     }
 
     // Stage 2: normalize aliases + dereference generic `id`, against the BASE
-    // descriptor (offline path has no deployment overlay).
+    // schema (offline path has no deployment overlay).
     let mut skip: HashSet<usize> = HashSet::new();
     for (idx, resource) in resources.iter_mut().enumerate() {
         let label = resource_label(resource);
-        let Some(descriptor) = descriptors.get(&resource.kind) else {
+        let Some(ir) = crate::ir::RESOURCE_IR.get(resource.kind.as_str()) else {
             errors.push(AnnotatedValidationError { resource: label, error: ValidationError::UnknownResourceType { kind: resource.kind.clone() } });
             skip.insert(idx);
             continue;
         };
-        let schema = &descriptor.schema.resource.schema;
-        if let Err(e) = normalize_raw_resource_fields(&mut resource.data, schema, &resource.kind) {
+        if let Err(e) = normalize_raw_resource_fields(&mut resource.data, &ir.resource.schema, &resource.kind) {
             errors.push(AnnotatedValidationError { resource: label, error: ValidationError::InvalidFieldValue { field: "field_normalization".to_string(), message: e.to_string() } });
             skip.insert(idx);
             continue;
         }
-        if let Err(e) = dereference_id_field(&mut resource.data, &descriptor.schema, &resource.kind) {
+        if let Err(e) = dereference_id_field(&mut resource.data, ir, &resource.kind) {
             errors.push(AnnotatedValidationError { resource: label, error: ValidationError::InvalidFieldValue { field: "id_dereferencing".to_string(), message: e.to_string() } });
             skip.insert(idx);
         }
@@ -90,17 +88,18 @@ pub fn validate_config(yaml: &str) -> anyhow::Result<ValidationReport> {
             continue;
         }
         let label = resource_label(resource);
-        let descriptor = descriptors.get(&resource.kind).expect("kind present (Stage 2 inserted skip otherwise)").clone();
+        let ir = crate::ir::RESOURCE_IR.get(resource.kind.as_str()).expect("kind present (Stage 2 inserted skip otherwise)");
+        let descriptor = Arc::new(ResourceDescriptor::from_ir(ir));
 
-        apply_defaults(resource, &descriptor.schema);
-        if let Err(e) = validate_schema(resource, &descriptor.schema) {
+        apply_defaults(resource, ir);
+        if let Err(e) = validate_schema(resource, ir) {
             errors.push(AnnotatedValidationError { resource: label, error: e });
             continue;
         }
 
         let ref_name = resource.data.get("ref_name").and_then(|v| v.as_str()).unwrap_or("unnamed").to_string();
         let key = ResourceKey::new(&resource.kind, &ref_name);
-        let dep_result = extract_dependencies(&key, &resource.data, &descriptor.schema, &available);
+        let dep_result = extract_dependencies(&key, &resource.data, ir, &available);
         if !dep_result.errors.is_empty() {
             for err in dep_result.errors {
                 errors.push(AnnotatedValidationError { resource: label.clone(), error: err });
@@ -190,28 +189,6 @@ fn parse_resources(yaml: &str) -> anyhow::Result<Vec<RawResource>> {
 #[derive(serde::Deserialize)]
 struct ResourceEnvelope {
     resources: Vec<RawResource>,
-}
-
-/// Shared kind → descriptor map (cheap to clone by `Arc`).
-type DescriptorMap = Arc<HashMap<String, Arc<ResourceDescriptor>>>;
-
-/// Kind → base `ResourceDescriptor`, built once from the compiled schema set and
-/// cached for the process lifetime (the schema set is static, so reparsing per
-/// call was pure waste). Errors are cached as strings — `anyhow::Error` is not
-/// `Clone`, and a parse failure of the compiled-in schemas is deterministic.
-static DESCRIPTOR_MAP: LazyLock<Result<DescriptorMap, String>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    for schema in crate::load_all_schemas().map_err(|e| format!("{e:#}"))? {
-        let descriptor = Arc::new(ResourceDescriptor::from_schema(&schema).map_err(|e| format!("{e:#}"))?);
-        map.insert(descriptor.kind.clone(), descriptor);
-    }
-    Ok(Arc::new(map))
-});
-
-/// Map every kind to its base `ResourceDescriptor` (cheap `Arc` clone of the
-/// process-wide cache). (Offline: no deployment overlay applied.)
-fn descriptor_map() -> anyhow::Result<DescriptorMap> {
-    DESCRIPTOR_MAP.clone().map_err(|e| anyhow::anyhow!(e))
 }
 
 #[cfg(test)]

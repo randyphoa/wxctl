@@ -5,7 +5,6 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use serde::Serialize;
-use wxctl_core::registry::ResourceDescriptor;
 
 use crate::output::panel::layout::Panel;
 use crate::output::panel::theme::{Color, Role};
@@ -49,8 +48,7 @@ pub(crate) fn product_name(service: &str) -> &str {
 /// Map each kind to its create endpoint (the POST path), parsed once from the
 /// shipped schemas. Read-only: no profile / network, same as the catalog.
 fn create_endpoints() -> Result<HashMap<String, String>> {
-    let schemas = wxctl_providers::load_all_schemas()?;
-    Ok(schemas.iter().filter_map(|s| ResourceDescriptor::from_schema(s).ok().map(|d| (d.kind, d.endpoints.create))).collect())
+    Ok(wxctl_schema::ir::RESOURCE_DESCRIPTOR_IR.entries().map(|(_, d)| (d.kind.to_string(), d.endpoints.create.to_string())).collect())
 }
 
 /// Dispatch `wxctl resources`.

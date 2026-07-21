@@ -93,53 +93,40 @@ fn validate_s3_bucket_storage_class(index: &IndexedResources<'_>) -> Vec<Annotat
     errors
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests {
     use super::*;
     use crate::descriptor::ResourceDescriptor;
-    use crate::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
+    use crate::ir_support::compile_to_static_ir;
     use serde_json::json;
     use std::sync::Arc;
 
+    /// Minimal `test`-service schema for a given `kind`: no fields, Skip discovery.
     fn make_descriptor(kind: &str) -> Arc<ResourceDescriptor> {
-        let schema = ResourceSchema {
-            resource: ResourceDefinition {
-                name: kind.into(),
-                service: "test".into(),
-                kind: kind.into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/x".into(),
-                    id_field: "id".into(),
-                    list_endpoint: None,
-                    get_endpoint: "/x/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition::default(),
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::Skip, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".into() },
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                    identity_hash: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        };
-        Arc::new(ResourceDescriptor::from_schema(&schema).unwrap())
+        let yaml = format!(
+            "
+resource:
+  name: {kind}
+  service: test
+  kind: {kind}
+  version: v1
+  api:
+    base_path: /x
+    id_field: id
+    get_endpoint: /x/{{id}}
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: id
+    update_strategy: patch
+"
+        );
+        let ir = compile_to_static_ir(&yaml).expect("test schema compiles");
+        Arc::new(ResourceDescriptor::from_ir(ir))
     }
 
     fn resource(kind: &str, name: &str, data: serde_json::Value) -> ValidatedResource {

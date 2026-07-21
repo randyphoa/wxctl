@@ -3534,7 +3534,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "wxctl"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -3576,7 +3576,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-compose"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "serde",
@@ -3590,7 +3590,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-compose-core"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "serde",
@@ -3601,7 +3601,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-core"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "base64",
@@ -3629,7 +3629,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-engine"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3652,7 +3652,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-graph"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -3661,7 +3661,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-mcp"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "rmcp",
@@ -3684,7 +3684,7 @@ dependencies = [
 
 [[package]]
 name = "wxctl-providers"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "base64",
@@ -3714,12 +3714,11 @@ dependencies = [
 
 [[package]]
 name = "wxctl-schema"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "chrono",
  "phf",
- "phf_codegen",
  "regex",
  "semver",
  "serde",
@@ -3727,11 +3726,25 @@ dependencies = [
  "serde_norway",
  "tracing",
  "wxctl-graph",
+ "wxctl-schema-compiler",
+]
+
+[[package]]
+name = "wxctl-schema-compiler"
+version = "0.1.6"
+dependencies = [
+ "anyhow",
+ "phf_codegen",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_norway",
+ "wxctl-graph",
 ]
 
 [[package]]
 name = "wxctl-sdk"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3752,6 +3765,7 @@ dependencies = [
  "wxctl-core",
  "wxctl-engine",
  "wxctl-providers",
+ "wxctl-schema",
 ]
 
 [[package]]

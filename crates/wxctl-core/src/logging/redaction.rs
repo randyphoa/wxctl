@@ -89,7 +89,7 @@ fn mask_ref_enrichment(value: &Value) -> Value {
     }
 }
 
-use wxctl_schema::schema::FieldDefinition;
+use wxctl_schema::ir::FieldIr;
 
 /// Collect dotted paths of fields marked `sensitive: true` from a field slice,
 /// recursing into nested object schemas. Mirrors `SchemaDefinition::sensitive_paths`
@@ -100,25 +100,25 @@ use wxctl_schema::schema::FieldDefinition;
 /// `RequestMaterializer::materialize`), while discovery responses and other
 /// name-keyed sinks use the wxctl name. The superset redacts harmlessly wherever
 /// only one of the two keys appears.
-pub fn sensitive_paths_from_fields(fields: &[FieldDefinition]) -> Vec<String> {
+pub fn sensitive_paths_from_fields(fields: &[FieldIr]) -> Vec<String> {
     let mut out = Vec::new();
     collect(fields, &[String::new()], &mut out);
     return out;
 
-    fn collect(fields: &[FieldDefinition], prefixes: &[String], out: &mut Vec<String>) {
+    fn collect(fields: &[FieldIr], prefixes: &[String], out: &mut Vec<String>) {
         for field in fields {
-            let mut segments: Vec<&str> = vec![field.name.as_str()];
-            if let Some(api) = &field.api_field
-                && api != &field.name
+            let mut segments: Vec<&str> = vec![field.name];
+            if let Some(api) = field.api_field
+                && api != field.name
             {
-                segments.push(api.as_str());
+                segments.push(api);
             }
             let paths: Vec<String> = prefixes.iter().flat_map(|p| segments.iter().map(move |s| if p.is_empty() { (*s).to_string() } else { format!("{p}.{s}") })).collect();
             if field.sensitive {
                 out.extend(paths.iter().cloned());
             }
-            if let Some(inner) = &field.schema {
-                collect(&inner.fields, &paths, out);
+            if let Some(inner) = field.schema {
+                collect(inner.fields, &paths, out);
             }
         }
     }
@@ -128,6 +128,35 @@ pub fn sensitive_paths_from_fields(fields: &[FieldDefinition]) -> Vec<String> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use wxctl_schema::ir::{FieldLocationIr, FieldTypeIr, SchemaBodyIr};
+
+    /// Minimal `FieldIr` literal builder for tests: a `Body`/`String` field with
+    /// every other attribute at its zero value. `FieldIr` derives neither `Clone`
+    /// nor `Copy` (nested `ValidationIr`/`FieldReferencesIr` don't either), so
+    /// tests build a fresh instance per field via this helper + struct-update
+    /// syntax rather than cloning a shared base.
+    fn field_ir(name: &'static str) -> FieldIr {
+        FieldIr {
+            name,
+            field_type: FieldTypeIr::String,
+            required: false,
+            immutable: false,
+            location: FieldLocationIr::Body,
+            description: None,
+            validation: None,
+            schema: None,
+            item_type: None,
+            default: None,
+            allowed_values: None,
+            references: None,
+            api_field: None,
+            sensitive: false,
+            also_query: false,
+            is_path: false,
+            synthesize: None,
+            synth_shape: None,
+        }
+    }
 
     #[test]
     fn redact_by_schema_masks_listed_paths_only() {
@@ -220,32 +249,14 @@ mod tests {
 
     #[test]
     fn sensitive_paths_from_fields_collects_nested() {
-        use wxctl_schema::schema::{FieldDefinition, FieldLocation, FieldType, SchemaDefinition};
-        let mut pwd = FieldDefinition {
-            name: "password".into(),
-            field_type: FieldType::String,
-            required: false,
-            immutable: false,
-            location: FieldLocation::Body,
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references: None,
-            api_field: None,
-            sensitive: true,
-            also_query: false,
-            properties: None,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-        };
-        let host = FieldDefinition { name: "host".into(), sensitive: false, ..pwd.clone() };
-        let conn = FieldDefinition { name: "connection".into(), field_type: FieldType::Object, sensitive: false, schema: Some(Box::new(SchemaDefinition { fields: vec![host, pwd.clone()], ..Default::default() })), ..pwd.clone() };
-        pwd.name = "api_key".into();
-        let paths = sensitive_paths_from_fields(&[conn, pwd]);
+        // Nested sensitive field under a non-sensitive parent, plus a top-level
+        // sensitive field: only the sensitive leaves emit paths.
+        let pwd_nested = FieldIr { sensitive: true, ..field_ir("password") };
+        let host = FieldIr { sensitive: false, ..field_ir("host") };
+        let schema_body: &'static SchemaBodyIr = Box::leak(Box::new(SchemaBodyIr { fields: Box::leak(vec![host, pwd_nested].into_boxed_slice()), discriminator: None, variants: None }));
+        let conn = FieldIr { field_type: FieldTypeIr::Object, sensitive: false, schema: Some(schema_body), ..field_ir("connection") };
+        let api_key = FieldIr { sensitive: true, ..field_ir("api_key") };
+        let paths = sensitive_paths_from_fields(&[conn, api_key]);
         assert!(paths.contains(&"connection.password".to_string()));
         assert!(paths.contains(&"api_key".to_string()));
         assert_eq!(paths.len(), 2);
@@ -253,34 +264,13 @@ mod tests {
 
     #[test]
     fn sensitive_paths_from_fields_emits_api_field_variant() {
-        use wxctl_schema::schema::{FieldDefinition, FieldLocation, FieldType, SchemaDefinition};
-        let base = FieldDefinition {
-            name: "placeholder".into(),
-            field_type: FieldType::String,
-            required: false,
-            immutable: false,
-            location: FieldLocation::Body,
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references: None,
-            api_field: None,
-            sensitive: false,
-            also_query: false,
-            properties: None,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-        };
         // Top-level sensitive field renamed in the request body via api_field
         // (api_field may itself be a dotted path).
-        let key = FieldDefinition { name: "api_key".into(), api_field: Some("credentials.apiKey".into()), sensitive: true, ..base.clone() };
+        let key = FieldIr { api_field: Some("credentials.apiKey"), sensitive: true, ..field_ir("api_key") };
         // Nested sensitive field under a renamed parent: both parent segments prefix the child.
-        let pwd = FieldDefinition { name: "password".into(), sensitive: true, ..base.clone() };
-        let conn = FieldDefinition { name: "connection".into(), field_type: FieldType::Object, api_field: Some("connectionProperties".into()), schema: Some(Box::new(SchemaDefinition { fields: vec![pwd], ..Default::default() })), ..base };
+        let pwd = FieldIr { sensitive: true, ..field_ir("password") };
+        let schema_body: &'static SchemaBodyIr = Box::leak(Box::new(SchemaBodyIr { fields: Box::leak(vec![pwd].into_boxed_slice()), discriminator: None, variants: None }));
+        let conn = FieldIr { field_type: FieldTypeIr::Object, api_field: Some("connectionProperties"), schema: Some(schema_body), ..field_ir("connection") };
         let paths = sensitive_paths_from_fields(&[key, conn]);
         for expected in ["api_key", "credentials.apiKey", "connection.password", "connectionProperties.password"] {
             assert!(paths.contains(&expected.to_string()), "missing {expected}: {paths:?}");

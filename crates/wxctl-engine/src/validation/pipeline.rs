@@ -25,21 +25,19 @@ use wxctl_schema::validation::{dereference_id_field, normalize_raw_resource_fiel
 /// deployment for the service can't be resolved — those paths surface
 /// elsewhere as R006 rather than as a silent fallthrough.
 fn effective_descriptor(base: &Arc<ResourceDescriptor>, client_factory: Option<&Arc<ClientFactory>>) -> Result<Arc<ResourceDescriptor>> {
-    let base_def = &base.schema.resource;
-    if base_def.deployments.is_none() {
+    if base.schema.resource.deployments.is_none() {
         return Ok(base.clone());
     }
-    let Some(cf) = client_factory else {
-        return Ok(base.clone());
-    };
-    let deployment = match cf.deployment_for_service(&base_def.service) {
+    let Some(cf) = client_factory else { return Ok(base.clone()) };
+    let deployment = match cf.deployment_for_service(base.schema.resource.service) {
         Ok(d) => d,
         Err(_) => return Ok(base.clone()),
     };
-    let effective_def = wxctl_schema::schema::effective_definition(base_def, &deployment)?;
-    let mut merged_schema = base.schema.clone();
-    merged_schema.resource = effective_def;
-    Ok(Arc::new(ResourceDescriptor::from_schema(&merged_schema)?))
+    let effective = wxctl_schema::deployment::effective_ir(base.schema, &deployment);
+    if std::ptr::eq(effective, base.schema) {
+        return Ok(base.clone());
+    }
+    Ok(Arc::new(ResourceDescriptor::from_ir(effective)))
 }
 
 /// Build a resource identity string like "tool/my_tool" for error messages.
@@ -126,7 +124,7 @@ impl ValidationPipeline {
                 }
 
                 // Stage 2b: Dereference generic 'id' field to schema-specific id_source
-                if let Err(e) = dereference_id_field(&mut resource.data, &descriptor.schema, &resource.kind) {
+                if let Err(e) = dereference_id_field(&mut resource.data, descriptor.schema, &resource.kind) {
                     let err = ValidationError::InvalidFieldValue { field: "id_dereferencing".to_string(), message: format!("{e}") };
                     wxctl_core::log_error_field!(operation_id, "validation", wxctl_core::logging::error_codes::V008, &resource.kind, resource.ref_name(), "id", &err.to_string(), "Check that the 'id' field value is valid");
                     errors.push(AnnotatedValidationError { resource: label, error: err });
@@ -224,10 +222,10 @@ impl ValidationPipeline {
                 };
 
                 // Apply default values before validation, against the effective schema.
-                apply_defaults(resource, &effective.schema);
+                apply_defaults(resource, effective.schema);
 
                 // Validate schema against the deployment-effective schema.
-                if let Err(e) = validate_schema(resource, &effective.schema) {
+                if let Err(e) = validate_schema(resource, effective.schema) {
                     // Attribute the event to the offending field when the error names one;
                     // "schema" is only the fallback for field-less variants (e.g. cycles).
                     let field = if e.field().is_empty() { "schema" } else { e.field() };
@@ -267,33 +265,37 @@ impl ValidationPipeline {
                 // field is `location: LocalOnly`, likewise omitted. Read from the
                 // deployment-effective schema so a deployment overlay could add the block.
                 if let Some(ih) = &effective.schema.resource.reconciliation.identity_hash {
+                    // `identity_hash` fields land in `wxctl_providers::identity_hash` as
+                    // `&[String]` — collect the static `&'static [&'static str]` field
+                    // names into an owned Vec once, for both hash branches below.
+                    let hash_fields: Vec<String> = ih.fields.iter().map(|f| f.to_string()).collect();
                     // EnvMarker: hash a marker-stripped copy so the hash stays a function
                     // of the user-declared inputs only — the injected WXCTL_IDENTITY entry
                     // must never feed back into the hash it carries (a re-stamped resource
                     // would otherwise drift its own identity).
-                    let hash = if matches!(ih.storage, wxctl_schema::schema::HashStorage::EnvMarker) {
+                    let hash = if matches!(ih.storage, wxctl_schema::ir::HashStorageIr::EnvMarker) {
                         let mut clean = resource.data.clone();
                         wxctl_providers::strip_identity_env_marker(&mut clean);
-                        wxctl_providers::identity_hash(&clean, &ih.fields, ih.nonce_field.as_deref(), ih.length)
+                        wxctl_providers::identity_hash(&clean, &hash_fields, ih.nonce_field, ih.length)
                     } else {
-                        wxctl_providers::identity_hash(&resource.data, &ih.fields, ih.nonce_field.as_deref(), ih.length)
+                        wxctl_providers::identity_hash(&resource.data, &hash_fields, ih.nonce_field, ih.length)
                     };
                     match ih.storage {
-                        wxctl_schema::schema::HashStorage::NameSuffix => {
-                            let name_field = effective.schema.resource.reconciliation.discovery.name_field.clone().unwrap_or_else(|| "name".to_string());
-                            if let Some(base) = resource.data.get(&name_field).and_then(|v| v.as_str()).map(String::from) {
-                                resource.data[name_field.as_str()] = serde_json::Value::String(format!("{base}-{hash}"));
+                        wxctl_schema::ir::HashStorageIr::NameSuffix => {
+                            let name_field = effective.schema.resource.reconciliation.discovery.name_field.unwrap_or("name");
+                            if let Some(base) = resource.data.get(name_field).and_then(|v| v.as_str()).map(String::from) {
+                                resource.data[name_field] = serde_json::Value::String(format!("{base}-{hash}"));
                             }
                         }
-                        wxctl_schema::schema::HashStorage::Tag => wxctl_providers::set_run_hash_tag(&mut resource.data, &hash),
+                        wxctl_schema::ir::HashStorageIr::Tag => wxctl_providers::set_run_hash_tag(&mut resource.data, &hash),
                         // EnvMarker: plant WXCTL_IDENTITY=<hash> in env_variables — the one
                         // job_run field the server round-trips verbatim (it clobbers the
                         // submitted name to "Notebook Job" on both CPDaaS and CP4D).
-                        wxctl_schema::schema::HashStorage::EnvMarker => wxctl_providers::set_identity_env_marker(&mut resource.data, &hash),
-                        wxctl_schema::schema::HashStorage::ServerSide => {}
+                        wxctl_schema::ir::HashStorageIr::EnvMarker => wxctl_providers::set_identity_env_marker(&mut resource.data, &hash),
+                        wxctl_schema::ir::HashStorageIr::ServerSide => {}
                         // Local: no remote carrier — the hash is stamped below; the
                         // Skip-discovery arm / handlers handle persistence.
-                        wxctl_schema::schema::HashStorage::Local => {}
+                        wxctl_schema::ir::HashStorageIr::Local => {}
                     }
                     resource.data["identity_hash"] = serde_json::Value::String(hash);
                 }
@@ -303,7 +305,7 @@ impl ValidationPipeline {
                 let key = ResourceKey::new(&resource.kind, &ref_name);
 
                 // Extract and validate dependencies from ${...} references
-                let dep_result = extract_dependencies(&key, &resource.data, &descriptor.schema, &available_resources);
+                let dep_result = extract_dependencies(&key, &resource.data, descriptor.schema, &available_resources);
 
                 // Log and collect any dependency validation errors
                 let mut has_dep_errors = false;
@@ -451,75 +453,38 @@ impl ValidationPipeline {
 mod tests {
     use super::*;
     use serde_json::json;
-    use wxctl_core::ResourceSchema;
-    use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldReferences, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, SchemaDefinition, UpdateStrategy};
+    use wxctl_schema::ir::SchemaIr;
+    use wxctl_schema::ir_support::compile_to_static_ir;
 
-    fn make_field(name: &str, field_type: FieldType, references: Option<FieldReferences>) -> FieldDefinition {
-        FieldDefinition {
-            name: name.into(),
-            field_type,
-            required: false,
-            immutable: false,
-            location: wxctl_schema::schema::FieldLocation::default(),
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references,
-            api_field: None,
-            sensitive: false,
-            also_query: false,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-            properties: None,
-        }
-    }
+    /// Shared shell for every test schema: a `test` kind, GetById discovery,
+    /// with `__ID_SOURCE__` / `__FIELDS__` placeholders for the bits each test
+    /// varies.
+    const SCHEMA_TEMPLATE: &str = "
+resource:
+  name: test
+  service: test
+  kind: test
+  version: v1
+  api:
+    base_path: /api/test
+    id_field: id
+    get_endpoint: /api/test/{id}
+    create_method: POST
+    delete_method: DELETE
+  schema:
+__FIELDS__
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: __ID_SOURCE__
+    update_strategy: patch
+";
 
-    fn make_schema_def(fields: Vec<FieldDefinition>) -> SchemaDefinition {
-        SchemaDefinition { fields, ..Default::default() }
-    }
+    const NO_FIELDS: &str = "    fields: []\n";
 
-    fn make_resource_schema(id_source: &str, fields: Vec<FieldDefinition>) -> ResourceSchema {
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "test".into(),
-                service: "test".into(),
-                kind: "test".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/api/test".into(),
-                    id_field: "id".into(),
-                    list_endpoint: None,
-                    get_endpoint: "/api/test/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields, ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: id_source.into(), list_filter: None },
-                    identity_hash: None,
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    fn schema_ir(id_source: &str, fields_block: &str) -> &'static SchemaIr {
+        let yaml = SCHEMA_TEMPLATE.replace("__ID_SOURCE__", id_source).replace("__FIELDS__", fields_block);
+        compile_to_static_ir(&yaml).expect("test schema compiles")
     }
 
     // ── normalize_raw_resource_fields ──
@@ -528,25 +493,23 @@ mod tests {
     fn normalize_raw_resource_fields_branches() {
         // field "connection_id" has references.resource = "orchestrate_connection"
         // → build_field_mapping produces {"orchestrate_connection" => "connection_id"}.
-        let fields = || vec![make_field("connection_id", FieldType::String, Some(FieldReferences { resource: "orchestrate_connection".into(), field: "id".into(), also_allows: vec![], optional: false, require_ready: false, relationship: None }))];
+        let fields_block = "    fields:\n      - name: connection_id\n        type: string\n        references:\n          resource: orchestrate_connection\n          field: id\n";
 
         // Alias key renamed onto the api field; the alias key is removed.
-        let schema = make_schema_def(fields());
+        let schema = &schema_ir("id", fields_block).resource.schema;
         let mut data = json!({"orchestrate_connection": "${orchestrate_connection.my-conn}"});
-        normalize_raw_resource_fields(&mut data, &schema, "test").unwrap();
+        normalize_raw_resource_fields(&mut data, schema, "test").unwrap();
         assert_eq!(data.get("connection_id"), Some(&json!("${orchestrate_connection.my-conn}")));
         assert!(data.get("orchestrate_connection").is_none());
 
         // api field already present (no alias) → left untouched.
-        let schema = make_schema_def(fields());
         let mut data = json!({"connection_id": "existing-value"});
-        normalize_raw_resource_fields(&mut data, &schema, "test").unwrap();
+        normalize_raw_resource_fields(&mut data, schema, "test").unwrap();
         assert_eq!(data.get("connection_id"), Some(&json!("existing-value")));
 
         // Both alias and api field set → "Field conflict" error.
-        let schema = make_schema_def(fields());
         let mut data = json!({"orchestrate_connection": "val1", "connection_id": "val2"});
-        let err = normalize_raw_resource_fields(&mut data, &schema, "test").unwrap_err();
+        let err = normalize_raw_resource_fields(&mut data, schema, "test").unwrap_err();
         assert!(err.to_string().contains("Field conflict"));
     }
 
@@ -555,29 +518,29 @@ mod tests {
     #[test]
     fn dereference_id_field_branches() {
         // id_source != "id" → `id` renamed to id_source; `_from_id` marker set.
-        let schema = make_resource_schema("app_id", vec![]);
+        let schema = schema_ir("app_id", NO_FIELDS);
         let mut data = json!({"id": "my-app-123"});
-        dereference_id_field(&mut data, &schema, "test").unwrap();
+        dereference_id_field(&mut data, schema, "test").unwrap();
         assert_eq!(data.get("app_id"), Some(&json!("my-app-123")));
         assert!(data.get("id").is_none());
         assert_eq!(data.get("_from_id"), Some(&json!(true)));
 
         // id_source == "id" → `id` kept as-is; `_from_id` marker still set.
-        let schema = make_resource_schema("id", vec![]);
+        let schema = schema_ir("id", NO_FIELDS);
         let mut data = json!({"id": "model-456"});
-        dereference_id_field(&mut data, &schema, "test").unwrap();
+        dereference_id_field(&mut data, schema, "test").unwrap();
         assert_eq!(data.get("id"), Some(&json!("model-456")));
         assert_eq!(data.get("_from_id"), Some(&json!(true)));
 
         // Both `id` and id_source present → "Field conflict" error.
-        let schema = make_resource_schema("app_id", vec![]);
+        let schema = schema_ir("app_id", NO_FIELDS);
         let mut data = json!({"id": "my-app", "app_id": "other-app"});
-        assert!(dereference_id_field(&mut data, &schema, "test").unwrap_err().to_string().contains("Field conflict"));
+        assert!(dereference_id_field(&mut data, schema, "test").unwrap_err().to_string().contains("Field conflict"));
 
         // Non-string `id` → "must be a string" error.
-        let schema = make_resource_schema("app_id", vec![]);
+        let schema = schema_ir("app_id", NO_FIELDS);
         let mut data = json!({"id": 12345});
-        assert!(dereference_id_field(&mut data, &schema, "test").unwrap_err().to_string().contains("must be a string"));
+        assert!(dereference_id_field(&mut data, schema, "test").unwrap_err().to_string().contains("must be a string"));
     }
 
     // ── effective_descriptor ──
@@ -590,20 +553,37 @@ mod tests {
     fn effective_descriptor_early_return_branches() {
         // Schema with no `deployments:` block — the common case. Returns the base
         // descriptor unchanged regardless of whether a client_factory is provided.
-        let schema = make_resource_schema("id", vec![]);
-        let base = Arc::new(ResourceDescriptor::from_schema(&schema).unwrap());
+        let schema = schema_ir("id", NO_FIELDS);
+        let base = Arc::new(ResourceDescriptor::from_ir(schema));
         let result = effective_descriptor(&base, None).unwrap();
         assert!(Arc::ptr_eq(&base, &result), "expected base Arc to be returned by clone, not a rebuilt descriptor");
 
         // Schema with a deployments overlay but no client_factory available (e.g.
         // `wxctl validate` without a profile). Helper falls back to the base — the
         // R006 path elsewhere will surface the missing profile if validation needs it.
-        let mut schema = make_resource_schema("id", vec![]);
-        let mut map = std::collections::HashMap::new();
-        map.insert("software-5.3".to_string(), wxctl_schema::schema::definition::DeploymentOverlay::default());
-        schema.resource.deployments = Some(map);
-        let base = Arc::new(ResourceDescriptor::from_schema(&schema).unwrap());
+        let overlay_yaml = SCHEMA_TEMPLATE.replace("__ID_SOURCE__", "id").replace("__FIELDS__", NO_FIELDS).replace("  reconciliation:", "  deployments:\n    software-5.3: {}\n  reconciliation:");
+        let schema = compile_to_static_ir(&overlay_yaml).expect("overlay test schema compiles");
+        let base = Arc::new(ResourceDescriptor::from_ir(schema));
         let result = effective_descriptor(&base, None).unwrap();
         assert!(Arc::ptr_eq(&base, &result), "no client_factory → must return base unchanged");
+    }
+
+    // A `compile_to_static_ir`-produced schema is never baked into the
+    // pre-computed `RESOURCE_IR_EFFECTIVE` table, so `effective_ir` can only ever
+    // fall through to base for it — real overlay selection needs a genuinely
+    // registered kind. `common_core_connection` declares a `software-5.3` overlay
+    // (verified against `wxctl_schema::ir::RESOURCE_IR_EFFECTIVE`); this proves
+    // `effective_ir` actually swaps in the baked overlay variant for a matching
+    // deployment, and falls back to base for a non-matching one (saas).
+    #[test]
+    fn effective_ir_selects_baked_overlay_for_a_real_kind() {
+        let base = *wxctl_schema::ir::RESOURCE_IR.get("common_core_connection").expect("common_core_connection registered in RESOURCE_IR");
+
+        let saas_effective = wxctl_schema::deployment::effective_ir(base, &wxctl_schema::deployment::Deployment::Saas);
+        assert!(std::ptr::eq(saas_effective, base), "no 'saas' overlay key declared -> base unchanged");
+
+        let software_deployment: wxctl_schema::deployment::Deployment = "software-5.3.0".parse().unwrap();
+        let software_effective = wxctl_schema::deployment::effective_ir(base, &software_deployment);
+        assert!(!std::ptr::eq(software_effective, base), "matching 'software-5.3' overlay key must select the baked effective IR, not base");
     }
 }

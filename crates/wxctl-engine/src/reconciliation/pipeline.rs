@@ -11,7 +11,7 @@ use tracing::{Instrument, info_span};
 use wxctl_core::logging::redact_for_log;
 use wxctl_core::registry::ResourceDescriptor;
 use wxctl_core::{ClientFactory, OnDestroyPolicy, Reconciler, RemoteResource, ResourceRegistry, StateComparison, ValidatedResource};
-use wxctl_schema::schema::DiscoveryMethod;
+use wxctl_schema::ir::DiscoveryMethodIr;
 
 /// Collects `discover_all` advisories into typed `Advisory` values for the plan.
 struct CollectingAdvisorySink(Mutex<Vec<Advisory>>);
@@ -110,7 +110,7 @@ fn apply_compare_to_op(reconciler: &dyn Reconciler, operation_id: &str, resource
     if let StateComparison::Recreate { field, local_value, remote_value } = &comparison
         && resource.descriptor.schema.resource.reconciliation.reject_on_immutable_drift
     {
-        let identity_hint = resource.descriptor.schema.resource.reconciliation.discovery.identity_match.as_ref().map(|im| im.local_path.as_str()).unwrap_or("name");
+        let identity_hint = resource.descriptor.schema.resource.reconciliation.discovery.identity_match.as_ref().map(|im| im.local_path).unwrap_or("name");
         let identity_value = super::schema_reconciler::render_value(super::schema_reconciler::get_nested_field(&local_resource.data, identity_hint));
         let kind = &resource.key.kind;
         let msg = format!(
@@ -211,8 +211,8 @@ impl ReconciliationPipeline {
                 let base_def = &resource.descriptor.schema.resource;
 
                 // Check unsupported_on before doing any work.
-                if wxctl_schema::schema::is_unsupported_on(base_def, &deployment) {
-                    let constraint = base_def.unsupported_on.iter().find(|c| deployment.matches(c)).map(|c| c.to_string()).unwrap_or_default();
+                if wxctl_schema::deployment::is_unsupported_on_ir(base_def.unsupported_on, &deployment) {
+                    let constraint = base_def.unsupported_on.iter().find(|c| c.parse::<wxctl_schema::deployment::DeploymentConstraint>().map(|dc| deployment.matches(&dc)).unwrap_or(false)).map(|c| c.to_string()).unwrap_or_default();
                     let msg = format!("[{}] kind '{}' is not supported on '{}' (matches unsupported_on constraint '{}')", wxctl_core::logging::error_codes::R004, resource.key.kind, deployment, constraint);
                     record_reconciliation_error(operation_id, wxctl_core::logging::error_codes::R004, &resource.key.kind, &resource.key.name, msg, "Remove this resource from your config or switch to a supported deployment.", &mut errors);
                     continue;
@@ -220,15 +220,13 @@ impl ReconciliationPipeline {
 
                 // Apply the deployment overlay to get the effective ResourceDefinition.
                 // When the schema has no `deployments` map (the common case) this returns
-                // the base unchanged (cloned). When an overlay is found, the returned
-                // definition carries the merged values; we then rebuild the descriptor so
-                // every downstream consumer (endpoints, field descriptors, schema ref)
-                // sees the overlay-applied values.
+                // the base unchanged. When an overlay is found, `effective_ir` looks up the
+                // pre-baked effective `&'static SchemaIr` for the winning overlay key; we
+                // then rebuild the descriptor so every downstream consumer (endpoints,
+                // field descriptors, schema ref) sees the overlay-applied values.
                 let resource = if base_def.deployments.is_some() {
-                    let effective_def = wxctl_schema::schema::effective_definition(base_def, &deployment)?;
-                    let mut merged_schema = resource.descriptor.schema.clone();
-                    merged_schema.resource = effective_def;
-                    let new_descriptor = Arc::new(ResourceDescriptor::from_schema(&merged_schema)?);
+                    let effective = wxctl_schema::deployment::effective_ir(resource.descriptor.schema, &deployment);
+                    let new_descriptor = Arc::new(ResourceDescriptor::from_ir(effective));
                     ValidatedResource { descriptor: new_descriptor, ..resource }
                 } else {
                     resource
@@ -250,7 +248,7 @@ impl ReconciliationPipeline {
                 let missing_deps = check_dependencies(&resource, runtime_store);
 
                 let resolved_resource = if missing_deps.is_empty() {
-                    match resolve_dependencies(&resource.data, runtime_store, &resource.descriptor.schema) {
+                    match resolve_dependencies(&resource.data, runtime_store, resource.descriptor.schema) {
                         Ok(resolved_data) => {
                             let mut resolved = resource.clone();
                             resolved.data = resolved_data;
@@ -288,7 +286,7 @@ impl ReconciliationPipeline {
                 // identity transform, and the CreateUnchecked behavior is unchanged.
                 let partial_resource = if resolved_resource.is_none() {
                     let mut partial = resource.clone();
-                    partial.data = resolve_dependencies_partial(&resource.data, runtime_store, &resource.descriptor.schema);
+                    partial.data = resolve_dependencies_partial(&resource.data, runtime_store, resource.descriptor.schema);
                     Some(partial)
                 } else {
                     None
@@ -367,7 +365,7 @@ impl ReconciliationPipeline {
                             // Skip-method kinds can't be listed, so discovery always says NotFound.
                             // Emit an optimistic Delete — the handler's pre_delete must tolerate a
                             // truly-absent resource (symmetric to apply's create-or-adopt path).
-                            if matches!(resource.descriptor.schema.resource.reconciliation.discovery.method, DiscoveryMethod::Skip) {
+                            if matches!(resource.descriptor.schema.resource.reconciliation.discovery.method, DiscoveryMethodIr::Skip) {
                                 let synthetic = RemoteResource { key: resource.key.clone(), data: local_resource.data.clone(), exists: true };
                                 let (op_type, decision) = destroy_op(resource.on_destroy);
                                 wxctl_core::log_decision!(operation_id, &resource.key.kind, &resource.key.name, decision, "destroying resource (skip-discovery, optimistic)");
@@ -424,7 +422,7 @@ impl ReconciliationPipeline {
                                 // Emit the optimistic Delete here — mirroring the `NotFound` +
                                 // skip-discovery path above — so the handler's teardown still runs.
                                 // (Honors `on_destroy`: a `Retain` skip-kind still short-circuits.)
-                                if matches!(resource.descriptor.schema.resource.reconciliation.discovery.method, DiscoveryMethod::Skip) {
+                                if matches!(resource.descriptor.schema.resource.reconciliation.discovery.method, DiscoveryMethodIr::Skip) {
                                     let synthetic = RemoteResource { key: resource.key.clone(), data: resource.data.clone(), exists: true };
                                     let (op_type, decision) = destroy_op(resource.on_destroy);
                                     wxctl_core::log_decision!(operation_id, &resource.key.kind, &resource.key.name, decision, "destroying resource (skip-discovery, optimistic, unresolved refs)");
@@ -449,7 +447,7 @@ impl ReconciliationPipeline {
                             // resolved from already-reconciled deps mean discovery genuinely
                             // ran and found nothing — a confident `Create`.
                             let (decision, reason_str) =
-                                if let Some(tpl) = super::schema_reconciler::identity_paths_unresolved(&local_resource.data, &resource.descriptor.schema) { ("CreateUnchecked", format!("unchecked: identity path has unresolved template `{tpl}`")) } else { ("Create", reason.clone()) };
+                                if let Some(tpl) = super::schema_reconciler::identity_paths_unresolved(&local_resource.data, resource.descriptor.schema) { ("CreateUnchecked", format!("unchecked: identity path has unresolved template `{tpl}`")) } else { ("Create", reason.clone()) };
                             wxctl_core::log_decision!(operation_id, &resource.key.kind, &resource.key.name, decision, &reason_str);
 
                             operations.push(Operation { key: resource.key.clone(), op_type: OperationType::Create, local: Some(local_resource), remote: None });
@@ -479,7 +477,7 @@ impl ReconciliationPipeline {
                                 // `Update { fields: vec![] }` ONLY when the comparison would be wholly
                                 // vacuous — every present compared field is still templated, so there
                                 // is nothing literal to anchor a NoChange/Update decision on.
-                                let (comparable_fields, templated_fields) = super::schema_reconciler::compared_field_resolution(&local_resource.data, &resource.descriptor.schema);
+                                let (comparable_fields, templated_fields) = super::schema_reconciler::compared_field_resolution(&local_resource.data, resource.descriptor.schema);
                                 let comparison_vacuous = comparable_fields == 0 && templated_fields > 0;
                                 for remote in remotes {
                                     if comparison_vacuous {

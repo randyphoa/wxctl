@@ -7,10 +7,9 @@
 
 use crate::dependency_graph::{deployment_support, get_edges, get_resource_by_index, resource_catalog, resource_prompt_notes};
 use crate::descriptor::ResourceDescriptor;
-use crate::schema::{FieldDefinition, FieldLocation, FieldType, HttpMethod, ValidationRules};
-use anyhow::{Result, bail};
+use crate::ir::{FieldIr, FieldLocationIr, FieldTypeIr, HttpMethodIr, RESOURCE_IR, ValidationIr};
+use anyhow::Result;
 use serde::Serialize;
-use std::sync::{Arc, LazyLock};
 
 /// Serializable detail view for one resource kind.
 #[derive(Serialize)]
@@ -108,23 +107,23 @@ pub struct ExplainField {
 
 /// Project a schema's field list onto the explain view, recursing into nested
 /// `object`/array-of-object sub-fields so the full authorable shape is exposed.
-fn build_fields(defs: &[FieldDefinition]) -> Vec<ExplainField> {
+fn build_fields(defs: &[FieldIr]) -> Vec<ExplainField> {
     defs.iter()
         .map(|f| ExplainField {
-            name: f.name.clone(),
+            name: f.name.to_string(),
             field_type: field_type_str(&f.field_type).to_string(),
-            item_type: f.item_type.as_deref().map(|t| field_type_str(t).to_string()),
+            item_type: f.item_type.as_ref().map(|t| field_type_str(t).to_string()),
             required: f.required,
             immutable: f.immutable,
             location: location_str(&f.location).to_string(),
             is_path: f.is_path,
             sensitive: f.sensitive,
-            default: f.default.clone(),
-            allowed_values: f.allowed_values.clone(),
-            description: f.description.clone(),
+            default: f.default.map(|s| serde_json::from_str::<serde_json::Value>(s).expect("canonical json default")),
+            allowed_values: f.allowed_values.map(|v| v.iter().map(|s| s.to_string()).collect()),
+            description: f.description.map(str::to_string),
             validation: f.validation.as_ref().and_then(ExplainValidation::from_rules),
             reference: f.references.as_ref().map(|r| format!("${{{}.<ref_name>}}", r.resource)),
-            fields: f.schema.as_ref().map(|s| build_fields(&s.fields)).filter(|v| !v.is_empty()),
+            fields: f.schema.map(|s| build_fields(s.fields)).filter(|v| !v.is_empty()),
         })
         .collect()
 }
@@ -159,20 +158,20 @@ pub struct ExplainValidation {
 }
 
 impl ExplainValidation {
-    /// Project the runtime [`ValidationRules`] onto the explain view, returning
+    /// Project the compiled [`ValidationIr`] onto the explain view, returning
     /// `None` when no constraint is set so the field omits `validation` entirely.
-    pub fn from_rules(v: &ValidationRules) -> Option<Self> {
+    pub fn from_rules(v: &ValidationIr) -> Option<Self> {
         let ev = ExplainValidation {
-            pattern: v.pattern.clone(),
+            pattern: v.pattern.map(str::to_string),
             min_length: v.min_length,
             max_length: v.max_length,
             max_length_bytes: v.max_length_bytes,
             min_value: v.min_value,
             max_value: v.max_value,
             max_items: v.max_items,
-            soft_allowed_values: v.soft_allowed_values.clone(),
-            one_of: v.one_of.clone(),
-            extra_rules: v.extra_rules.clone(),
+            soft_allowed_values: v.soft_allowed_values.map(|vals| vals.iter().map(|s| s.to_string()).collect()),
+            one_of: v.one_of.map(|groups| groups.iter().map(|g| g.iter().map(|s| s.to_string()).collect()).collect()),
+            extra_rules: v.extra_rules.map(|rules| rules.iter().map(|s| s.to_string()).collect()),
         };
         let empty = ev.pattern.is_none() && ev.min_length.is_none() && ev.max_length.is_none() && ev.max_length_bytes.is_none() && ev.min_value.is_none() && ev.max_value.is_none() && ev.max_items.is_none() && ev.soft_allowed_values.is_none() && ev.one_of.is_none() && ev.extra_rules.is_none();
         (!empty).then_some(ev)
@@ -221,26 +220,26 @@ pub struct ExplainVariant {
     pub fields: Vec<ExplainField>,
 }
 
-fn location_str(loc: &FieldLocation) -> &'static str {
+fn location_str(loc: &FieldLocationIr) -> &'static str {
     match loc {
-        FieldLocation::Body => "Body",
-        FieldLocation::Query => "Query",
-        FieldLocation::Header => "Header",
-        FieldLocation::Path => "Path",
-        FieldLocation::Computed => "Computed",
-        FieldLocation::LocalOnly => "LocalOnly",
+        FieldLocationIr::Body => "Body",
+        FieldLocationIr::Query => "Query",
+        FieldLocationIr::Header => "Header",
+        FieldLocationIr::Path => "Path",
+        FieldLocationIr::Computed => "Computed",
+        FieldLocationIr::LocalOnly => "LocalOnly",
     }
 }
 
-fn field_type_str(t: &FieldType) -> &'static str {
+fn field_type_str(t: &FieldTypeIr) -> &'static str {
     match t {
-        FieldType::String => "string",
-        FieldType::Integer => "integer",
-        FieldType::Float => "float",
-        FieldType::Boolean => "boolean",
-        FieldType::Object => "object",
-        FieldType::Array => "array",
-        FieldType::Timestamp => "timestamp",
+        FieldTypeIr::String => "string",
+        FieldTypeIr::Integer => "integer",
+        FieldTypeIr::Float => "float",
+        FieldTypeIr::Boolean => "boolean",
+        FieldTypeIr::Object => "object",
+        FieldTypeIr::Array => "array",
+        FieldTypeIr::Timestamp => "timestamp",
     }
 }
 
@@ -252,29 +251,14 @@ pub fn type_label(f: &ExplainField) -> String {
     }
 }
 
-fn method_str(m: &HttpMethod) -> &'static str {
+fn method_str(m: &HttpMethodIr) -> &'static str {
     match m {
-        HttpMethod::Get => "GET",
-        HttpMethod::Post => "POST",
-        HttpMethod::Put => "PUT",
-        HttpMethod::Patch => "PATCH",
-        HttpMethod::Delete => "DELETE",
+        HttpMethodIr::Get => "GET",
+        HttpMethodIr::Post => "POST",
+        HttpMethodIr::Put => "PUT",
+        HttpMethodIr::Patch => "PATCH",
+        HttpMethodIr::Delete => "DELETE",
     }
-}
-
-/// Descriptor list built once from the compiled schema set and cached for the
-/// process lifetime (no profile / network / registry). Errors are cached as
-/// strings — `anyhow::Error` is not `Clone`, and a parse failure of the
-/// compiled-in schemas is deterministic.
-static ALL_DESCRIPTORS: LazyLock<Result<Arc<[ResourceDescriptor]>, String>> = LazyLock::new(|| {
-    let schemas = crate::load_all_schemas().map_err(|e| format!("{e:#}"))?;
-    let descriptors = schemas.iter().map(ResourceDescriptor::from_schema).collect::<Result<Vec<_>>>().map_err(|e| format!("{e:#}"))?;
-    Ok(descriptors.into())
-});
-
-/// The cached descriptor list (cheap `Arc` clone).
-fn all_descriptors() -> Result<Arc<[ResourceDescriptor]>> {
-    ALL_DESCRIPTORS.clone().map_err(|e| anyhow::anyhow!(e))
 }
 
 pub fn build_view(desc: &ResourceDescriptor) -> ExplainView {
@@ -292,7 +276,7 @@ pub fn build_view(desc: &ResourceDescriptor) -> ExplainView {
     // narrow `desc.fields` projection, so type / description / default / enum /
     // validation / nested sub-fields reach the structured output an LLM agent
     // authors against.
-    let fields = build_fields(&desc.schema.resource.schema.fields);
+    let fields = build_fields(desc.schema.resource.schema.fields);
 
     // Field-level dependencies from the compile-time edge table. `name == kind`
     // for all schemas, so the graph (keyed by resource name) is reachable by kind.
@@ -304,13 +288,10 @@ pub fn build_view(desc: &ResourceDescriptor) -> ExplainView {
     let advisories = crate::dependency_graph::resource_advisories(&desc.kind).iter().map(|&(severity, tier, date, text)| ExplainAdvisory { severity: severity.to_string(), tier: tier.to_string(), date: date.to_string(), text: text.to_string() }).collect();
 
     // Discriminator-scoped field groups (e.g. per-datasource-type fields on a
-    // connection kind), sorted by variant key for deterministic output.
-    let variants = match &desc.schema.resource.schema.variants {
-        Some(map) => {
-            let mut keys: Vec<&String> = map.keys().collect();
-            keys.sort_unstable();
-            keys.into_iter().map(|k| ExplainVariant { name: k.clone(), applies_to: map[k].applies_to.clone(), fields: build_fields(&map[k].fields) }).collect()
-        }
+    // connection kind); the IR's `variants` pair slice is already sorted by
+    // variant key at build time, so we just iterate it.
+    let variants = match desc.schema.resource.schema.variants {
+        Some(pairs) => pairs.iter().map(|(name, v)| ExplainVariant { name: name.to_string(), applies_to: v.applies_to.iter().map(|s| s.to_string()).collect(), fields: build_fields(v.fields) }).collect(),
         None => Vec::new(),
     };
 
@@ -331,13 +312,12 @@ pub struct KindSummary {
 /// Full structured schema for one kind — the exact value `wxctl explain -o json`
 /// serializes. Returns an error (listing valid kinds) for an unknown kind.
 pub fn explain_kind(kind: &str) -> Result<ExplainView> {
-    let descriptors = all_descriptors()?;
-    let Some(desc) = descriptors.iter().find(|d| d.kind == kind) else {
-        let mut kinds: Vec<&str> = descriptors.iter().map(|d| d.kind.as_str()).collect();
-        kinds.sort_unstable();
-        bail!("unknown kind '{}'. Valid kinds: {}.", kind, kinds.join(", "));
-    };
-    Ok(build_view(desc))
+    let ir = RESOURCE_IR.get(kind).copied().ok_or_else(|| {
+        let mut ks: Vec<&str> = RESOURCE_IR.keys().copied().collect();
+        ks.sort_unstable();
+        anyhow::anyhow!("unknown kind '{kind}'. Valid kinds: {}.", ks.join(", "))
+    })?;
+    Ok(build_view(&ResourceDescriptor::from_ir(ir)))
 }
 
 /// The resource catalog as `KindSummary` rows, optionally narrowed to one service

@@ -3,7 +3,7 @@ use crate::traits::{Reconciler, ResourceHandler};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
-use wxctl_schema::schema::ResourceSchema;
+use wxctl_schema::ir::SchemaIr;
 
 pub struct ResourceRegistry {
     descriptors: HashMap<String, Arc<ResourceDescriptor>>,
@@ -26,15 +26,13 @@ impl ResourceRegistry {
     ///
     /// The `reconciler_factory` function takes the schema and produces a reconciler.
     /// This allows the reconciler implementation to live in a different crate.
-    pub fn register_from_schema<F>(&mut self, schema: ResourceSchema, handler: Option<Arc<dyn ResourceHandler>>, reconciler_factory: F) -> Result<()>
+    pub fn register_from_schema<F>(&mut self, schema: &'static SchemaIr, handler: Option<Arc<dyn ResourceHandler>>, reconciler_factory: F) -> Result<()>
     where
-        F: FnOnce(ResourceSchema) -> Arc<dyn Reconciler>,
+        F: FnOnce(&'static SchemaIr) -> Arc<dyn Reconciler>,
     {
-        let name = schema.resource.name.clone();
+        let name = schema.resource.name.to_string();
 
-        schema.validate()?;
-
-        let descriptor = Arc::new(ResourceDescriptor::from_schema(&schema)?);
+        let descriptor = Arc::new(ResourceDescriptor::from_ir(schema));
         let reconciler = reconciler_factory(schema);
 
         self.descriptors.insert(name.clone(), descriptor);

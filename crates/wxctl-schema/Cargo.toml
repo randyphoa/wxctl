@@ -20,12 +20,17 @@ tracing = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
 wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+wxctl-schema-compiler = { path = "../wxctl-schema-compiler", version = "0.1", optional = true }
 
 [build-dependencies]
-serde = { workspace = true }
 serde_norway = { workspace = true }
-phf_codegen = "0.14"
-wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+wxctl-schema-compiler = { path = "../wxctl-schema-compiler", version = "0.1" }
+
+[dev-dependencies]
+wxctl-schema-compiler = { path = "../wxctl-schema-compiler", version = "0.1" }
+
+[features]
+test-support = ["dep:wxctl-schema-compiler"]
 
 [lints]
 workspace = true

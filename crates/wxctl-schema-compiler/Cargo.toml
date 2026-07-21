@@ -1,0 +1,22 @@
+[package]
+name = "wxctl-schema-compiler"
+publish = false
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Build-time schema model, YAML parser, overlay merge, validation and codegen emitters for wxctl-schema"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+anyhow = { workspace = true }
+semver = { workspace = true }
+phf_codegen = "0.14"
+wxctl-graph = { path = "../wxctl-graph", version = "0.1" }
+
+[lints]
+workspace = true

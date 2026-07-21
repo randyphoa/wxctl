@@ -11,7 +11,7 @@ use std::pin::Pin;
 use wxctl_core::client::{BodyKind, BodyKindSelector, HttpClient, RequestMaterializer, RequestSpec, error_has_status, lookup_nested};
 use wxctl_core::traits::{AdvisorySink, NoOpAdvisorySink, Reconciler, StateComparison};
 use wxctl_core::types::{RemoteResource, ValidatedResource};
-use wxctl_schema::schema::{AbsentWhen, DiscoveryMethod, FieldLocation, HashStorage, IdentityMatch, ListFilter, ResourceSchema, SchemaDefinition};
+use wxctl_schema::ir::{AbsentWhenIr, DiscoveryMethodIr, FieldLocationIr, HashStorageIr, IdentityMatchIr, ListFilterIr, SchemaBodyIr, SchemaIr};
 
 /// Stateless schema-driven reconciler. All schema reads come from
 /// `ValidatedResource.descriptor.schema`, which the validation pipeline
@@ -35,23 +35,23 @@ impl SchemaBasedReconciler {
 /// scoping value is still a template reference — the endpoint usually requires
 /// the param, so callers must skip the API call rather than send the literal
 /// `${...}` string.
-fn build_scoping_params(data: &Value, schema: &ResourceSchema) -> Result<Option<HashMap<String, String>>> {
+fn build_scoping_params(data: &Value, schema: &SchemaIr) -> Result<Option<HashMap<String, String>>> {
     let mut params = HashMap::new();
 
-    for field in &schema.resource.schema.fields {
-        if field.location != FieldLocation::Query && !field.also_query {
+    for field in schema.resource.schema.fields {
+        if !matches!(field.location, FieldLocationIr::Query) && !field.also_query {
             continue;
         }
         // Resolve via get_nested_field so a dotted Query field name (e.g.
         // `target.target_id`) reads the nested value `data["target"]["target_id"]`
         // and is sent as `?target.target_id=<id>`. Single-segment names traverse
         // through the same `map.get`, so flat scoping fields are unchanged.
-        match get_nested_field(data, &field.name) {
+        match get_nested_field(data, field.name) {
             Value::String(val) => {
                 if is_template(val) {
                     bail!("unresolved template reference in scoping parameter: {}", field.name);
                 }
-                params.insert(field.name.clone(), val.to_string());
+                params.insert(field.name.to_string(), val.to_string());
             }
             // A whole object/array here is the leftover of a reference that could
             // not be extracted to an id (e.g. destroy against an absent stack: the
@@ -77,17 +77,17 @@ fn build_scoping_params(data: &Value, schema: &ResourceSchema) -> Result<Option<
 /// list-call machinery otherwise passes endpoints through verbatim — schemas
 /// like `watsonx_data.schema` whose `list_endpoint` carries a `{catalog_id}`
 /// segment would 400 against the literal template string.
-fn substitute_path_placeholders(endpoint: &str, data: &Value, schema: &ResourceSchema) -> Result<String> {
+fn substitute_path_placeholders(endpoint: &str, data: &Value, schema: &SchemaIr) -> Result<String> {
     let mut out = endpoint.to_string();
-    for field in &schema.resource.schema.fields {
-        if field.location != FieldLocation::Path {
+    for field in schema.resource.schema.fields {
+        if !matches!(field.location, FieldLocationIr::Path) {
             continue;
         }
         let placeholder = format!("{{{}}}", field.name);
         if !out.contains(&placeholder) {
             continue;
         }
-        let value = data.get(&field.name).and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("path placeholder `{placeholder}` has no resolved value in resource data"))?;
+        let value = data.get(field.name).and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("path placeholder `{placeholder}` has no resolved value in resource data"))?;
         out = out.replace(&placeholder, value);
     }
     Ok(out)
@@ -137,12 +137,12 @@ fn extract_declared_field(resp: Value, field: &str) -> Vec<Value> {
 /// compared against remote list items. Templates elsewhere in `data` (e.g. a
 /// bucket ref on storage_registration whose identity path is a hardcoded
 /// catalog_name) do NOT block discovery.
-pub(super) fn identity_paths_unresolved(data: &Value, schema: &ResourceSchema) -> Option<String> {
-    for field in &schema.resource.schema.fields {
-        if field.location != FieldLocation::Path && field.location != FieldLocation::Query && !field.also_query {
+pub(super) fn identity_paths_unresolved(data: &Value, schema: &SchemaIr) -> Option<String> {
+    for field in schema.resource.schema.fields {
+        if !matches!(field.location, FieldLocationIr::Path | FieldLocationIr::Query) && !field.also_query {
             continue;
         }
-        if let Some(s) = get_nested_field(data, &field.name).as_str()
+        if let Some(s) = get_nested_field(data, field.name).as_str()
             && is_template(s)
         {
             return Some(s.to_string());
@@ -150,13 +150,13 @@ pub(super) fn identity_paths_unresolved(data: &Value, schema: &ResourceSchema) -
     }
     let discovery = &schema.resource.reconciliation.discovery;
     if let Some(im) = &discovery.identity_match {
-        if let Some(s) = get_nested_field(data, &im.local_path).as_str()
+        if let Some(s) = get_nested_field(data, im.local_path).as_str()
             && is_template(s)
         {
             return Some(s.to_string());
         }
     } else {
-        let name_field = discovery.name_field.as_deref().unwrap_or("name");
+        let name_field = discovery.name_field.unwrap_or("name");
         if let Some(s) = data.get(name_field).and_then(|v| v.as_str())
             && is_template(s)
         {
@@ -188,11 +188,11 @@ fn value_has_unresolved_template(value: &Value) -> bool {
 /// vacuous — does the caller fall back to the conservative blind
 /// `Update { fields: vec![] }`. Fields absent from local data are ignored
 /// (`compare` skips them too).
-pub(super) fn compared_field_resolution(data: &Value, schema: &ResourceSchema) -> (usize, usize) {
+pub(super) fn compared_field_resolution(data: &Value, schema: &SchemaIr) -> (usize, usize) {
     let reconciliation = &schema.resource.reconciliation;
-    let state_fields = reconciliation.state_fields.as_deref().unwrap_or(&[]);
+    let state_fields = reconciliation.state_fields.unwrap_or(&[]);
     let (mut comparable, mut templated) = (0usize, 0usize);
-    for field in state_fields.iter().chain(reconciliation.immutable_fields.iter()) {
+    for field in state_fields.iter().copied().chain(reconciliation.immutable_fields.iter().copied()) {
         if !field_exists(data, field) {
             continue;
         }
@@ -237,8 +237,11 @@ fn normalize_list_item(item: Value, name_field: &str) -> Value {
 /// identity-matched item whose state field indicates the record is a leftover
 /// husk, not a live resource — e.g. watsonx Orchestrate's undeployed
 /// `Environment` record with `current_version: null`).
-fn is_absent_sentinel(data: &Value, absent_when: Option<&AbsentWhen>) -> bool {
-    absent_when.is_some_and(|aw| *get_nested_field(data, &aw.field) == aw.equals)
+fn is_absent_sentinel(data: &Value, absent_when: Option<&AbsentWhenIr>) -> bool {
+    absent_when.is_some_and(|aw| {
+        let equals: Value = serde_json::from_str(aw.equals).expect("canonical json absent_when.equals");
+        *get_nested_field(data, aw.field) == equals
+    })
 }
 
 /// Filter `items` to those matching the schema-declared identity. The schema
@@ -254,22 +257,22 @@ fn is_absent_sentinel(data: &Value, absent_when: Option<&AbsentWhen>) -> bool {
 /// in-flight, then failed) so `discover`'s first-match pick and post_discover's
 /// enrichment adopt the stable run when the pre-fix create-loop left duplicates.
 #[allow(clippy::too_many_arguments)]
-fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field: &str, resource_name: Option<&str>, identity: Option<&IdentityMatch>, run_hash: Option<&str>, env_marker_hash: Option<&str>, list_filter: Option<&ListFilter>) -> Vec<&'a Value> {
+fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field: &str, resource_name: Option<&str>, identity: Option<&IdentityMatchIr>, run_hash: Option<&str>, env_marker_hash: Option<&str>, list_filter: Option<&ListFilterIr>) -> Vec<&'a Value> {
     if let Some(hash) = env_marker_hash {
         let mut matched: Vec<&Value> = items.iter().filter(|item| wxctl_providers::extract_identity_env_marker(item) == Some(hash)).collect();
         matched.sort_by_key(|item| wxctl_providers::job_run_state_rank(item));
         return matched;
     }
     if let Some(im) = identity {
-        let Some(target) = get_nested_field(resource_data, &im.local_path).as_str() else {
+        let Some(target) = get_nested_field(resource_data, im.local_path).as_str() else {
             return Vec::new();
         };
-        return items.iter().filter(|item| get_nested_field(item, &im.remote_path).as_str() == Some(target)).collect();
+        return items.iter().filter(|item| get_nested_field(item, im.remote_path).as_str() == Some(target)).collect();
     }
     let Some(resource_name) = resource_name else {
         return Vec::new();
     };
-    items.iter().filter(|item| name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && list_filter.is_none_or(|lf| get_nested_field(item, &lf.field).as_str() == Some(lf.equals.as_str()))).collect()
+    items.iter().filter(|item| name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && list_filter.is_none_or(|lf| get_nested_field(item, lf.field).as_str() == Some(lf.equals))).collect()
 }
 
 /// R501: within a `list_filter` kind's discovery, a same-named item whose filter
@@ -277,12 +280,12 @@ fn match_remote_items<'a>(items: &'a [Value], resource_data: &Value, name_field:
 /// tracing event per colliding item (telemetry, byte-identical to before) and push
 /// one deduped advisory per (resource, conflicting value) onto `sink`.
 #[allow(clippy::too_many_arguments)]
-fn push_list_filter_advisories(items: &[Value], lf: &ListFilter, resource_name: &str, name_field: &str, run_hash: Option<&str>, key_kind: &str, key_name: &str, sink: &dyn AdvisorySink) {
+fn push_list_filter_advisories(items: &[Value], lf: &ListFilterIr, resource_name: &str, name_field: &str, run_hash: Option<&str>, key_kind: &str, key_name: &str, sink: &dyn AdvisorySink) {
     const R501_SUGGESTION: &str = "If the create is rejected, rename this resource so its name does not collide with the existing item of a different type.";
     let mut seen: HashSet<String> = HashSet::new();
     for item in items {
-        if name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && get_nested_field(item, &lf.field).as_str() != Some(lf.equals.as_str()) {
-            let found = render_value(get_nested_field(item, &lf.field));
+        if name_matches(item, resource_name, name_field) && run_hash.is_none_or(|h| wxctl_providers::extract_run_hash(item) == Some(h)) && get_nested_field(item, lf.field).as_str() != Some(lf.equals) {
+            let found = render_value(get_nested_field(item, lf.field));
             let message = format!("a same-named item exists with {}='{}' (expected '{}'); '{}' is absent and will be created — a backend enforcing cross-type name uniqueness may then reject the create", lf.field, found, lf.equals, key_name);
             wxctl_core::log_warn_resource_field!(wxctl_core::logging::error_codes::R501, key_kind, key_name, lf.field, found, std::slice::from_ref(&lf.equals), message);
             if seen.insert(found.clone()) {
@@ -299,19 +302,19 @@ fn push_list_filter_advisories(items: &[Value], lf: &ListFilter, resource_name: 
 /// (NameSuffix), or the WXCTL_IDENTITY entry in the round-tripped
 /// `configuration.env_variables` (EnvMarker). No-op for ServerSide and for
 /// non-hash kinds.
-fn normalize_identity_hash(remote_data: &mut Value, schema: &ResourceSchema) {
+fn normalize_identity_hash(remote_data: &mut Value, schema: &SchemaIr) {
     let def = &schema.resource;
     let Some(ih) = def.reconciliation.identity_hash.as_ref() else {
         return;
     };
-    let name_field = def.reconciliation.discovery.name_field.as_deref().unwrap_or("name");
+    let name_field = def.reconciliation.discovery.name_field.unwrap_or("name");
     let hash = match ih.storage {
-        HashStorage::Tag => wxctl_providers::extract_run_hash(remote_data).map(str::to_string),
-        HashStorage::NameSuffix => get_nested_field(remote_data, name_field).as_str().and_then(|n| n.rsplit_once('-')).map(|(_, suffix)| suffix.to_string()),
-        HashStorage::EnvMarker => wxctl_providers::extract_identity_env_marker(remote_data).map(str::to_string),
-        HashStorage::ServerSide => None,
+        HashStorageIr::Tag => wxctl_providers::extract_run_hash(remote_data).map(str::to_string),
+        HashStorageIr::NameSuffix => get_nested_field(remote_data, name_field).as_str().and_then(|n| n.rsplit_once('-')).map(|(_, suffix)| suffix.to_string()),
+        HashStorageIr::EnvMarker => wxctl_providers::extract_identity_env_marker(remote_data).map(str::to_string),
+        HashStorageIr::ServerSide => None,
         // Local kinds never reach ListAndGet normalization (discovery: skip).
-        HashStorage::Local => None,
+        HashStorageIr::Local => None,
     };
     if let Some(h) = hash
         && let Some(obj) = remote_data.as_object_mut()
@@ -326,9 +329,9 @@ fn normalize_identity_hash(remote_data: &mut Value, schema: &ResourceSchema) {
 /// trivially NoChange). No record ⇒ None ⇒ the caller falls through to the normal
 /// always-create Skip behavior (fresh machine: one re-run, then idempotent).
 /// Read-only — safe during plan.
-fn local_hash_skip_match(schema: &ResourceSchema, resource: &ValidatedResource, store_root: &std::path::Path, env: &str) -> Option<RemoteResource> {
+fn local_hash_skip_match(schema: &SchemaIr, resource: &ValidatedResource, store_root: &std::path::Path, env: &str) -> Option<RemoteResource> {
     let ih = schema.resource.reconciliation.identity_hash.as_ref()?;
-    if !matches!(ih.storage, HashStorage::Local) {
+    if !matches!(ih.storage, HashStorageIr::Local) {
         return None;
     }
     let hash = resource.data.get("identity_hash").and_then(|v| v.as_str())?;
@@ -357,7 +360,7 @@ fn local_hash_skip_match(schema: &ResourceSchema, resource: &ValidatedResource, 
 /// cover that case; this fix only removes the *additional* phantom-create
 /// trigger for non-templated parent-scoped fields that were previously left
 /// as literal `{placeholder}` text.
-fn build_get_by_id_spec(schema: &ResourceSchema, resource_data: &Value, id_source_field: &str, resource_id: &str) -> Result<RequestSpec> {
+fn build_get_by_id_spec(schema: &SchemaIr, resource_data: &Value, id_source_field: &str, resource_id: &str) -> Result<RequestSpec> {
     let def = &schema.resource;
     let endpoint = def.api.get_endpoint.replace(&format!("{{{}}}", id_source_field), resource_id);
 
@@ -367,19 +370,19 @@ fn build_get_by_id_spec(schema: &ResourceSchema, resource_data: &Value, id_sourc
     // variant-scoped fields); chain the resource-level `sensitive_paths()` after
     // it (which also walks `variants` and adds the CAMS response-envelope
     // spellings) so the GET response is redacted like the LIST path.
-    Ok(RequestMaterializer::new(Method::GET, &endpoint).materialize(resource_data, &schema.resource.schema.fields, BodyKindSelector::None)?.sensitive_paths(schema.resource.sensitive_paths()).not_found_ok().stage("reconciliation"))
+    Ok(RequestMaterializer::new(Method::GET, &endpoint).materialize(resource_data, schema.resource.schema.fields, BodyKindSelector::None)?.sensitive_paths(schema.resource.sensitive_paths()).not_found_ok().stage("reconciliation"))
 }
 
 impl Reconciler for SchemaBasedReconciler {
     fn discover<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient) -> Pin<Box<dyn Future<Output = Result<RemoteResource>> + Send + 'a>> {
         Box::pin(async move {
-            let schema = &resource.descriptor.schema;
+            let schema = resource.descriptor.schema;
             let def = &schema.resource;
             let discovery = &def.reconciliation.discovery;
-            let _id_field = &def.api.id_field;
+            let _id_field = def.api.id_field;
 
             match discovery.method {
-                DiscoveryMethod::ListAndGet => {
+                DiscoveryMethodIr::ListAndGet => {
                     // Delegate to discover_all's ListAndGet arm — the single copy of the
                     // list/match/normalize path (list_field handling, POST-search, 404/403
                     // quirks) — and take the first match. Keeping one implementation means
@@ -387,9 +390,9 @@ impl Reconciler for SchemaBasedReconciler {
                     let mut matches = self.discover_all(operation_id, resource, client, &NoOpAdvisorySink).await?;
                     if matches.is_empty() { Ok(RemoteResource { key: resource.key.clone(), data: Value::Null, exists: false }) } else { Ok(matches.swap_remove(0)) }
                 }
-                DiscoveryMethod::GetById => {
+                DiscoveryMethodIr::GetById => {
                     // Try to get resource by ID directly using the id_source field
-                    let id_source_field = &discovery.id_source;
+                    let id_source_field = discovery.id_source;
                     // A server-minted id is absent until the resource is created. With no id to
                     // GET, the resource cannot exist remotely under our reference, so treat it as
                     // not-found (plan Create) rather than erroring. (Kinds whose id is
@@ -428,7 +431,7 @@ impl Reconciler for SchemaBasedReconciler {
                         }
                     }
                 }
-                DiscoveryMethod::Skip => {
+                DiscoveryMethodIr::Skip => {
                     // Q2 local-hash fallback: consult the local record store first.
                     if let Some(found) = local_hash_skip_match(schema, resource, &wxctl_core::logging::run_record::runs_root(), &wxctl_providers::local_hash::env_key(client.base_url())) {
                         tracing::debug!(target: "wxctl::reconciliation::discovery", operation_id = %operation_id, resource_type = %resource.key.kind, resource_name = %resource.key.name, "local-hash record matched — treating as existing (NoChange)");
@@ -445,7 +448,7 @@ impl Reconciler for SchemaBasedReconciler {
                     );
                     Ok(RemoteResource { key: resource.key.clone(), data: Value::Null, exists: false })
                 }
-                DiscoveryMethod::Singleton => {
+                DiscoveryMethodIr::Singleton => {
                     // Per-instance singleton (e.g. sal_integration, sal_global_settings):
                     // GET the id-less get_endpoint. Materialize the request so a singleton's
                     // location: Query/Path fields (e.g. sal_enrichment_settings.project_id)
@@ -454,7 +457,7 @@ impl Reconciler for SchemaBasedReconciler {
                     // means absent (plan Create / "enable").
                     // not_found_ok() suppresses the wxctl::error event for 404 — the Err
                     // branch below still distinguishes HTML (bad route) vs clean 404 (absent).
-                    let spec = RequestMaterializer::new(Method::GET, &def.api.get_endpoint).materialize(&resource.data, &schema.resource.schema.fields, BodyKindSelector::None)?.not_found_ok().stage("reconciliation");
+                    let spec = RequestMaterializer::new(Method::GET, def.api.get_endpoint).materialize(&resource.data, schema.resource.schema.fields, BodyKindSelector::None)?.not_found_ok().stage("reconciliation");
                     match client.execute::<Value>(operation_id, spec).await {
                         Ok(remote_data) => {
                             // Some singletons return 200 with a sentinel body when absent (e.g. SAL's
@@ -493,14 +496,14 @@ impl Reconciler for SchemaBasedReconciler {
 
     fn discover_all<'a>(&'a self, operation_id: &'a str, resource: &'a ValidatedResource, client: HttpClient, advisories: &'a dyn AdvisorySink) -> Pin<Box<dyn Future<Output = Result<Vec<RemoteResource>>> + Send + 'a>> {
         Box::pin(async move {
-            let descriptor_schema = &resource.descriptor.schema;
+            let descriptor_schema = resource.descriptor.schema;
             let def = &descriptor_schema.resource;
             let discovery = &def.reconciliation.discovery;
 
             match discovery.method {
-                DiscoveryMethod::ListAndGet => {
+                DiscoveryMethodIr::ListAndGet => {
                     // List all resources and find ALL matching ones
-                    let list_endpoint = def.api.list_endpoint.as_ref().ok_or_else(|| anyhow::anyhow!("list_endpoint not configured"))?;
+                    let list_endpoint = def.api.list_endpoint.ok_or_else(|| anyhow::anyhow!("list_endpoint not configured"))?;
 
                     if let Some(tpl) = identity_paths_unresolved(&resource.data, descriptor_schema) {
                         tracing::debug!(target: "wxctl::reconciliation::discovery", operation_id = %operation_id, resource_type = %resource.key.kind, resource_name = %resource.key.name, template = %tpl, "skipping discovery_all: identity-relevant path has unresolved template reference");
@@ -536,7 +539,7 @@ impl Reconciler for SchemaBasedReconciler {
                         // the match field, so name_matches finds it AND the entry's computed fields
                         // (e.g. an auth mount's `accessor`) survive rediscovery for downstream
                         // ${...accessor} references. An empty map or 404 means no resources.
-                        let map_field = discovery.name_field.as_deref().unwrap_or("name");
+                        let map_field = discovery.name_field.unwrap_or("name");
                         let spec = RequestSpec::new(Method::GET, &list_endpoint).body(BodyKind::None).not_found_ok().stage("reconciliation").sensitive_paths(sensitive_paths.clone());
                         match client.execute::<Value>(operation_id, spec).await {
                             Ok(resp) => resp
@@ -564,10 +567,10 @@ impl Reconciler for SchemaBasedReconciler {
                             }
                             Err(e) => return Err(e).context("Failed to list resources (object map)"),
                         }
-                    } else if discovery.list_method.as_deref() == Some("post") {
+                    } else if discovery.list_method == Some("post") {
                         // POST-search enumeration (see `discover`): APIs like CAMS
                         // `/v2/asset_types/<type>/search` have no GET list, only a search POST.
-                        let body = discovery.list_body.clone().unwrap_or_else(|| serde_json::json!({}));
+                        let body = discovery.list_body.map(|s| serde_json::from_str::<Value>(s).expect("canonical json list_body")).unwrap_or_else(|| serde_json::json!({}));
                         let mut spec = RequestSpec::new(Method::POST, &list_endpoint).body(BodyKind::Json(body)).not_found_ok().stage("reconciliation").sensitive_paths(sensitive_paths.clone());
                         if let Some(params) = &params {
                             for (k, v) in params {
@@ -576,7 +579,7 @@ impl Reconciler for SchemaBasedReconciler {
                         }
                         match client.execute::<Value>(operation_id, spec).await {
                             Ok(resp) => {
-                                let field = discovery.list_field.as_deref().ok_or_else(|| anyhow::anyhow!("list_method: post requires list_field"))?;
+                                let field = discovery.list_field.ok_or_else(|| anyhow::anyhow!("list_method: post requires list_field"))?;
                                 resp.get(field).and_then(|v| v.as_array()).cloned().unwrap_or_default()
                             }
                             Err(e) if error_has_status(&e, 404) => {
@@ -585,7 +588,7 @@ impl Reconciler for SchemaBasedReconciler {
                             }
                             Err(e) => return Err(e).context("Failed to search resources"),
                         }
-                    } else if let Some(field) = discovery.list_field.as_deref() {
+                    } else if let Some(field) = discovery.list_field {
                         // Declared list_field on a GET list ⇒ explicit resp[field] extraction — see
                         // `discover`'s matching branch (and `list_via_declared_field`) for the rationale.
                         match list_via_declared_field(&client, operation_id, &list_endpoint, &params, sensitive_paths.clone(), field).await {
@@ -615,10 +618,10 @@ impl Reconciler for SchemaBasedReconciler {
                     // Identity lookup: see `discover` for the name_field vs identity_match dispatch.
                     // EnvMarker kinds match on the identity marker alone (the server clobbers
                     // names), so no local name is required or consulted.
-                    let name_field = discovery.name_field.as_deref().unwrap_or("name");
-                    let env_marker_hash = def.reconciliation.identity_hash.as_ref().filter(|ih| matches!(ih.storage, HashStorage::EnvMarker)).and_then(|_| resource.data.get("identity_hash").and_then(|v| v.as_str()));
+                    let name_field = discovery.name_field.unwrap_or("name");
+                    let env_marker_hash = def.reconciliation.identity_hash.as_ref().filter(|ih| matches!(ih.storage, HashStorageIr::EnvMarker)).and_then(|_| resource.data.get("identity_hash").and_then(|v| v.as_str()));
                     let resource_name = if discovery.identity_match.is_some() || env_marker_hash.is_some() { None } else { Some(resource.data.get(name_field).and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("Resource has no '{}' field", name_field))?) };
-                    let run_hash = def.reconciliation.identity_hash.as_ref().filter(|ih| matches!(ih.storage, HashStorage::Tag)).and_then(|_| resource.data.get("identity_hash").and_then(|v| v.as_str()));
+                    let run_hash = def.reconciliation.identity_hash.as_ref().filter(|ih| matches!(ih.storage, HashStorageIr::Tag)).and_then(|_| resource.data.get("identity_hash").and_then(|v| v.as_str()));
 
                     // Find ALL resources matching the identity (not just first)
                     let field_schema = &descriptor_schema.resource.schema;
@@ -667,7 +670,7 @@ impl Reconciler for SchemaBasedReconciler {
                     Ok(matches)
                 }
                 // For GetById, Skip, and Singleton, delegate to discover() (single result)
-                DiscoveryMethod::GetById | DiscoveryMethod::Skip | DiscoveryMethod::Singleton => {
+                DiscoveryMethodIr::GetById | DiscoveryMethodIr::Skip | DiscoveryMethodIr::Singleton => {
                     let remote = self.discover(operation_id, resource, client).await?;
                     if remote.exists { Ok(vec![remote]) } else { Ok(vec![]) }
                 }
@@ -684,7 +687,7 @@ impl Reconciler for SchemaBasedReconciler {
         let reconciliation = &def.reconciliation;
 
         // Check immutable fields for recreate condition
-        for immutable_field in &reconciliation.immutable_fields {
+        for immutable_field in reconciliation.immutable_fields.iter().copied() {
             let local_value = get_nested_field(&local.data, immutable_field);
             // Skip a field whose local value still carries an unresolved `${...}`
             // template — its upstream dependency wasn't discovered, so the literal
@@ -698,7 +701,7 @@ impl Reconciler for SchemaBasedReconciler {
             let remote_value = get_nested_field(&remote.data, immutable_field);
 
             if !values_match(local_value, remote_value) {
-                return StateComparison::Recreate { field: immutable_field.clone(), local_value: render_value(local_value), remote_value: render_value(remote_value) };
+                return StateComparison::Recreate { field: immutable_field.to_string(), local_value: render_value(local_value), remote_value: render_value(remote_value) };
             }
         }
 
@@ -706,8 +709,8 @@ impl Reconciler for SchemaBasedReconciler {
         // Only compare fields that are explicitly set in the local config
         // This prevents spurious updates for fields with remote defaults that aren't specified locally
         let mut changed_fields = Vec::new();
-        let state_fields = reconciliation.state_fields.as_deref().unwrap_or(&[]);
-        for state_field in state_fields {
+        let state_fields = reconciliation.state_fields.unwrap_or(&[]);
+        for state_field in state_fields.iter().copied() {
             // Skip comparison if field doesn't exist in local config
             if !field_exists(&local.data, state_field) {
                 continue;
@@ -732,7 +735,7 @@ impl Reconciler for SchemaBasedReconciler {
                     remote_value = %remote_value,
                     "Field difference detected"
                 );
-                changed_fields.push(state_field.clone());
+                changed_fields.push(state_field.to_string());
             }
         }
 
@@ -906,18 +909,18 @@ fn extract_nested_value_enveloped<'a>(value: &'a Value, path: &str) -> Option<&'
 
 /// Denormalize API response to user-facing format using api_field mappings
 /// Extracts values from nested API paths and adds them as top-level fields
-fn denormalize_api_response(response: &mut Value, schema: &SchemaDefinition) {
+fn denormalize_api_response(response: &mut Value, schema: &SchemaBodyIr) {
     // Collect field values from an immutable borrow first, then apply as mutations
     let insertions: Vec<(String, Value)> = schema
         .fields
         .iter()
         .filter_map(|field| {
-            let api_path = field.api_field.as_ref()?;
+            let api_path = field.api_field?;
             let value = extract_nested_value_enveloped(&*response, api_path)?;
             if value.is_null() {
                 return None;
             }
-            Some((field.name.clone(), value.clone()))
+            Some((field.name.to_string(), value.clone()))
         })
         .collect();
 
@@ -985,7 +988,7 @@ mod tests {
         // Storage-registration shape: plural `associated_catalogs[0]` remote, singular `associated_catalog` local.
         let items = vec![json!({"display_name": "A", "associated_catalogs": [{"catalog_name": "cat_x"}]}), json!({"display_name": "B", "associated_catalogs": [{"catalog_name": "cat_y"}]})];
         let local = json!({"display_name": "ignored", "associated_catalog": {"catalog_name": "cat_y"}});
-        let identity = IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalogs.0.catalog_name".into() };
+        let identity = IdentityMatchIr { local_path: "associated_catalog.catalog_name", remote_path: "associated_catalogs.0.catalog_name" };
         let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None, None);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].get("display_name").and_then(|v| v.as_str()), Some("B"), "identity_match selects by catalog name, not display_name");
@@ -993,7 +996,7 @@ mod tests {
         // Even if `display_name` matches, identity_match is the only criterion when declared.
         let items = vec![json!({"display_name": "same", "associated_catalog": {"catalog_name": "cat_x"}}), json!({"display_name": "other", "associated_catalog": {"catalog_name": "cat_y"}})];
         let local = json!({"display_name": "same", "associated_catalog": {"catalog_name": "cat_y"}});
-        let identity = IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalog.catalog_name".into() };
+        let identity = IdentityMatchIr { local_path: "associated_catalog.catalog_name", remote_path: "associated_catalog.catalog_name" };
         let hits = match_remote_items(&items, &local, "display_name", None, Some(&identity), None, None, None);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].get("display_name").and_then(|v| v.as_str()), Some("other"), "identity_match ignores a matching display_name");
@@ -1011,7 +1014,7 @@ mod tests {
         // A folder and a book share the name; the paw_book kind filters on type=dashboard.
         let items = vec![json!({"name": "Reports", "type": "folder"}), json!({"name": "Reports", "type": "dashboard"})];
         let local = json!({"name": "Reports"});
-        let lf = ListFilter { field: "type".into(), equals: "dashboard".into() };
+        let lf = ListFilterIr { field: "type", equals: "dashboard" };
         // AC1: only the dashboard item matches — the folder is never adopted.
         let hits = match_remote_items(&items, &local, "name", Some("Reports"), None, None, None, Some(&lf));
         assert_eq!(hits.len(), 1);
@@ -1038,7 +1041,7 @@ mod tests {
     /// collision at all.
     #[test]
     fn push_list_filter_advisories_dedupes_by_conflicting_value() {
-        let lf = ListFilter { field: "asset_type".into(), equals: "dashboard".into() };
+        let lf = ListFilterIr { field: "asset_type", equals: "dashboard" };
         let items = vec![
             json!({ "name": "Reports", "asset_type": "folder" }),    // collision
             json!({ "name": "Reports", "asset_type": "folder" }),    // same conflicting value → deduped
@@ -1057,7 +1060,7 @@ mod tests {
     fn is_absent_sentinel_null_equals_matches_missing_and_explicit_null() {
         // wxO agent_release shape: a matched `live` Environment record with a
         // deployed version is NOT the sentinel — exists true.
-        let aw = AbsentWhen { field: "current_version".into(), equals: json!(null) };
+        let aw = AbsentWhenIr { field: "current_version", equals: "null" };
         assert!(!is_absent_sentinel(&json!({"name": "live", "current_version": 5}), Some(&aw)), "a real deployed version is not the absent sentinel");
 
         // Undeploy leaves the record with current_version explicitly null — absent.
@@ -1075,7 +1078,9 @@ mod tests {
     #[test]
     fn is_absent_sentinel_string_equals_still_works() {
         // SAL's existing `equals: missing` (a bare string, not null) must keep working.
-        let aw = AbsentWhen { field: "status".into(), equals: json!("missing") };
+        // `equals` is the canonical-JSON encoding of the sentinel value, so a string
+        // sentinel carries its own quotes.
+        let aw = AbsentWhenIr { field: "status", equals: "\"missing\"" };
         assert!(is_absent_sentinel(&json!({"status": "missing"}), Some(&aw)));
         assert!(!is_absent_sentinel(&json!({"status": "active"}), Some(&aw)));
         // A field merely absent does NOT match a non-null string sentinel — only
@@ -1159,77 +1164,67 @@ mod tests {
         assert_eq!(normalize_list_item(orig.clone(), "name"), orig);
     }
 
-    /// Build a minimal ResourceSchema with the named fields declared at the
-    /// given locations and optional identity/name_field settings. Used to
-    /// exercise the Path/Query-aware branches of identity_paths_unresolved,
-    /// build_scoping_params, and substitute_path_placeholders.
-    fn make_schema_with_fields(fields: &[(&str, FieldLocation)], identity: Option<IdentityMatch>, name_field: Option<&str>) -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        let field_defs = fields
-            .iter()
-            .map(|(name, location)| FieldDefinition {
-                name: (*name).into(),
-                field_type: FieldType::String,
-                required: false,
-                immutable: false,
-                location: location.clone(),
-                description: None,
-                validation: None,
-                schema: None,
-                item_type: None,
-                default: None,
-                allowed_values: None,
-                references: None,
-                api_field: None,
-                sensitive: false,
-                also_query: false,
-                is_path: false,
-                synthesize: None,
-                synth_shape: None,
-                properties: None,
-            })
-            .collect();
-        // Build list_endpoint with placeholders so substitute_path_placeholders
-        // tests have something meaningful to substitute.
-        let path_placeholders: String = fields.iter().filter(|(_, loc)| loc == &FieldLocation::Path).map(|(name, _)| format!("/{{{name}}}")).collect();
-        let list_endpoint = format!("/v1/parents{path_placeholders}/things");
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "thing".into(),
-                service: "svc".into(),
-                kind: "thing".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: list_endpoint.clone(),
-                    id_field: "id".into(),
-                    list_endpoint: Some(list_endpoint.clone()),
-                    get_endpoint: format!("{list_endpoint}/{{id}}"),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: field_defs, ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: name_field.map(str::to_string), identity_match: identity, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    identity_hash: None,
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
+    /// Build a minimal schema declaring the named fields at the given locations
+    /// and optional identity/name_field settings, by compiling a YAML literal
+    /// through the production parse path (D10). Used to exercise the Path/Query
+    /// -aware branches of identity_paths_unresolved, build_scoping_params, and
+    /// substitute_path_placeholders.
+    fn make_schema_with_fields(fields: &[(&str, FieldLocationIr)], identity: Option<IdentityMatchIr>, name_field: Option<&str>) -> &'static SchemaIr {
+        fn loc_str(l: FieldLocationIr) -> &'static str {
+            match l {
+                FieldLocationIr::Body => "Body",
+                FieldLocationIr::Query => "Query",
+                FieldLocationIr::Header => "Header",
+                FieldLocationIr::Path => "Path",
+                FieldLocationIr::Computed => "Computed",
+                FieldLocationIr::LocalOnly => "LocalOnly",
+            }
         }
+        let mut fields_yaml = String::new();
+        if fields.is_empty() {
+            fields_yaml.push_str("    fields: []\n");
+        } else {
+            fields_yaml.push_str("    fields:\n");
+            for (name, loc) in fields {
+                fields_yaml.push_str(&format!("      - name: \"{name}\"\n        type: string\n        location: {}\n", loc_str(*loc)));
+            }
+        }
+        // list_endpoint carries a `{field}` placeholder for every declared Path field,
+        // so substitute_path_placeholders tests have something meaningful to substitute.
+        let path_placeholders: String = fields.iter().filter(|(_, loc)| matches!(loc, FieldLocationIr::Path)).map(|(name, _)| format!("/{{{name}}}")).collect();
+        let list_endpoint = format!("/v1/parents{path_placeholders}/things");
+        let mut discovery_extra = String::new();
+        if let Some(nf) = name_field {
+            discovery_extra.push_str(&format!("      name_field: \"{nf}\"\n"));
+        }
+        if let Some(im) = identity {
+            discovery_extra.push_str(&format!("      identity_match:\n        local_path: \"{}\"\n        remote_path: \"{}\"\n", im.local_path, im.remote_path));
+        }
+        let yaml = format!(
+            r#"
+resource:
+  name: thing
+  service: svc
+  kind: thing
+  version: v1
+  api:
+    base_path: "{list_endpoint}"
+    id_field: id
+    list_endpoint: "{list_endpoint}"
+    get_endpoint: "{list_endpoint}/{{id}}"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+{fields_yaml}  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+{discovery_extra}    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+"#
+        );
+        wxctl_schema::ir_support::compile_to_static_ir(&yaml).unwrap_or_else(|e| panic!("test schema yaml failed to parse: {e}\n{yaml}"))
     }
 
     #[test]
@@ -1241,68 +1236,42 @@ mod tests {
         // was left literal, the live TM1 server 404s on the literal text, and
         // discovery reported a phantom not-found (every re-plan showed a spurious
         // `+ create` for pa_hierarchy / pa_subset / pa_view).
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        let mk_field = |name: &str, location: FieldLocation| FieldDefinition {
-            name: name.into(),
-            field_type: FieldType::String,
-            required: true,
-            immutable: true,
-            location,
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references: None,
-            api_field: None,
-            sensitive: false,
-            also_query: false,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-            properties: None,
-        };
-        let schema = ResourceSchema {
-            resource: ResourceDefinition {
-                name: "pa_hierarchy".into(),
-                service: "planning-analytics".into(),
-                kind: "pa_hierarchy".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/Dimensions".into(),
-                    id_field: "name".into(),
-                    list_endpoint: None,
-                    get_endpoint: "/Dimensions('{dimension}')/Hierarchies('{name}')".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![mk_field("dimension", FieldLocation::Path), mk_field("name", FieldLocation::Body)], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "name".into(), list_filter: None },
-                    identity_hash: None,
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        };
+        const PA_HIERARCHY_YAML: &str = r#"
+resource:
+  name: pa_hierarchy
+  service: planning-analytics
+  kind: pa_hierarchy
+  version: v1
+  api:
+    base_path: /Dimensions
+    id_field: name
+    get_endpoint: "/Dimensions('{dimension}')/Hierarchies('{name}')"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: dimension
+        type: string
+        required: true
+        immutable: true
+        location: Path
+      - name: name
+        type: string
+        required: true
+        immutable: true
+        location: Body
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: name
+    state_fields: []
+    update_strategy: patch
+    use_json_patch: false
+"#;
+        let schema = wxctl_schema::ir_support::compile_to_static_ir(PA_HIERARCHY_YAML).expect("valid test schema yaml");
         let data = json!({"name": "H1", "dimension": "D1"});
 
-        let spec = build_get_by_id_spec(&schema, &data, "name", "H1").unwrap();
+        let spec = build_get_by_id_spec(schema, &data, "name", "H1").unwrap();
 
         // id_source placeholder resolved via string-replace...
         assert!(spec.path_template.contains("('H1')"), "id placeholder must be substituted into the endpoint: {}", spec.path_template);
@@ -1320,7 +1289,7 @@ mod tests {
         // distinct identity_paths_unresolved branch: None = discovery proceeds,
         // Some(s) = unresolved template `s` surfaced so discovery is skipped.
         #[allow(clippy::type_complexity)]
-        let cases: Vec<(&str, Value, Vec<(&str, FieldLocation)>, Option<IdentityMatch>, Option<&str>, Option<&str>)> = vec![
+        let cases: Vec<(&str, Value, Vec<(&str, FieldLocationIr)>, Option<IdentityMatchIr>, Option<&str>, Option<&str>)> = vec![
             // storage_registration re-apply regression: bucket ref is templated but
             // identity_match.local_path (associated_catalog.catalog_name) is a literal → None.
             (
@@ -1331,7 +1300,7 @@ mod tests {
                     "display_name": "wxctl-iceberg"
                 }),
                 vec![],
-                Some(IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalogs.0.catalog_name".into() }),
+                Some(IdentityMatchIr { local_path: "associated_catalog.catalog_name", remote_path: "associated_catalogs.0.catalog_name" }),
                 None,
                 None,
             ),
@@ -1340,29 +1309,29 @@ mod tests {
                 "templated identity_match value",
                 json!({"associated_catalog": {"catalog_name": "${presto_engine.analytics.catalog}", "catalog_type": "iceberg"}}),
                 vec![],
-                Some(IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalogs.0.catalog_name".into() }),
+                Some(IdentityMatchIr { local_path: "associated_catalog.catalog_name", remote_path: "associated_catalogs.0.catalog_name" }),
                 None,
                 Some("${presto_engine.analytics.catalog}"),
             ),
             // Templated Query / Path scoping fields → surfaced.
-            ("templated query field", json!({"catalog_id": "${catalog.primary.id}", "name": "thing"}), vec![("catalog_id", FieldLocation::Query)], None, None, Some("${catalog.primary.id}")),
-            ("templated path field", json!({"catalog_id": "${catalog.primary.id}", "name": "thing"}), vec![("catalog_id", FieldLocation::Path)], None, None, Some("${catalog.primary.id}")),
+            ("templated query field", json!({"catalog_id": "${catalog.primary.id}", "name": "thing"}), vec![("catalog_id", FieldLocationIr::Query)], None, None, Some("${catalog.primary.id}")),
+            ("templated path field", json!({"catalog_id": "${catalog.primary.id}", "name": "thing"}), vec![("catalog_id", FieldLocationIr::Path)], None, None, Some("${catalog.primary.id}")),
             // Path/Query/name all literal (an unrelated `other` template is irrelevant) → None.
-            ("path/query/name all literal", json!({"catalog_id": "lit-cat-id", "name": "thing", "other": "${foo.bar}"}), vec![("catalog_id", FieldLocation::Path)], None, None, None),
+            ("path/query/name all literal", json!({"catalog_id": "lit-cat-id", "name": "thing", "other": "${foo.bar}"}), vec![("catalog_id", FieldLocationIr::Path)], None, None, None),
             // A Body field with a templated value is NOT identity-relevant — the
             // template goes into the POST body at execution time, not the list call → None.
-            ("templated body field ignored", json!({"bucket": "${s3_bucket.x.name}", "name": "thing"}), vec![("bucket", FieldLocation::Body)], None, None, None),
+            ("templated body field ignored", json!({"bucket": "${s3_bucket.x.name}", "name": "thing"}), vec![("bucket", FieldLocationIr::Body)], None, None, None),
             // Templated default name field when identity_match absent → surfaced.
             ("templated name field (no identity)", json!({"name": "${thing.x.name}"}), vec![], None, None, Some("${thing.x.name}")),
             // Dotted Query field reader must surface an unresolved nested template
             // so discovery is skipped (returns the template string to the caller).
-            ("templated dotted query field", json!({"target": {"target_id": "${subscription.os_sub.id}"}, "monitor_definition_id": "quality"}), vec![("target.target_id", FieldLocation::Query)], None, None, Some("${subscription.os_sub.id}")),
+            ("templated dotted query field", json!({"target": {"target_id": "${subscription.os_sub.id}"}, "monitor_definition_id": "quality"}), vec![("target.target_id", FieldLocationIr::Query)], None, None, Some("${subscription.os_sub.id}")),
             // Custom name_field honored when templated.
             ("templated custom name field", json!({"display_name": "${engine.x.display_name}"}), vec![], None, Some("display_name"), Some("${engine.x.display_name}")),
         ];
         for (label, data, fields, identity, name_field, expected) in cases {
             let schema = make_schema_with_fields(&fields, identity, name_field);
-            assert_eq!(identity_paths_unresolved(&data, &schema).as_deref(), expected, "case: {label}");
+            assert_eq!(identity_paths_unresolved(&data, schema).as_deref(), expected, "case: {label}");
         }
     }
 
@@ -1371,22 +1340,22 @@ mod tests {
         // A `location: Query` field named `target.target_id` must read the nested
         // value data["target"]["target_id"] and emit it under that dotted key.
         let data = json!({"target": {"target_id": "sub-123", "target_type": "subscription"}, "monitor_definition_id": "quality"});
-        let schema = make_schema_with_fields(&[("target.target_id", FieldLocation::Query)], None, None);
-        let params = build_scoping_params(&data, &schema).unwrap().expect("scoping params present");
+        let schema = make_schema_with_fields(&[("target.target_id", FieldLocationIr::Query)], None, None);
+        let params = build_scoping_params(&data, schema).unwrap().expect("scoping params present");
         assert_eq!(params.get("target.target_id").map(String::as_str), Some("sub-123"));
 
         // Single-segment Query names traverse via map.get exactly as before — guards
         // against a regression in existing flat scoping fields (space_id, catalog_id).
         let data = json!({"catalog_id": "cat-9", "name": "thing"});
-        let schema = make_schema_with_fields(&[("catalog_id", FieldLocation::Query)], None, None);
-        let params = build_scoping_params(&data, &schema).unwrap().expect("scoping params present");
+        let schema = make_schema_with_fields(&[("catalog_id", FieldLocationIr::Query)], None, None);
+        let params = build_scoping_params(&data, schema).unwrap().expect("scoping params present");
         assert_eq!(params.get("catalog_id").map(String::as_str), Some("cat-9"));
 
         // An unresolved ${...} template in a dotted query field must Err so the
         // caller skips the list call rather than sending the literal template string.
         let data = json!({"target": {"target_id": "${subscription.os_sub.id}"}});
-        let schema = make_schema_with_fields(&[("target.target_id", FieldLocation::Query)], None, None);
-        assert!(build_scoping_params(&data, &schema).is_err());
+        let schema = make_schema_with_fields(&[("target.target_id", FieldLocationIr::Query)], None, None);
+        assert!(build_scoping_params(&data, schema).is_err());
     }
 
     #[test]
@@ -1399,156 +1368,111 @@ mod tests {
         // "Exactly one of the query parameters in [project_id, space_id] is
         // required"; run 20260708-002457-destroy-483a7e).
         let data = json!({"project_id": {"name": "churn-project", "description": "seeded local data, no guid"}, "display_name": "Runtime"});
-        let schema = make_schema_with_fields(&[("project_id", FieldLocation::Query)], None, None);
-        assert!(build_scoping_params(&data, &schema).is_err(), "object left by failed ref extraction must not be silently dropped");
+        let schema = make_schema_with_fields(&[("project_id", FieldLocationIr::Query)], None, None);
+        assert!(build_scoping_params(&data, schema).is_err(), "object left by failed ref extraction must not be silently dropped");
 
         // A genuinely absent optional scoping field still yields params-less Ok —
         // the config never set it, so an unscoped LIST is the author's intent.
         let data = json!({"display_name": "Runtime"});
-        let schema = make_schema_with_fields(&[("project_id", FieldLocation::Query)], None, None);
-        assert!(build_scoping_params(&data, &schema).unwrap().is_none());
+        let schema = make_schema_with_fields(&[("project_id", FieldLocationIr::Query)], None, None);
+        assert!(build_scoping_params(&data, schema).unwrap().is_none());
     }
 
     #[test]
     fn substitute_path_placeholders_branches() {
         let endpoint = "/v1/parents/{catalog_id}/things";
         // Path-located field substituted into its placeholder.
-        let schema = make_schema_with_fields(&[("catalog_id", FieldLocation::Path)], None, None);
-        assert_eq!(substitute_path_placeholders(endpoint, &json!({"catalog_id": "cat-123"}), &schema).unwrap(), "/v1/parents/cat-123/things");
+        let schema = make_schema_with_fields(&[("catalog_id", FieldLocationIr::Path)], None, None);
+        assert_eq!(substitute_path_placeholders(endpoint, &json!({"catalog_id": "cat-123"}), schema).unwrap(), "/v1/parents/cat-123/things");
         // No matching placeholder in the endpoint → passes through unchanged.
-        assert_eq!(substitute_path_placeholders("/v1/things", &json!({"catalog_id": "cat-123"}), &schema).unwrap(), "/v1/things");
+        assert_eq!(substitute_path_placeholders("/v1/things", &json!({"catalog_id": "cat-123"}), schema).unwrap(), "/v1/things");
         // Missing value for a declared Path placeholder → error.
-        assert!(substitute_path_placeholders(endpoint, &json!({}), &schema).is_err());
+        assert!(substitute_path_placeholders(endpoint, &json!({}), schema).is_err());
         // A Body-located field `catalog_id` with the same name still shouldn't get
         // substituted into paths — only Path-located fields are candidates.
-        let body_schema = make_schema_with_fields(&[("catalog_id", FieldLocation::Body)], None, None);
-        assert_eq!(substitute_path_placeholders(endpoint, &json!({"catalog_id": "cat-123"}), &body_schema).unwrap(), "/v1/parents/{catalog_id}/things");
+        let body_schema = make_schema_with_fields(&[("catalog_id", FieldLocationIr::Body)], None, None);
+        assert_eq!(substitute_path_placeholders(endpoint, &json!({"catalog_id": "cat-123"}), body_schema).unwrap(), "/v1/parents/{catalog_id}/things");
     }
 
-    fn make_schema_with_immutable(immutable_fields: Vec<String>, reject: bool) -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldLocation, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "reg".into(),
-                service: "svc".into(),
-                kind: "reg".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v3/regs".into(),
-                    id_field: "id".into(),
-                    list_endpoint: Some("/v3/regs".into()),
-                    get_endpoint: "/v3/regs/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: Some(HttpMethod::Patch),
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition {
-                    fields: vec![FieldDefinition {
-                        name: "type".into(),
-                        field_type: FieldType::String,
-                        required: true,
-                        immutable: true,
-                        location: FieldLocation::Body,
-                        description: None,
-                        validation: None,
-                        schema: None,
-                        item_type: None,
-                        default: None,
-                        allowed_values: None,
-                        references: None,
-                        api_field: None,
-                        sensitive: false,
-                        also_query: false,
-                        is_path: false,
-                        synthesize: None,
-                        synth_shape: None,
-                        properties: None,
-                    }],
-                    ..Default::default()
-                },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    identity_hash: None,
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields,
-                    reject_on_immutable_drift: reject,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// Build a storage_registration-shaped schema whose reconciliation declares
+    /// the given `immutable_fields` and `reject_on_immutable_drift`, by compiling
+    /// a YAML literal (D10).
+    fn make_schema_with_immutable(immutable_fields: &[&str], reject: bool) -> &'static SchemaIr {
+        let immutable_yaml = immutable_fields.iter().map(|f| format!("\"{f}\"")).collect::<Vec<_>>().join(", ");
+        let yaml = format!(
+            r#"
+resource:
+  name: reg
+  service: svc
+  kind: reg
+  version: v1
+  api:
+    base_path: /v3/regs
+    id_field: id
+    list_endpoint: /v3/regs
+    get_endpoint: "/v3/regs/{{id}}"
+    create_method: POST
+    update_method: PATCH
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: type
+        type: string
+        required: true
+        immutable: true
+        location: Body
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+    state_fields: []
+    update_strategy: patch
+    immutable_fields: [{immutable_yaml}]
+    reject_on_immutable_drift: {reject}
+    use_json_patch: false
+"#
+        );
+        wxctl_schema::ir_support::compile_to_static_ir(&yaml).unwrap_or_else(|e| panic!("test schema yaml failed to parse: {e}\n{yaml}"))
     }
 
-    fn make_connection_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldLocation, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        let field = |name: &str, field_type: FieldType, immutable: bool, item_type: Option<FieldType>| FieldDefinition {
-            name: name.into(),
-            field_type,
-            required: false,
-            immutable,
-            location: FieldLocation::Body,
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: item_type.map(Box::new),
-            default: None,
-            allowed_values: None,
-            references: None,
-            api_field: None,
-            sensitive: false,
-            also_query: false,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-            properties: None,
-        };
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "orchestrate_connection".into(),
-                service: "watsonx_orchestrate".into(),
-                kind: "orchestrate_connection".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v1/orchestrate/connections/applications".into(),
-                    id_field: "app_id".into(),
-                    list_endpoint: Some("/v1/orchestrate/connections/applications".into()),
-                    get_endpoint: "/v1/orchestrate/connections/applications/{app_id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: Some(HttpMethod::Patch),
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![field("app_id", FieldType::String, true, None), field("configured_environments", FieldType::Array, false, Some(FieldType::String))], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "app_id".into(), list_filter: None },
-                    identity_hash: None,
-                    state_fields: Some(vec!["configured_environments".into()]),
-                    update_strategy: UpdateStrategy::Recreate,
-                    immutable_fields: vec!["app_id".into()],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// Build the orchestrate_connection schema (state_fields: [configured_environments],
+    /// update_strategy: recreate, immutable_fields: [app_id]) by compiling a YAML
+    /// literal (D10).
+    fn make_connection_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: orchestrate_connection
+  service: watsonx_orchestrate
+  kind: orchestrate_connection
+  version: v1
+  api:
+    base_path: /v1/orchestrate/connections/applications
+    id_field: app_id
+    list_endpoint: /v1/orchestrate/connections/applications
+    get_endpoint: "/v1/orchestrate/connections/applications/{app_id}"
+    create_method: POST
+    update_method: PATCH
+    delete_method: DELETE
+  schema:
+    fields:
+      - name: app_id
+        type: string
+        immutable: true
+        location: Body
+      - name: configured_environments
+        type: array
+        item_type: string
+        location: Body
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: app_id
+    state_fields: [configured_environments]
+    update_strategy: recreate
+    immutable_fields: [app_id]
+    use_json_patch: false
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     #[test]
@@ -1559,7 +1483,7 @@ mod tests {
         let reconciler = SchemaBasedReconciler::new();
         let local = json!({"app_id": "churn-scoring", "configured_environments": ["draft", "live"]});
         let remote = json!({"app_id": "churn-scoring", "configured_environments": ["draft"]});
-        let (lv, rv) = make_test_resources(local, remote, &schema);
+        let (lv, rv) = make_test_resources(local, remote, schema);
         match reconciler.compare(&lv, &rv) {
             StateComparison::Update { fields } => assert_eq!(fields, vec!["configured_environments".to_string()]),
             other => panic!("expected Update on configured_environments, got {:?}", other),
@@ -1572,7 +1496,7 @@ mod tests {
         let schema = make_connection_schema();
         let reconciler = SchemaBasedReconciler::new();
         let both = json!({"app_id": "churn-scoring", "configured_environments": ["draft", "live"]});
-        let (lv, rv) = make_test_resources(both.clone(), both, &schema);
+        let (lv, rv) = make_test_resources(both.clone(), both, schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange));
     }
 
@@ -1585,14 +1509,14 @@ mod tests {
         let reconciler = SchemaBasedReconciler::new();
         let local = json!({"app_id": "plain-conn"});
         let remote = json!({"app_id": "plain-conn", "configured_environments": ["draft"]});
-        let (lv, rv) = make_test_resources(local, remote, &schema);
+        let (lv, rv) = make_test_resources(local, remote, schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange));
     }
 
-    fn make_test_resources(local_data: Value, remote_data: Value, schema: &ResourceSchema) -> (ValidatedResource, RemoteResource) {
+    fn make_test_resources(local_data: Value, remote_data: Value, schema: &'static SchemaIr) -> (ValidatedResource, RemoteResource) {
         use wxctl_core::registry::ResourceDescriptor;
         use wxctl_core::types::ResourceKey;
-        let descriptor = std::sync::Arc::new(ResourceDescriptor::from_schema(schema).unwrap());
+        let descriptor = std::sync::Arc::new(ResourceDescriptor::from_ir(schema));
         let key = ResourceKey::new("reg", "test");
         let local = ValidatedResource { key: key.clone(), data: local_data, descriptor, dependencies: vec![], on_destroy: Default::default() };
         let remote = RemoteResource { key, data: remote_data, exists: true };
@@ -1608,8 +1532,8 @@ mod tests {
         // Recreate into a ReconciliationError. The reconciler itself still reports
         // the drifted field so callers can build an error message.
         for reject in [true, false] {
-            let schema = make_schema_with_immutable(vec!["type".into()], reject);
-            let (lv, rv) = make_test_resources(json!({"type": "ibm_cos"}), json!({"type": "amazon_s3"}), &schema);
+            let schema = make_schema_with_immutable(&["type"], reject);
+            let (lv, rv) = make_test_resources(json!({"type": "ibm_cos"}), json!({"type": "amazon_s3"}), schema);
             match reconciler.compare(&lv, &rv) {
                 StateComparison::Recreate { field, local_value, remote_value } => {
                     assert_eq!(field, "type");
@@ -1620,67 +1544,56 @@ mod tests {
             }
         }
         // No drift → NoChange.
-        let schema = make_schema_with_immutable(vec!["type".into()], true);
-        let (lv, rv) = make_test_resources(json!({"type": "ibm_cos"}), json!({"type": "ibm_cos"}), &schema);
+        let schema = make_schema_with_immutable(&["type"], true);
+        let (lv, rv) = make_test_resources(json!({"type": "ibm_cos"}), json!({"type": "ibm_cos"}), schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange));
     }
 
     /// Build a storage_registration-shaped schema: state_fields
     /// [display_name, description, tags] + immutable_fields [bucket,
     /// associated_catalog.catalog_name, associated_catalog.catalog_type] +
-    /// reject_on_immutable_drift, with an identity_match on the catalog name.
-    /// Used to reproduce the Deferred-but-found re-plan regression where the
-    /// templated `bucket` immutable ref must not trigger a phantom Recreate.
-    fn make_storage_registration_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HookDefinition, HttpMethod, IdentityMatch, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "storage_registration".into(),
-                service: "watsonx_data".into(),
-                kind: "storage_registration".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v3/storage_registrations".into(),
-                    id_field: "id".into(),
-                    list_endpoint: Some("/v3/storage_registrations".into()),
-                    get_endpoint: "/v3/storage_registrations/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: Some(HttpMethod::Patch),
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition {
-                        method: DiscoveryMethod::ListAndGet,
-                        list_field: Some("storage_registrations".into()),
-                        name_field: None,
-                        identity_match: Some(IdentityMatch { local_path: "associated_catalog.catalog_name".into(), remote_path: "associated_catalogs.0.catalog_name".into() }),
-                        absent_when: None,
-                        list_method: None,
-                        list_body: None,
-                        list_map: false,
-                        id_source: "id".into(),
-                        list_filter: None,
-                    },
-                    identity_hash: None,
-                    state_fields: Some(vec!["display_name".into(), "description".into(), "tags".into()]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec!["bucket".into(), "associated_catalog.catalog_name".into(), "associated_catalog.catalog_type".into()],
-                    reject_on_immutable_drift: true,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// reject_on_immutable_drift, with an identity_match on the catalog name, by
+    /// compiling a YAML literal (D10). Used to reproduce the Deferred-but-found
+    /// re-plan regression where the templated `bucket` immutable ref must not
+    /// trigger a phantom Recreate.
+    fn make_storage_registration_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: storage_registration
+  service: watsonx_data
+  kind: storage_registration
+  version: v1
+  api:
+    base_path: /v3/storage_registrations
+    id_field: id
+    list_endpoint: /v3/storage_registrations
+    get_endpoint: "/v3/storage_registrations/{id}"
+    create_method: POST
+    update_method: PATCH
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: storage_registrations
+      id_source: id
+      identity_match:
+        local_path: associated_catalog.catalog_name
+        remote_path: associated_catalogs.0.catalog_name
+    state_fields:
+      - display_name
+      - description
+      - tags
+    update_strategy: patch
+    use_json_patch: false
+    immutable_fields:
+      - bucket
+      - associated_catalog.catalog_name
+      - associated_catalog.catalog_type
+    reject_on_immutable_drift: true
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     /// Deferred-but-found storage_registration re-plan regression. On this path the
@@ -1715,7 +1628,7 @@ mod tests {
             "associated_catalog": {"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"},
             "associated_catalogs": [{"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"}]
         });
-        let (lv, rv) = make_test_resources(local, remote, &schema);
+        let (lv, rv) = make_test_resources(local, remote, schema);
         match reconciler.compare(&lv, &rv) {
             StateComparison::NoChange => {}
             other => panic!("expected NoChange (templated immutable `bucket` must be skipped), got {:?}", other),
@@ -1735,7 +1648,7 @@ mod tests {
             "associated_catalog": {"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"},
             "associated_catalogs": [{"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"}]
         });
-        let (lv, rv) = make_test_resources(local, remote, &schema);
+        let (lv, rv) = make_test_resources(local, remote, schema);
         match reconciler.compare(&lv, &rv) {
             StateComparison::Update { fields } => assert_eq!(fields, vec!["display_name".to_string()]),
             other => panic!("expected Update on display_name, got {:?}", other),
@@ -1753,7 +1666,7 @@ mod tests {
             "associated_catalog": {"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"},
             "associated_catalogs": [{"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"}]
         });
-        let (lv, rv) = make_test_resources(local, remote, &schema);
+        let (lv, rv) = make_test_resources(local, remote, schema);
         match reconciler.compare(&lv, &rv) {
             StateComparison::Recreate { field, .. } => assert_eq!(field, "associated_catalog.catalog_type"),
             other => panic!("expected Recreate on catalog_type, got {:?}", other),
@@ -1771,13 +1684,13 @@ mod tests {
             "bucket": "${s3_bucket.sw_bucket.name}",
             "associated_catalog": {"catalog_name": "e2e_sw_iceberg", "catalog_type": "iceberg"}
         });
-        assert_eq!(compared_field_resolution(&data, &schema), (4, 1));
+        assert_eq!(compared_field_resolution(&data, schema), (4, 1));
 
         // When every present compared field is templated, comparable == 0 — the
         // Deferred-Apply caller keeps the conservative blind Update.
-        let schema = make_schema_with_immutable(vec!["type".into()], false);
+        let schema = make_schema_with_immutable(&["type"], false);
         let data = json!({"type": "${storage_connection.c.type}"});
-        assert_eq!(compared_field_resolution(&data, &schema), (0, 1));
+        assert_eq!(compared_field_resolution(&data, schema), (0, 1));
     }
 
     #[test]
@@ -1797,10 +1710,10 @@ mod tests {
     /// catches any regression that reintroduces a captured-base read path.
     #[test]
     fn compare_reads_immutable_fields_from_per_resource_descriptor() {
-        let overlay_schema = make_schema_with_immutable(vec!["job_id".into()], false);
+        let overlay_schema = make_schema_with_immutable(&["job_id"], false);
         let local = json!({"job_id": "ingest-001"});
         let remote = json!({"job_id": "ingest-002"});
-        let (lv, rv) = make_test_resources(local, remote, &overlay_schema);
+        let (lv, rv) = make_test_resources(local, remote, overlay_schema);
         let reconciler = SchemaBasedReconciler::new();
         match reconciler.compare(&lv, &rv) {
             StateComparison::Recreate { field, .. } => assert_eq!(field, "job_id"),
@@ -1819,30 +1732,32 @@ mod tests {
 
     #[test]
     fn denormalize_api_field_to_user_field_branches() {
-        use wxctl_schema::schema::{FieldDefinition, FieldLocation, FieldType, SchemaDefinition};
+        use wxctl_schema::ir::{FieldIr, FieldTypeIr};
         // A category schema mapping user field `parent_category` ← api_field `parent_category_id`.
-        let mut schema = SchemaDefinition::default();
-        schema.fields = vec![FieldDefinition {
-            name: "parent_category".into(),
-            field_type: FieldType::String,
-            required: false,
-            immutable: false,
-            location: FieldLocation::Body,
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references: None,
-            api_field: Some("parent_category_id".into()),
-            sensitive: false,
-            also_query: false,
-            properties: None,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-        }];
+        let schema = SchemaBodyIr {
+            fields: &[FieldIr {
+                name: "parent_category",
+                field_type: FieldTypeIr::String,
+                required: false,
+                immutable: false,
+                location: FieldLocationIr::Body,
+                description: None,
+                validation: None,
+                schema: None,
+                item_type: None,
+                default: None,
+                allowed_values: None,
+                references: None,
+                api_field: Some("parent_category_id"),
+                sensitive: false,
+                also_query: false,
+                is_path: false,
+                synthesize: None,
+                synth_shape: None,
+            }],
+            discriminator: None,
+            variants: None,
+        };
 
         // Top-level api_field → mapped onto the user field.
         let mut resp = json!({"name": "e2e PII", "parent_category_id": "cat-root-1"});
@@ -1898,46 +1813,38 @@ mod tests {
 
     /// Build a name_suffix identity-hash schema with the synthetic `identity_hash`
     /// as the only state field (as the parser produces after dropping name + hashed
-    /// fields). Mirrors the autoai_experiment shape without wiring the real kind.
-    fn make_identity_hash_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HashStorage, HookDefinition, HttpMethod, IdentityHash, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "job".into(),
-                service: "svc".into(),
-                kind: "job".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v4/trainings".into(),
-                    id_field: "id".into(),
-                    list_endpoint: Some("/v4/trainings".into()),
-                    get_endpoint: "/v4/trainings/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    identity_hash: Some(IdentityHash { fields: vec!["training_data".into(), "scoring".into()], nonce_field: Some("generation".into()), storage: HashStorage::NameSuffix, length: 8 }),
-                    state_fields: Some(vec!["identity_hash".into()]),
-                    update_strategy: UpdateStrategy::Recreate,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// fields). Mirrors the autoai_experiment shape without wiring the real kind, by
+    /// compiling a YAML literal (D10).
+    fn make_identity_hash_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: job
+  service: svc
+  kind: job
+  version: v1
+  api:
+    base_path: /v4/trainings
+    id_field: id
+    list_endpoint: /v4/trainings
+    get_endpoint: "/v4/trainings/{id}"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: list_and_get
+      id_source: id
+    identity_hash:
+      fields: [training_data, scoring]
+      nonce_field: generation
+      storage: name_suffix
+      length: 8
+    state_fields: [identity_hash]
+    update_strategy: recreate
+    use_json_patch: false
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     #[test]
@@ -1952,17 +1859,17 @@ mod tests {
         let matched = match_remote_items(&items, &json!({"name": "exp-abc12345"}), "name", Some("exp-abc12345"), None, None, None, None);
         assert_eq!(matched.len(), 1, "suffixed name matches exactly one remote");
         let mut remote_data = matched[0].clone();
-        normalize_identity_hash(&mut remote_data, &schema);
+        normalize_identity_hash(&mut remote_data, schema);
         assert_eq!(remote_data.get("identity_hash").and_then(|v| v.as_str()), Some("abc12345"), "hash parsed from name suffix");
 
         // compare with equal identity_hash → NoChange (name is not a state field).
-        let (lv, rv) = make_test_resources(json!({"name": "exp-abc12345", "identity_hash": "abc12345"}), remote_data, &schema);
+        let (lv, rv) = make_test_resources(json!({"name": "exp-abc12345", "identity_hash": "abc12345"}), remote_data, schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange), "matching hash → NoChange");
 
         // Different hash → no discovery match → RemoteResource exists:false → Create (NOT Recreate).
         let no_match = match_remote_items(&items, &json!({"name": "exp-def67890"}), "name", Some("exp-def67890"), None, None, None, None);
         assert!(no_match.is_empty(), "a differing hash yields a different suffixed name → no match");
-        let (lv2, rv2) = make_test_resources(json!({"name": "exp-def67890", "identity_hash": "def67890"}), Value::Null, &schema);
+        let (lv2, rv2) = make_test_resources(json!({"name": "exp-def67890", "identity_hash": "def67890"}), Value::Null, schema);
         let absent = RemoteResource { exists: false, ..rv2 };
         assert!(matches!(reconciler.compare(&lv2, &absent), StateComparison::Create), "differing hash → Create, never Recreate");
     }
@@ -1970,46 +1877,39 @@ mod tests {
     /// Build a job_run-shaped env_marker schema: the server clobbers submitted run
     /// names to "Notebook Job" (both CPDaaS and CP4D, live-pinned 2026-07-05), so
     /// identity rides a WXCTL_IDENTITY entry in the round-tripped
-    /// configuration.env_variables. Mirrors the wired kind without a registry.
-    fn make_env_marker_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HashStorage, HookDefinition, HttpMethod, IdentityHash, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "job_run".into(),
-                service: "common_core".into(),
-                kind: "job_run".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v2/jobs/{job}/runs".into(),
-                    id_field: "id".into(),
-                    list_endpoint: Some("/v2/jobs/{job}/runs".into()),
-                    get_endpoint: "/v2/jobs/{job}/runs/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: Some("results".into()), name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    identity_hash: Some(IdentityHash { fields: vec!["job".into(), "env_variables".into(), "project_id".into()], nonce_field: Some("generation".into()), storage: HashStorage::EnvMarker, length: 8 }),
-                    state_fields: Some(vec!["identity_hash".into()]),
-                    update_strategy: UpdateStrategy::Recreate,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// configuration.env_variables. Mirrors the wired kind without a registry, by
+    /// compiling a YAML literal (D10).
+    fn make_env_marker_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: job_run
+  service: common_core
+  kind: job_run
+  version: v1
+  api:
+    base_path: "/v2/jobs/{job}/runs"
+    id_field: id
+    list_endpoint: "/v2/jobs/{job}/runs"
+    get_endpoint: "/v2/jobs/{job}/runs/{id}"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: list_and_get
+      list_field: results
+      id_source: id
+    identity_hash:
+      fields: [job, env_variables, project_id]
+      nonce_field: generation
+      storage: env_marker
+      length: 8
+    state_fields: [identity_hash]
+    update_strategy: recreate
+    use_json_patch: false
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     /// A runs-LIST item in the live CAMS shape: name always the clobbered
@@ -2039,16 +1939,16 @@ mod tests {
         // remote's clobbered "Notebook Job" — name is neither a state field nor
         // immutable, so no Update/Recreate loop.
         let mut remote_data = matched[0].clone();
-        normalize_identity_hash(&mut remote_data, &schema);
+        normalize_identity_hash(&mut remote_data, schema);
         assert_eq!(remote_data.get("identity_hash").and_then(|v| v.as_str()), Some("abc12345"), "hash parsed from the WXCTL_IDENTITY marker");
-        let (lv, rv) = make_test_resources(json!({"name": "train-run", "identity_hash": "abc12345"}), remote_data, &schema);
+        let (lv, rv) = make_test_resources(json!({"name": "train-run", "identity_hash": "abc12345"}), remote_data, schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange), "matching marker → NoChange despite the clobbered name");
 
         // Changed input / bumped generation → different hash → no marker match →
         // exists:false → Create (a new run), never Recreate.
         let no_match = match_remote_items(&items, &json!({"name": "train-run"}), "name", None, None, None, Some("def67890"), None);
         assert!(no_match.is_empty(), "a differing hash matches no remote marker");
-        let (lv2, rv2) = make_test_resources(json!({"name": "train-run", "identity_hash": "def67890"}), Value::Null, &schema);
+        let (lv2, rv2) = make_test_resources(json!({"name": "train-run", "identity_hash": "def67890"}), Value::Null, schema);
         let absent = RemoteResource { exists: false, ..rv2 };
         assert!(matches!(reconciler.compare(&lv2, &absent), StateComparison::Create), "differing hash → Create, never Recreate");
     }
@@ -2057,56 +1957,46 @@ mod tests {
     /// name_field, and `identity_hash.storage: Local` with an explicit empty
     /// `state_fields` (compare over the hash-identity is trivially NoChange once
     /// discovered as existing). Mirrors the wired Q2 local-hash kinds without a
-    /// registry.
-    fn make_local_hash_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HashStorage, HookDefinition, HttpMethod, IdentityHash, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "sal_like".into(),
-                service: "svc".into(),
-                kind: "sal_like".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v3/sal_like".into(),
-                    id_field: "id".into(),
-                    list_endpoint: None,
-                    get_endpoint: "/v3/sal_like/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::Skip, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    identity_hash: Some(IdentityHash { fields: vec!["changes".into()], nonce_field: Some("generation".into()), storage: HashStorage::Local, length: 8 }),
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Recreate,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// registry, by compiling a YAML literal (D10).
+    fn make_local_hash_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: sal_like
+  service: svc
+  kind: sal_like
+  version: v1
+  api:
+    base_path: /v3/sal_like
+    id_field: id
+    get_endpoint: "/v3/sal_like/{id}"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: skip
+      id_source: id
+    identity_hash:
+      fields: [changes]
+      nonce_field: generation
+      storage: local
+      length: 8
+    state_fields: []
+    update_strategy: recreate
+    use_json_patch: false
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     /// Build a bare `ValidatedResource` with a caller-chosen key (kind/name), unlike
     /// `make_test_resources` which hardcodes `reg/test` and always pairs it with a
     /// `RemoteResource`. `local_hash_skip_match` only needs the local side, and the
     /// local-hash record store is keyed by kind/name, so the test needs distinct keys.
-    fn make_validated(schema: &ResourceSchema, kind: &str, name: &str, data: Value) -> ValidatedResource {
+    fn make_validated(schema: &'static SchemaIr, kind: &str, name: &str, data: Value) -> ValidatedResource {
         use wxctl_core::registry::ResourceDescriptor;
         use wxctl_core::types::ResourceKey;
-        let descriptor = std::sync::Arc::new(ResourceDescriptor::from_schema(schema).unwrap());
+        let descriptor = std::sync::Arc::new(ResourceDescriptor::from_ir(schema));
         ValidatedResource { key: ResourceKey::new(kind, name), data, descriptor, dependencies: vec![], on_destroy: Default::default() }
     }
 
@@ -2124,16 +2014,16 @@ mod tests {
         let h1 = wxctl_providers::identity_hash(&base, &fields, Some("generation"), 8);
         let mut data = base.clone();
         data["identity_hash"] = json!(h1);
-        let resource = make_validated(&schema, "sal_like", "enrich", data.clone());
+        let resource = make_validated(schema, "sal_like", "enrich", data.clone());
 
         // Fresh store → no match → Create path.
-        assert!(local_hash_skip_match(&schema, &resource, root, env).is_none());
+        assert!(local_hash_skip_match(schema, &resource, root, env).is_none());
 
         // Recorded → exists:true, and compare over state_fields [] is NoChange.
         wxctl_providers::local_hash::record_run_hash_at(root, env, "sal_like", "enrich", &h1).unwrap();
-        let found = local_hash_skip_match(&schema, &resource, root, env).expect("recorded hash matches");
+        let found = local_hash_skip_match(schema, &resource, root, env).expect("recorded hash matches");
         assert!(found.exists);
-        let (lv, rv) = make_test_resources(data.clone(), found.data.clone(), &schema);
+        let (lv, rv) = make_test_resources(data.clone(), found.data.clone(), schema);
         assert!(matches!(SchemaBasedReconciler::new().compare(&lv, &rv), StateComparison::NoChange));
 
         // Changed hashed input → new hash → no record → Create (prior record intact).
@@ -2142,7 +2032,7 @@ mod tests {
         let h2 = wxctl_providers::identity_hash(&changed, &fields, Some("generation"), 8);
         assert_ne!(h1, h2);
         changed["identity_hash"] = json!(h2);
-        assert!(local_hash_skip_match(&schema, &make_validated(&schema, "sal_like", "enrich", changed), root, env).is_none());
+        assert!(local_hash_skip_match(schema, &make_validated(schema, "sal_like", "enrich", changed), root, env).is_none());
 
         // Bumped generation → new hash → Create.
         let mut bumped = base.clone();
@@ -2150,52 +2040,45 @@ mod tests {
         let h3 = wxctl_providers::identity_hash(&bumped, &fields, Some("generation"), 8);
         assert_ne!(h1, h3);
         bumped["identity_hash"] = json!(h3);
-        assert!(local_hash_skip_match(&schema, &make_validated(&schema, "sal_like", "enrich", bumped), root, env).is_none());
+        assert!(local_hash_skip_match(schema, &make_validated(schema, "sal_like", "enrich", bumped), root, env).is_none());
     }
 
     /// Build the ingestion_job identity shape: get_by_id discovery with a
     /// client-settable `id`, `name_field: id`, `storage: name_suffix`, and an
     /// explicit `state_fields: [id]` (no synthetic identity_hash — get_by_id
-    /// never runs normalize_identity_hash). Mirrors the wired kind without a registry.
-    fn make_ingestion_job_schema() -> ResourceSchema {
-        use wxctl_schema::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, HashStorage, HookDefinition, HttpMethod, IdentityHash, ReconciliationDefinition, ResourceDefinition, ResourceSchema, SchemaDefinition, UpdateStrategy};
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "ingestion_job".into(),
-                service: "watsonx_data".into(),
-                kind: "ingestion_job".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/v3/lhingestion/api/v1/ingestion/jobs".into(),
-                    id_field: "id".into(),
-                    list_endpoint: Some("/v3/lhingestion/api/v1/ingestion/jobs?limit=100".into()),
-                    get_endpoint: "/v3/lhingestion/api/v1/ingestion/jobs/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields: vec![], ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: Some("id".into()), identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, id_source: "id".into(), list_filter: None },
-                    state_fields: Some(vec!["id".into()]),
-                    update_strategy: UpdateStrategy::Recreate,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                    identity_hash: Some(IdentityHash { fields: vec!["engine_id".into(), "source".into(), "target".into(), "partition_by".into(), "execute_config".into()], nonce_field: Some("generation".into()), storage: HashStorage::NameSuffix, length: 8 }),
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
+    /// never runs normalize_identity_hash). Mirrors the wired kind without a
+    /// registry, by compiling a YAML literal (D10).
+    fn make_ingestion_job_schema() -> &'static SchemaIr {
+        const YAML: &str = r#"
+resource:
+  name: ingestion_job
+  service: watsonx_data
+  kind: ingestion_job
+  version: v1
+  api:
+    base_path: /v3/lhingestion/api/v1/ingestion/jobs
+    id_field: id
+    list_endpoint: "/v3/lhingestion/api/v1/ingestion/jobs?limit=100"
+    get_endpoint: "/v3/lhingestion/api/v1/ingestion/jobs/{id}"
+    create_method: POST
+    delete_method: DELETE
+  schema:
+    fields: []
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: id
+      name_field: id
+    identity_hash:
+      fields: [engine_id, source, target, partition_by, execute_config]
+      nonce_field: generation
+      storage: name_suffix
+      length: 8
+    state_fields: [id]
+    update_strategy: recreate
+    use_json_patch: false
+"#;
+        wxctl_schema::ir_support::compile_to_static_ir(YAML).expect("valid test schema yaml")
     }
 
     #[test]
@@ -2212,7 +2095,7 @@ mod tests {
 
         // Unchanged re-apply: get_by_id returns the same suffixed id (job_id → id).
         // compare over state_fields=[id] → NoChange; immutable=[] adds no drift.
-        let (lv, rv) = make_test_resources(json!({"id": id1}), json!({"id": id1}), &schema);
+        let (lv, rv) = make_test_resources(json!({"id": id1}), json!({"id": id1}), schema);
         assert!(matches!(reconciler.compare(&lv, &rv), StateComparison::NoChange), "same suffixed id → NoChange (AC1/AC8 offline shape)");
 
         // Changed hashed input → different hash → different id → GET-by-id 404 →
@@ -2220,7 +2103,7 @@ mod tests {
         let changed = json!({"engine_id": "spark-1", "source": {"file_type": "parquet"}, "target": {"table": "t"}});
         let h2 = wxctl_providers::identity_hash(&changed, &fields, Some("generation"), 8);
         assert_ne!(h2, h1, "changed source → new hash → new id");
-        let (lv2, rv2) = make_test_resources(json!({"id": format!("job1-{h2}")}), Value::Null, &schema);
+        let (lv2, rv2) = make_test_resources(json!({"id": format!("job1-{h2}")}), Value::Null, schema);
         let absent2 = RemoteResource { exists: false, ..rv2 };
         assert!(matches!(reconciler.compare(&lv2, &absent2), StateComparison::Create), "changed input → Create, never Recreate");
 
@@ -2229,7 +2112,7 @@ mod tests {
         let bumped = json!({"engine_id": "spark-1", "source": {"file_type": "csv"}, "target": {"table": "t"}, "generation": "2"});
         let h3 = wxctl_providers::identity_hash(&bumped, &fields, Some("generation"), 8);
         assert_ne!(h3, h1, "bumped generation → new hash → new id");
-        let (lv3, rv3) = make_test_resources(json!({"id": format!("job1-{h3}")}), Value::Null, &schema);
+        let (lv3, rv3) = make_test_resources(json!({"id": format!("job1-{h3}")}), Value::Null, schema);
         let absent3 = RemoteResource { exists: false, ..rv3 };
         assert!(matches!(reconciler.compare(&lv3, &absent3), StateComparison::Create), "bumped generation → Create");
     }

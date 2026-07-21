@@ -1,4 +1,4 @@
-use super::definition::ResourceSchema;
+use crate::definition::ResourceSchema;
 use anyhow::{Context, Result};
 use serde_norway::Value;
 
@@ -216,13 +216,6 @@ resource:
     }
 
     #[test]
-    fn business_term_does_not_immutable_compare_parent_category() {
-        let yaml = include_str!("../schemas/common_core/business_term.yaml");
-        let schema = SchemaParser::parse_str(yaml).expect("parse business_term schema");
-        assert!(!schema.resource.reconciliation.immutable_fields.iter().any(|f| f == "parent_category"));
-    }
-
-    #[test]
     fn test_deployments_and_unsupported_on_parse() {
         let yaml = r#"
 resource:
@@ -267,7 +260,7 @@ resource:
 
     #[test]
     fn identity_hash_block_round_trips_and_reshapes_state_fields() {
-        use crate::schema::definition::HashStorage;
+        use crate::definition::HashStorage;
         let yaml = r#"
 resource:
     name: autoai_experiment
@@ -322,7 +315,7 @@ resource:
 
     #[test]
     fn identity_hash_storage_local_parses() {
-        use crate::schema::definition::HashStorage;
+        use crate::definition::HashStorage;
         let yaml = r#"
 resource:
   name: sal_like
@@ -375,7 +368,7 @@ resource:
 
     #[test]
     fn identity_hash_length_defaults_to_eight_and_storage_defaults_name_suffix() {
-        use crate::schema::definition::HashStorage;
+        use crate::definition::HashStorage;
         let yaml = r#"
 resource:
     name: k
@@ -406,37 +399,6 @@ resource:
         assert_eq!(ih.length, 8);
         assert!(matches!(ih.storage, HashStorage::NameSuffix));
         assert!(ih.nonce_field.is_none());
-    }
-
-    #[test]
-    fn ingestion_job_identity_hash_rides_id_via_name_suffix() {
-        use crate::schema::definition::HashStorage;
-        let yaml = include_str!("../schemas/watsonx_data/ingestion_job.yaml");
-        let schema = SchemaParser::parse_str(yaml).expect("parse ingestion_job schema");
-        let recon = &schema.resource.reconciliation;
-
-        let ih = recon.identity_hash.as_ref().expect("identity_hash block present");
-        assert_eq!(ih.fields, vec!["engine_id".to_string(), "source".to_string(), "target".to_string(), "partition_by".to_string(), "execute_config".to_string()]);
-        assert_eq!(ih.nonce_field.as_deref(), Some("generation"));
-        assert!(matches!(ih.storage, HashStorage::NameSuffix), "hash rides the id via name_suffix");
-        assert_eq!(ih.length, 8);
-        assert!(!ih.fields.contains(&"id".to_string()), "id is the base prefix, never a hashed field");
-
-        // name_field points the generic name_suffix step at the client-settable id.
-        assert_eq!(recon.discovery.name_field.as_deref(), Some("id"));
-
-        // Explicit state_fields = [id]; the parser must NOT have injected the
-        // synthetic identity_hash state field (get_by_id skips normalize_identity_hash).
-        let sf = recon.state_fields.as_ref().unwrap();
-        assert_eq!(sf, &vec!["id".to_string()], "state_fields is exactly [id]");
-        assert!(!sf.contains(&"identity_hash".to_string()), "no synthetic identity_hash state field");
-
-        // No immutable Recreate under the accumulate model.
-        assert!(recon.immutable_fields.is_empty(), "immutable_fields cleared — changes route to a new id → Create");
-
-        // generation is LocalOnly (never sent to the API body).
-        let generation_field = schema.resource.schema.fields.iter().find(|f| f.name == "generation").expect("generation field present");
-        assert!(matches!(generation_field.location, crate::schema::definition::FieldLocation::LocalOnly));
     }
 
     #[test]

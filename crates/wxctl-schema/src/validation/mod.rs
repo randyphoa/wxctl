@@ -27,14 +27,13 @@ pub mod error_codes {
     pub const V504: &str = "WXCTL-V504";
 }
 
-use crate::schema::ResourceSchema;
-use crate::schema::definition::SchemaDefinition;
+use crate::ir::{SchemaBodyIr, SchemaIr};
 use anyhow::anyhow;
 use serde_json::Value;
 
 /// Normalize user-facing field names (aliases) to API field names. (Moved from the
 /// engine's validation pipeline so the offline validator shares one implementation.)
-pub fn normalize_raw_resource_fields(data: &mut Value, schema: &SchemaDefinition, kind: &str) -> anyhow::Result<()> {
+pub fn normalize_raw_resource_fields(data: &mut Value, schema: &SchemaBodyIr, kind: &str) -> anyhow::Result<()> {
     let field_mapping = schema.build_field_mapping();
 
     // Extract ref_name from data for error messages (fallback to "unnamed")
@@ -78,7 +77,7 @@ pub fn normalize_raw_resource_fields(data: &mut Value, schema: &SchemaDefinition
 
 /// Dereference generic 'id' field to schema-specific id_source field. (Moved from the
 /// engine's validation pipeline.)
-pub fn dereference_id_field(data: &mut Value, schema: &ResourceSchema, kind: &str) -> anyhow::Result<()> {
+pub fn dereference_id_field(data: &mut Value, schema: &SchemaIr, kind: &str) -> anyhow::Result<()> {
     // Check if generic 'id' field is present
     let has_id = data.get("id").is_some();
 
@@ -87,7 +86,7 @@ pub fn dereference_id_field(data: &mut Value, schema: &ResourceSchema, kind: &st
     }
 
     let def = &schema.resource;
-    let id_source_field = &def.reconciliation.discovery.id_source;
+    let id_source_field = def.reconciliation.discovery.id_source;
 
     // Extract ref_name for error messages
     let ref_name = data.get("ref_name").and_then(|v| v.as_str()).unwrap_or("unnamed").to_string();
@@ -128,7 +127,7 @@ pub fn dereference_id_field(data: &mut Value, schema: &ResourceSchema, kind: &st
     let id_str = id_value.as_str().ok_or_else(|| anyhow!("Resource '{}:{}': 'id' field must be a string, got {}", kind, ref_name, id_value))?;
 
     // Step 3: Dereference id → id_source field
-    map.insert(id_source_field.clone(), Value::String(id_str.to_string()));
+    map.insert(id_source_field.to_string(), Value::String(id_str.to_string()));
 
     // Step 4: Add metadata flag to track ID dereferencing
     map.insert("_from_id".to_string(), Value::Bool(true));

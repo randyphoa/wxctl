@@ -1,5 +1,5 @@
 use super::types::ValidationError;
-use crate::schema::{FieldDefinition, ResourceSchema};
+use crate::ir::{FieldIr, SchemaIr};
 use std::cell::OnceCell;
 use std::collections::HashSet;
 use wxctl_graph::{DependencyEdge, ResourceKey, extract_references_with_path, istr, parse_reference};
@@ -9,16 +9,16 @@ use wxctl_graph::{DependencyEdge, ResourceKey, extract_references_with_path, ist
 /// `storage_registration.connection.name → cos_bucket`) are discovered
 /// alongside top-level refs so cross-resource references at any depth are
 /// recognised by dependency extraction.
-fn collect_allowed_kinds<'a>(fields: &'a [FieldDefinition], out: &mut HashSet<&'a str>) {
+fn collect_allowed_kinds<'a>(fields: &'a [FieldIr], out: &mut HashSet<&'a str>) {
     for field in fields {
         if let Some(refs) = &field.references {
-            out.insert(refs.resource.as_str());
-            for also in &refs.also_allows {
-                out.insert(also.as_str());
+            out.insert(refs.resource);
+            for also in refs.also_allows.iter().copied() {
+                out.insert(also);
             }
         }
-        if let Some(nested) = &field.schema {
-            collect_allowed_kinds(&nested.fields, out);
+        if let Some(nested) = field.schema {
+            collect_allowed_kinds(nested.fields, out);
         }
     }
 }
@@ -47,7 +47,7 @@ pub struct DependencyExtractionResult {
 pub fn extract_dependencies(
     from_key: &ResourceKey,
     data: &serde_json::Value,
-    schema: &ResourceSchema,
+    schema: &SchemaIr,
     available_resources: &[(ResourceKey, String)], // (key, kind) pairs
 ) -> DependencyExtractionResult {
     let mut seen: HashSet<ResourceKey> = HashSet::new();
@@ -58,7 +58,7 @@ pub fn extract_dependencies(
     // Build set of allowed dependency kinds from field-level references,
     // walking nested object schemas so refs at any depth are recognised.
     let mut allowed_kinds: HashSet<&str> = HashSet::new();
-    collect_allowed_kinds(&schema.resource.schema.fields, &mut allowed_kinds);
+    collect_allowed_kinds(schema.resource.schema.fields, &mut allowed_kinds);
 
     // Lazily allocate allowed_kinds_vec only when first error occurs
     let allowed_kinds_vec: OnceCell<Vec<String>> = OnceCell::new();
@@ -104,83 +104,64 @@ pub fn extract_dependencies(
     DependencyExtractionResult { dependencies, edges, errors }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests {
     use super::*;
-    use crate::schema::{ApiDefinition, DiscoveryDefinition, DiscoveryMethod, FieldDefinition, FieldReferences, FieldType, HookDefinition, HttpMethod, ReconciliationDefinition, ResourceDefinition, SchemaDefinition, UpdateStrategy};
+    use crate::ir_support::compile_to_static_ir;
     use serde_json::json;
 
-    fn make_field_with_ref(name: &str, ref_resource: &str) -> FieldDefinition {
-        FieldDefinition {
-            name: name.into(),
-            field_type: FieldType::String,
-            required: false,
-            immutable: false,
-            location: crate::schema::FieldLocation::default(),
-            description: None,
-            validation: None,
-            schema: None,
-            item_type: None,
-            default: None,
-            allowed_values: None,
-            references: Some(FieldReferences { resource: ref_resource.into(), field: "id".into(), also_allows: vec![], optional: false, require_ready: false, relationship: None }),
-            api_field: None,
-            sensitive: false,
-            also_query: false,
-            is_path: false,
-            synthesize: None,
-            synth_shape: None,
-            properties: None,
-        }
+    /// Shared shell for every test schema: a `test` kind, GetById discovery,
+    /// with `__FIELDS__` spliced in for the `schema:` body (either `fields: []`
+    /// or a `fields:` block with entries).
+    const SCHEMA_TEMPLATE: &str = "
+resource:
+  name: test
+  service: test
+  kind: test
+  version: v1
+  api:
+    base_path: /api/test
+    id_field: id
+    get_endpoint: /api/test/{id}
+    create_method: POST
+    delete_method: DELETE
+  schema:
+__FIELDS__
+  reconciliation:
+    discovery:
+      method: get_by_id
+      id_source: id
+    update_strategy: patch
+";
+
+    fn schema_ir(fields_block: &str) -> &'static SchemaIr {
+        let yaml = SCHEMA_TEMPLATE.replace("__FIELDS__", fields_block);
+        compile_to_static_ir(&yaml).expect("test schema compiles")
     }
 
-    fn make_schema(fields: Vec<FieldDefinition>) -> ResourceSchema {
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "test".into(),
-                service: "test".into(),
-                kind: "test".into(),
-                version: "v1".into(),
-                api: ApiDefinition {
-                    base_path: "/api/test".into(),
-                    id_field: "id".into(),
-                    list_endpoint: None,
-                    get_endpoint: "/api/test/{id}".into(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields, ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::GetById, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".into() },
-                    state_fields: Some(vec![]),
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: false,
-                    json_patch_path_prefix: None,
-                    identity_hash: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
+    /// A single-field `fields:` block: a string field named `name` carrying a
+    /// `references: { resource: ref_resource, field: id }`, with an optional
+    /// `also_allows` list.
+    fn field_with_ref(name: &str, ref_resource: &str, also_allows: &[&str]) -> String {
+        let mut out = format!("    fields:\n      - name: {name}\n        type: string\n        references:\n          resource: {ref_resource}\n          field: id\n");
+        if !also_allows.is_empty() {
+            out.push_str("          also_allows:\n");
+            for k in also_allows {
+                out.push_str(&format!("            - {k}\n"));
+            }
         }
+        out
     }
+
+    const NO_FIELDS: &str = "    fields: []\n";
 
     #[test]
     fn extract_dep_allowed_kind_builds_dependency_and_edge() {
-        let schema = make_schema(vec![make_field_with_ref("catalog_id", "catalog")]);
+        let schema = schema_ir(&field_with_ref("catalog_id", "catalog", &[]));
         let from_key = ResourceKey::new("test", "my-test");
         let available = vec![(ResourceKey::new("catalog", "my-cat"), "catalog".into())];
 
-        let result = extract_dependencies(&from_key, &json!({"catalog_id": "${catalog.my-cat}"}), &schema, &available);
+        let result = extract_dependencies(&from_key, &json!({"catalog_id": "${catalog.my-cat}"}), schema, &available);
 
         assert!(result.errors.is_empty());
         assert_eq!(result.dependencies, vec![ResourceKey::new("catalog", "my-cat")]);
@@ -191,11 +172,11 @@ mod tests {
 
     #[test]
     fn extract_dep_disallowed_kind() {
-        let schema = make_schema(vec![make_field_with_ref("catalog_id", "catalog")]);
+        let schema = schema_ir(&field_with_ref("catalog_id", "catalog", &[]));
         let from_key = ResourceKey::new("test", "my-test");
         let available = vec![(ResourceKey::new("connection", "my-conn"), "connection".into())];
 
-        let result = extract_dependencies(&from_key, &json!({"catalog_id": "${connection.my-conn}"}), &schema, &available);
+        let result = extract_dependencies(&from_key, &json!({"catalog_id": "${connection.my-conn}"}), schema, &available);
 
         assert_eq!(result.errors.len(), 1);
         assert!(matches!(
@@ -209,16 +190,14 @@ mod tests {
     fn extract_dep_dependency_counts() {
         // Each row: (schema, from_key, available, data, expected dep count, why).
         // All must produce zero errors — only the resolved dependency set varies.
-        let catalog_schema = || make_schema(vec![make_field_with_ref("catalog_id", "catalog")]);
+        let catalog_schema = || schema_ir(&field_with_ref("catalog_id", "catalog", &[]));
         let test_key = ResourceKey::new("test", "my-test");
         let cat_avail = vec![(ResourceKey::new("catalog", "my-cat"), "catalog".to_string())];
 
         // also_allows: a wml_function ref accepted because it's in `also_allows`.
-        let mut also_field = make_field_with_ref("asset", "ai_service");
-        also_field.references.as_mut().unwrap().also_allows = vec!["wml_function".into()];
-        let also_schema = make_schema(vec![also_field]);
+        let also_schema = schema_ir(&field_with_ref("asset", "ai_service", &["wml_function"]));
 
-        let cases: Vec<(ResourceSchema, ResourceKey, Vec<(ResourceKey, String)>, serde_json::Value, usize, &str)> = vec![
+        let cases: Vec<(&'static SchemaIr, ResourceKey, Vec<(ResourceKey, String)>, serde_json::Value, usize, &str)> = vec![
             // Same reference in two fields → deduped to one dependency.
             (catalog_schema(), test_key.clone(), cat_avail.clone(), json!({"catalog_id": "${catalog.my-cat}", "other_field": "${catalog.my-cat}"}), 1, "duplicate refs deduped"),
             // also_allows kind accepted as a dependency.
@@ -227,7 +206,7 @@ mod tests {
             (catalog_schema(), test_key.clone(), vec![], json!({"catalog_id": "plain-value"}), 0, "plain value is not a ref"),
         ];
         for (schema, from_key, available, data, want, why) in cases {
-            let result = extract_dependencies(&from_key, &data, &schema, &available);
+            let result = extract_dependencies(&from_key, &data, schema, &available);
             assert!(result.errors.is_empty(), "{why}: unexpected errors {:?}", result.errors);
             assert_eq!(result.dependencies.len(), want, "{why}: dep count");
             if want == 0 {
@@ -240,9 +219,9 @@ mod tests {
     fn dangling_ref_known_kind_errors_v005() {
         // AC1 (schema surface): a `${tool.missing_tool}` template whose kind IS a known
         // resource kind but whose referent is absent → UnresolvedReference (maps to V005).
-        let schema = make_schema(vec![make_field_with_ref("tools", "tool")]);
+        let schema = schema_ir(&field_with_ref("tools", "tool", &[]));
         let from_key = ResourceKey::new("agent", "a1");
-        let result = extract_dependencies(&from_key, &json!({ "tools": "${tool.missing_tool}" }), &schema, &[]);
+        let result = extract_dependencies(&from_key, &json!({ "tools": "${tool.missing_tool}" }), schema, &[]);
         assert_eq!(result.errors.len(), 1, "expected one dangling-ref error, got {:?}", result.errors);
         match &result.errors[0] {
             ValidationError::UnresolvedReference { ref_kind, ref_name, .. } => {
@@ -262,9 +241,9 @@ mod tests {
     #[test]
     fn literal_value_produces_no_error_no_dep() {
         // AC2: a plain literal in a ref-capable field is not a reference — no error, no dep.
-        let schema = make_schema(vec![make_field_with_ref("tools", "tool")]);
+        let schema = schema_ir(&field_with_ref("tools", "tool", &[]));
         let from_key = ResourceKey::new("agent", "a2");
-        let result = extract_dependencies(&from_key, &json!({ "tools": "a-plain-literal" }), &schema, &[]);
+        let result = extract_dependencies(&from_key, &json!({ "tools": "a-plain-literal" }), schema, &[]);
         assert!(result.errors.is_empty(), "literal must not error: {:?}", result.errors);
         assert!(result.dependencies.is_empty());
     }
@@ -275,9 +254,9 @@ mod tests {
         // behavior — no new UnresolvedReference. A field-less schema leaves allowed_kinds
         // empty (so no InvalidDependency guard fires), and resource_index("notakind") is
         // None (so no V005). Zero errors, zero deps.
-        let schema = make_schema(vec![]);
+        let schema = schema_ir(NO_FIELDS);
         let from_key = ResourceKey::new("test", "t3");
-        let result = extract_dependencies(&from_key, &json!({ "x": "${notakind.y}" }), &schema, &[]);
+        let result = extract_dependencies(&from_key, &json!({ "x": "${notakind.y}" }), schema, &[]);
         assert!(result.errors.is_empty(), "unknown kind must not error: {:?}", result.errors);
         assert!(result.dependencies.is_empty());
     }

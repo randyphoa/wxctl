@@ -24,8 +24,8 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     // `${...}` templates below. Resolve those refs now; tolerate failures (an
     // orphaned resource may reference an already-deleted parent) by falling back
     // to the raw local — delete is best-effort, not state-restoring.
-    let mut local_enriched = resolve_dependencies(&local.data, &state.runtime_ids, &descriptor.schema).unwrap_or_else(|_| local.data.clone());
-    enrich_with_linked_refs(&mut local_enriched, &local.data, &state.runtime_ids, &descriptor.schema, &state.registry);
+    let mut local_enriched = resolve_dependencies(&local.data, &state.runtime_ids, descriptor.schema).unwrap_or_else(|_| local.data.clone());
+    enrich_with_linked_refs(&mut local_enriched, &local.data, &state.runtime_ids, descriptor.schema, &state.registry);
 
     // A handler that OWNS the delete (HookOutcome::Handled) still needs the
     // server-assigned id, but in Destroy mode `local` is the ORIGINAL declared
@@ -59,7 +59,7 @@ pub(super) async fn execute<'a>(planned_op: &'a crate::reconciliation::types::Op
     // Materialize from the resolved data so Path/Query fields carry literal
     // values — otherwise `${...}` templates leak into the delete URL.
     let materializer = RequestMaterializer::new(Method::DELETE, endpoint_template);
-    let mut spec = materializer.materialize(&local_enriched, &descriptor.schema.resource.schema.fields, BodyKindSelector::None)?;
+    let mut spec = materializer.materialize(&local_enriched, descriptor.schema.resource.schema.fields, BodyKindSelector::None)?;
 
     spec.path_vars.insert(descriptor.id_field.clone(), resource_id);
 

@@ -4,11 +4,19 @@
 # watsonx SaaS profile. See README.
 #
 # Edges:
-#   space -> {package_extension, software_specification, wml_*}.space_id
+#   space -> package_extension.space_id
+#   space -> software_specification.space_id
+#   space -> wml_function.space_id
+#   space -> wml_script.space_id
+#   space -> ai_service.space_id
+#   space -> wml_deployment.space_id
 #   package_extension -> software_specification.package_extensions
-#   software_specification -> {wml_function, wml_script, ai_service}.software_spec
+#   software_specification -> wml_function.software_spec
+#   software_specification -> wml_script.software_spec
+#   software_specification -> ai_service.software_spec
 #   wml_function -> wml_deployment.asset
-#   wml_deployment -> test.deployment
+# Ordering: recorded for authors; not compiled graph edges, so the guard never parses these
+#   wml_deployment -> test.deployment (kind: test is not a graph node)
 
 kind: space
 ref_name: credit_space

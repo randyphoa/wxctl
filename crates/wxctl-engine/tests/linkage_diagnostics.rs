@@ -4,7 +4,7 @@
 //! real registry from the compiled schema set, client_factory = None, no network.
 //!
 //! Harness mirrors `depends_on_e2e.rs`: a fully-populated `ResourceRegistry` built
-//! from `wxctl_providers::load_all_schemas` + `get_handler`, driven through the real
+//! from `wxctl_schema::ir::RESOURCE_IR` + `get_handler`, driven through the real
 //! `ValidationPipeline` with `client_factory = None` and `skip_post_validate = true`
 //! (no client factory available to run post-validate hooks offline).
 
@@ -17,8 +17,8 @@ use wxctl_schema::deployment::Deployment;
 /// Build a fully-populated registry from the compiled schema set, offline.
 fn registry() -> Arc<ResourceRegistry> {
     let mut registry = ResourceRegistry::new();
-    for schema in wxctl_providers::load_all_schemas().expect("schemas parse") {
-        let handler = wxctl_providers::get_handler(&schema.resource.name);
+    for schema in wxctl_schema::ir::RESOURCE_IR.values().copied() {
+        let handler = wxctl_providers::get_handler(schema.resource.name);
         registry.register_from_schema(schema, handler, |_| Arc::new(SchemaBasedReconciler::new())).expect("register");
     }
     Arc::new(registry)

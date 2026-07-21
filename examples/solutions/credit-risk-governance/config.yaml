@@ -12,24 +12,29 @@
 # key), GATEWAY_API_KEY (AI gateway), WATSONX_URL (the SaaS watsonx.ai host).
 # See README.
 #
-# Edges (watsonx.ai + watsonx.governance):
-#   space -> {software_specification, wml_function}.space_id
-#          -> service_provider.deployment_space_id
+# Edges:
+#   space -> software_specification.space_id
+#   space -> wml_function.space_id
+#   space -> wml_deployment.space_id
+#   space -> service_provider.deployment_space_id
+#   space -> model.provider_config.watsonx_space_id
 #   software_specification -> wml_function.software_spec
 #   wml_function -> wml_deployment.asset
-#   data_mart -> subscription.data_mart_id, monitor_instance.data_mart_id
+#   data_mart -> subscription.data_mart_id
+#   data_mart -> monitor_instance.data_mart_id
 #   service_provider -> subscription.service_provider_id
-#   wml_deployment -> subscription.{asset,deployment}.*_id, test.deployment
+#   wml_deployment -> subscription.asset.asset_id
+#   wml_deployment -> subscription.deployment.deployment_id
 #   subscription -> monitor_instance.target.target_id
-# Edges (watsonx Orchestrate layer):
-#   gateway_conn -> gateway_model.connection_id
-#   space -> gateway_model.provider_config.watsonx_space_id
-#   wml_deployment -> scorer_conn (depends_on; the deployment id flows into the
-#       connection credentials so the tool can call the governed deployment)
-#   scorer_conn -> score_applicant.binding.python.connections
-#   gateway_model -> loan_desk.llm
-#   score_applicant -> loan_desk.tools
-#   loan_desk -> agent_decision_test.agent
+#   orchestrate_connection -> model.connection_id
+#   model -> agent.llm
+#   tool -> agent.tools
+# Ordering: recorded for authors; not compiled graph edges, so the guard never parses these
+#   wml_deployment -> test.deployment (kind: test is not a graph node)
+#   wml_deployment -> scorer_conn (depends_on: the deployment id flows into the connection
+#       credentials so the scorer tool can call the governed deployment)
+#   scorer_conn -> score_applicant.binding.python.connections (tool binding = code contract, no edge)
+#   loan_desk -> agent_decision_test.agent (kind: test is not a graph node)
 
 kind: space
 ref_name: gov_space

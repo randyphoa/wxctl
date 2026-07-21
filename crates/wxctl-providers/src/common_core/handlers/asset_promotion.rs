@@ -277,8 +277,8 @@ mod tests {
     fn reconciler_compare_is_existence_only() {
         use wxctl_core::ResourceKey;
         let key = ResourceKey::new("asset_promotion", "promote_model");
-        let schema = wxctl_schema::load_all_schemas().unwrap().into_iter().find(|s| s.resource.kind == "asset_promotion").expect("asset_promotion schema present");
-        let local = ValidatedResource { key: key.clone(), data: json!({"asset_name": "m"}), descriptor: std::sync::Arc::new(wxctl_core::registry::ResourceDescriptor::from_schema(&schema).unwrap()), dependencies: vec![], on_destroy: wxctl_core::OnDestroyPolicy::Delete };
+        let ir = wxctl_schema::ir::RESOURCE_IR.get("asset_promotion").copied().expect("asset_promotion in RESOURCE_IR");
+        let local = ValidatedResource { key: key.clone(), data: json!({"asset_name": "m"}), descriptor: std::sync::Arc::new(wxctl_core::registry::ResourceDescriptor::from_ir(ir)), dependencies: vec![], on_destroy: wxctl_core::OnDestroyPolicy::Delete };
         let found = RemoteResource { key: key.clone(), data: json!({"id": "a-1"}), exists: true };
         let absent = RemoteResource { key, data: Value::Null, exists: false };
         assert!(matches!(AssetPromotionReconciler.compare(&local, &found), StateComparison::NoChange));

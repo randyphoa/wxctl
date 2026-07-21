@@ -105,12 +105,11 @@ impl CommandContext {
         // "failed" manifest on the way out — otherwise `wxctl runs`/`wxctl debug` see no
         // record for exactly the failures they exist to diagnose.
         let mut registry = ResourceRegistry::new();
-        let schemas = wxctl_providers::load_all_schemas().inspect_err(|_| run_sink.finalize("failed"))?;
-        for schema in schemas {
-            let handler = wxctl_providers::get_handler(&schema.resource.name);
+        for ir in wxctl_schema::ir::RESOURCE_IR.values().copied() {
+            let handler = wxctl_providers::get_handler(ir.resource.name);
             // Per-kind custom reconcilers first (e.g. asset_promotion); the generic
             // schema-driven reconciler covers everything else.
-            registry.register_from_schema(schema, handler, |s| wxctl_providers::get_reconciler(&s.resource.name).unwrap_or_else(|| Arc::new(SchemaBasedReconciler::new()))).inspect_err(|_| run_sink.finalize("failed"))?;
+            registry.register_from_schema(ir, handler, |ir| wxctl_providers::get_reconciler(ir.resource.name).unwrap_or_else(|| Arc::new(SchemaBasedReconciler::new()))).inspect_err(|_| run_sink.finalize("failed"))?;
         }
         let registry = Arc::new(registry);
 

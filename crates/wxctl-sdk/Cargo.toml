@@ -12,6 +12,7 @@ description = "SDK for programmatic access to wxctl"
 wxctl-core = { path = "../wxctl-core", version = "0.1" }
 wxctl-engine = { path = "../wxctl-engine", version = "0.1" }
 wxctl-providers = { path = "../wxctl-providers", version = "0.1" }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1" }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }

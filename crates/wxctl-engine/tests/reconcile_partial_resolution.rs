@@ -132,7 +132,7 @@ resource:
 "#;
     let mut registry = ResourceRegistry::new();
     for yaml in [parent_yaml, child_yaml] {
-        let schema = wxctl_schema::SchemaParser::parse_str(yaml).expect("synthetic schema parses");
+        let schema = wxctl_schema::ir_support::compile_to_static_ir(yaml).expect("synthetic schema parses");
         registry.register_from_schema(schema, None, |_| Arc::new(SchemaBasedReconciler::new())).expect("register");
     }
     Arc::new(registry)

@@ -4,9 +4,9 @@
 //! deep-merges its YAML form onto the base, and re-deserializes. Also exposes
 //! `is_unsupported_on` for the `unsupported_on` constraint check.
 
+use crate::definition::ResourceDefinition;
 use crate::deployment::{Deployment, select_overlay_key};
-use crate::schema::definition::ResourceDefinition;
-use crate::schema::merge::deep_merge;
+use crate::merge::deep_merge;
 use anyhow::{Context, Result};
 
 /// Resolve the effective `ResourceDefinition` for the active deployment.
@@ -54,8 +54,8 @@ pub fn is_unsupported_on(base: &ResourceDefinition, deployment: &Deployment) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::definition::*;
     use crate::deployment::DeploymentConstraint;
-    use crate::schema::definition::*;
     use semver::Version;
     use std::collections::HashMap;
 

@@ -6,7 +6,7 @@ demo the tool falls back to a bundled mock ledger whenever the ERP is
 unreachable (here: always), so apply and test succeed without a real ERP.
 """
 
-import os
+from ibm_watsonx_orchestrate.run import connections
 
 # Bundled mock ledger of invoices already seen in the AP system.
 _SAMPLE_LEDGER = [
@@ -19,11 +19,16 @@ _SAMPLE_LEDGER = [
 def _lookup_ledger() -> list:
     """Return the invoice ledger to check against.
 
-    A real implementation would fetch the ERP ledger from ERP_BASE_URL using
-    the bound connection's credentials; this demo always returns the bundled
-    mock ledger so it never depends on a reachable ERP.
+    A real implementation would fetch the ERP ledger from the bound
+    `northwind-erp` connection's `erp_base_url`; this demo falls back to the
+    bundled mock ledger whenever the ERP (or its connection) is unavailable, so
+    it never depends on a reachable ERP.
     """
-    _ = os.environ.get("ERP_BASE_URL")  # present only to show where the ERP would be read
+    try:
+        creds = connections.key_value("northwind-erp")
+        _ = creds["erp_base_url"]  # where a real fetch would read the ERP ledger
+    except Exception:  # noqa: BLE001 (any failure falls back to the bundled ledger)
+        pass
     return _SAMPLE_LEDGER
 
 

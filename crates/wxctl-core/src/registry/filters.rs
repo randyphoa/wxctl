@@ -1,7 +1,7 @@
 use super::FieldDescriptor;
 use anyhow::Result;
 use serde_json::Value;
-use wxctl_schema::schema::FieldLocation;
+use wxctl_schema::ir::FieldLocationIr;
 
 /// Filter out Computed, LocalOnly, and Query fields from API request bodies
 ///
@@ -18,7 +18,7 @@ pub fn filter_request_fields(data: &Value, fields: &[FieldDescriptor]) -> Result
         for field in fields {
             // Remove fields that should not be sent in request body
             match field.location {
-                FieldLocation::Computed | FieldLocation::LocalOnly | FieldLocation::Query => {
+                FieldLocationIr::Computed | FieldLocationIr::LocalOnly | FieldLocationIr::Query => {
                     obj.remove(&field.name);
                 }
                 _ => {
@@ -36,7 +36,7 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn make_field_desc(name: &str, location: FieldLocation) -> FieldDescriptor {
+    fn make_field_desc(name: &str, location: FieldLocationIr) -> FieldDescriptor {
         FieldDescriptor { name: name.to_string(), required: false, immutable: false, location }
     }
 
@@ -45,12 +45,12 @@ mod tests {
         // Computed/LocalOnly/Query and the internal ref_name are stripped from the
         // request body; Body/Path/Header fields (and unlisted keys) are retained.
         let fields = vec![
-            make_field_desc("status", FieldLocation::Computed),
-            make_field_desc("source_path", FieldLocation::LocalOnly),
-            make_field_desc("version", FieldLocation::Query),
-            make_field_desc("name", FieldLocation::Body),
-            make_field_desc("id", FieldLocation::Path),
-            make_field_desc("x-custom", FieldLocation::Header),
+            make_field_desc("status", FieldLocationIr::Computed),
+            make_field_desc("source_path", FieldLocationIr::LocalOnly),
+            make_field_desc("version", FieldLocationIr::Query),
+            make_field_desc("name", FieldLocationIr::Body),
+            make_field_desc("id", FieldLocationIr::Path),
+            make_field_desc("x-custom", FieldLocationIr::Header),
         ];
         let data = json!({"status": "active", "source_path": "/tmp", "version": "v1", "ref_name": "my-ref", "name": "agent", "id": "123", "x-custom": "val"});
 

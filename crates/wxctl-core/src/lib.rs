@@ -31,4 +31,3 @@ pub use registry::filters::filter_request_fields;
 pub use registry::{ResourceDescriptor, ResourceRegistry};
 pub use traits::{AdvisorySink, NoOpAdvisorySink, Reconciler, ResourceHandler, StateComparison};
 pub use types::{Config, IStr, OnDestroyPolicy, Profile, RawResource, RemoteResource, ResourceKey, ValidatedResource, error_chain_vec, istr};
-pub use wxctl_schema::schema::{ResourceDefinition, ResourceSchema, SchemaParser};

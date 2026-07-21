@@ -1,5 +1,4 @@
 use crate::deployment::DeploymentConstraint;
-use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -255,7 +254,11 @@ pub struct FieldDefinition {
     /// (the build-graph spelling for object/array item sub-fields). Parsed but not
     /// consumed at runtime — the runtime model uses `schema:` for nesting. Declared
     /// so `deny_unknown_fields` accepts the schemas that use `properties:`.
-    #[serde(default)]
+    /// Always `None` post-parse (`normalize_properties` rewrites `properties:` into
+    /// `schema.fields` before deserialization), so it's skipped on serialize: the
+    /// owned model's serialization then matches the IR (`wxctl-schema/src/ir.rs`
+    /// `FieldIr`), which omits this field entirely (see tests/ir_parse_equivalence.rs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub properties: Option<HashMap<String, FieldDefinition>>,
 
     /// When true, the field holds a local filesystem path that `resolve_file_paths`
@@ -593,15 +596,6 @@ pub struct HookDefinition {
     pub post_delete: Option<String>,
 }
 
-impl ResourceSchema {
-    /// Validate schema consistency and alias rules
-    pub fn validate(&self) -> Result<()> {
-        validate_aliases(&self.resource.schema)?;
-        crate::validation::schema::validate_reconciliation_patch_prefix(&self.resource.reconciliation, &self.resource.kind).map_err(|e| anyhow!("Schema validation failed: {}", e))?;
-        Ok(())
-    }
-}
-
 impl ResourceDefinition {
     /// Sensitive dotted paths for LOGGED API bodies, request AND response: the
     /// field-derived `schema.sensitive_paths()` superset plus CAMS response-envelope
@@ -624,23 +618,6 @@ impl ResourceDefinition {
         }
         out
     }
-}
-
-/// Validate schema consistency
-/// Currently validates that references are properly structured.
-fn validate_aliases(schema: &SchemaDefinition) -> Result<()> {
-    // Validate that fields with references have the expected structure
-    for field in &schema.fields {
-        if let Some(refs) = &field.references {
-            if refs.resource.is_empty() {
-                return Err(anyhow!("Schema validation failed: Field '{}' has references with empty resource.", field.name));
-            }
-            if refs.field.is_empty() {
-                return Err(anyhow!("Schema validation failed: Field '{}' has references with empty field.", field.name));
-            }
-        }
-    }
-    Ok(())
 }
 
 impl SchemaDefinition {
@@ -815,46 +792,6 @@ mod tests {
         f
     }
 
-    fn make_test_schema(fields: Vec<FieldDefinition>) -> ResourceSchema {
-        ResourceSchema {
-            resource: ResourceDefinition {
-                name: "test".to_string(),
-                service: "test".to_string(),
-                kind: "test".to_string(),
-                version: "v1".to_string(),
-                api: ApiDefinition {
-                    base_path: "/test".to_string(),
-                    id_field: "id".to_string(),
-                    list_endpoint: None,
-                    get_endpoint: "/test/{id}".to_string(),
-                    create_endpoint: None,
-                    create_method: HttpMethod::Post,
-                    update_endpoint: None,
-                    update_method: None,
-                    delete_endpoint: None,
-                    delete_method: HttpMethod::Delete,
-                    readiness: None,
-                },
-                schema: SchemaDefinition { fields, ..Default::default() },
-                reconciliation: ReconciliationDefinition {
-                    discovery: DiscoveryDefinition { method: DiscoveryMethod::ListAndGet, list_field: None, name_field: None, identity_match: None, absent_when: None, list_method: None, list_body: None, list_map: false, list_filter: None, id_source: "id".to_string() },
-                    state_fields: None,
-                    update_strategy: UpdateStrategy::Patch,
-                    immutable_fields: vec![],
-                    reject_on_immutable_drift: false,
-                    use_json_patch: true,
-                    json_patch_path_prefix: None,
-                    identity_hash: None,
-                },
-                hooks: HookDefinition::default(),
-                deployments: None,
-                unsupported_on: vec![],
-                description: None,
-                prompt: None,
-            },
-        }
-    }
-
     #[test]
     fn test_compute_state_fields_excludes_computed_local() {
         let schema =
@@ -889,21 +826,6 @@ mod tests {
         assert!(!mapping.contains_key("s3_bucket"), "ambiguous alias must be removed, got {mapping:?}");
         assert_eq!(mapping.get("connection").unwrap(), "conn", "unambiguous aliases stay");
         assert_eq!(mapping.len(), 1);
-    }
-
-    #[test]
-    fn test_validate_rejects_empty_reference_parts() {
-        // Each row: (reference resource, reference field, expected error substring).
-        // A reference must name both a non-empty resource and a non-empty field.
-        let cases: &[(&str, &str, &str)] = &[
-            ("", "asset_id", "empty resource"),            // empty resource
-            ("orchestrate_connection", "", "empty field"), // empty field
-        ];
-        for (res, field, needle) in cases {
-            let schema = make_test_schema(vec![make_field_with_ref("conn_id", res, field)]);
-            let err = schema.validate().unwrap_err();
-            assert!(err.to_string().contains(needle), "ref({res:?},{field:?}) should error '{needle}', got: {err}");
-        }
     }
 
     #[test]

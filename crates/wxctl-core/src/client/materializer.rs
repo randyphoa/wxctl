@@ -2,7 +2,7 @@ use super::request::{BodyKind, RequestSpec};
 use anyhow::{Result, anyhow};
 use reqwest::Method;
 use serde_json::{Map, Value};
-use wxctl_schema::schema::{FieldDefinition, FieldLocation};
+use wxctl_schema::ir::{FieldIr, FieldLocationIr};
 
 /// Insert a value at a nested path in a JSON object (e.g., "additional_properties.icon")
 /// When both the existing value and new value are objects, they are merged (new values take precedence).
@@ -54,7 +54,7 @@ impl RequestMaterializer {
     /// Materialize RequestSpec from resource data and schema fields
     /// Partitions fields by location: Body, Query, Path, Header
     /// Excludes Computed and LocalOnly fields
-    pub fn materialize(self, data: &Value, fields: &[FieldDefinition], body_kind: BodyKindSelector) -> Result<RequestSpec> {
+    pub fn materialize(self, data: &Value, fields: &[FieldIr], body_kind: BodyKindSelector) -> Result<RequestSpec> {
         let obj = data.as_object().ok_or_else(|| anyhow!("Resource data must be a JSON object"))?;
 
         let mut spec = RequestSpec::new(self.method, self.path_template);
@@ -64,36 +64,36 @@ impl RequestMaterializer {
 
         for field in fields {
             // Skip if field not present in data
-            let value = match obj.get(&field.name) {
+            let value = match obj.get(field.name) {
                 Some(v) => v,
                 None => continue,
             };
 
             match field.location {
-                FieldLocation::Body => {
+                FieldLocationIr::Body => {
                     if bodyless && field.also_query {
                         // Bodyless verb (GET/DELETE) — straddle field becomes a query
                         // param instead of being silently dropped with the body.
-                        spec.query.push((field.name.clone(), coerce_to_string(value)?));
+                        spec.query.push((field.name.to_string(), coerce_to_string(value)?));
                     } else {
                         // Use api_field if specified, otherwise use field.name
-                        let target_path = field.api_field.as_ref().unwrap_or(&field.name);
+                        let target_path = field.api_field.unwrap_or(field.name);
                         insert_nested(&mut body_fields, target_path, value.clone())?;
                     }
                 }
-                FieldLocation::Query => {
+                FieldLocationIr::Query => {
                     let string_value = coerce_to_string(value)?;
-                    spec.query.push((field.name.clone(), string_value));
+                    spec.query.push((field.name.to_string(), string_value));
                 }
-                FieldLocation::Path => {
+                FieldLocationIr::Path => {
                     let string_value = coerce_to_string(value)?;
-                    spec.path_vars.insert(field.name.clone(), string_value);
+                    spec.path_vars.insert(field.name.to_string(), string_value);
                 }
-                FieldLocation::Header => {
+                FieldLocationIr::Header => {
                     let string_value = coerce_to_string(value)?;
-                    spec.headers.insert(field.name.clone(), string_value);
+                    spec.headers.insert(field.name.to_string(), string_value);
                 }
-                FieldLocation::Computed | FieldLocation::LocalOnly => {
+                FieldLocationIr::Computed | FieldLocationIr::LocalOnly => {
                     // Skip - not sent to API
                 }
             }
@@ -113,7 +113,7 @@ pub enum BodyKindSelector<'a> {
     /// Standard JSON body
     Json,
     /// JSON Patch with specific changed fields
-    JsonPatch { changed_fields: Vec<String>, path_prefix: String, fields: &'a [FieldDefinition] },
+    JsonPatch { changed_fields: Vec<String>, path_prefix: String, fields: &'a [FieldIr] },
 }
 
 impl<'a> BodyKindSelector<'a> {
@@ -218,13 +218,13 @@ pub fn extract_nested<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
 /// Path prefix can be configured per resource:
 /// - "/entity" for CP4D compatibility
 /// - "" for standard RFC 6902 paths
-fn generate_json_patch(data: &Value, changed_fields: &[String], path_prefix: &str, fields: &[FieldDefinition]) -> Value {
+fn generate_json_patch(data: &Value, changed_fields: &[String], path_prefix: &str, fields: &[FieldIr]) -> Value {
     let mut operations = Vec::new();
 
     for field_name in changed_fields {
         // Find the field definition to get api_field path if present
-        let field_def = fields.iter().find(|f| &f.name == field_name);
-        let api_path = field_def.and_then(|f| f.api_field.as_ref()).map(|s| s.as_str()).unwrap_or(field_name.as_str());
+        let field_def = fields.iter().find(|f| f.name == field_name.as_str());
+        let api_path = field_def.and_then(|f| f.api_field).unwrap_or(field_name.as_str());
 
         // Extract value from the nested structure using the api_path
         if let Some(value) = extract_nested(data, api_path) {
@@ -247,12 +247,12 @@ fn generate_json_patch(data: &Value, changed_fields: &[String], path_prefix: &st
 mod tests {
     use super::*;
     use serde_json::json;
-    use wxctl_schema::schema::{FieldDefinition, FieldLocation, FieldType};
+    use wxctl_schema::ir::FieldTypeIr;
 
-    fn make_field(name: &str, location: FieldLocation) -> FieldDefinition {
-        FieldDefinition {
-            name: name.to_string(),
-            field_type: FieldType::String,
+    fn make_field(name: &'static str, location: FieldLocationIr) -> FieldIr {
+        FieldIr {
+            name,
+            field_type: FieldTypeIr::String,
             required: false,
             immutable: false,
             location,
@@ -266,7 +266,6 @@ mod tests {
             api_field: None,
             sensitive: false,
             also_query: false,
-            properties: None,
             is_path: false,
             synthesize: None,
             synth_shape: None,
@@ -278,7 +277,14 @@ mod tests {
         // One materialize call exercises every FieldLocation branch: Body lands in
         // the body, Query/Path/Header land in their partitions, and Computed +
         // LocalOnly are dropped (never sent to the API).
-        let fields = vec![make_field("name", FieldLocation::Body), make_field("version", FieldLocation::Query), make_field("id", FieldLocation::Path), make_field("x-custom", FieldLocation::Header), make_field("status", FieldLocation::Computed), make_field("source_path", FieldLocation::LocalOnly)];
+        let fields = vec![
+            make_field("name", FieldLocationIr::Body),
+            make_field("version", FieldLocationIr::Query),
+            make_field("id", FieldLocationIr::Path),
+            make_field("x-custom", FieldLocationIr::Header),
+            make_field("status", FieldLocationIr::Computed),
+            make_field("source_path", FieldLocationIr::LocalOnly),
+        ];
         let data = json!({"name": "my-agent", "version": "2024-01-01", "id": "abc-123", "x-custom": "value", "status": "active", "source_path": "/tmp/tool"});
 
         let spec = RequestMaterializer::new(Method::POST, "/agents/{id}").materialize(&data, &fields, BodyKindSelector::Json).unwrap();
@@ -297,10 +303,10 @@ mod tests {
     fn test_api_field_nesting_and_merge_shared_parent() {
         // Two fields with api_field paths under the same parent must merge into one
         // nested object rather than the second overwriting the first.
-        let mut field1 = make_field("icon", FieldLocation::Body);
-        field1.api_field = Some("additional_properties.icon".to_string());
-        let mut field2 = make_field("color", FieldLocation::Body);
-        field2.api_field = Some("additional_properties.color".to_string());
+        let mut field1 = make_field("icon", FieldLocationIr::Body);
+        field1.api_field = Some("additional_properties.icon");
+        let mut field2 = make_field("color", FieldLocationIr::Body);
+        field2.api_field = Some("additional_properties.color");
         let fields = vec![field1, field2];
         let data = json!({"icon": "star", "color": "blue"});
 
@@ -313,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_json_patch_generation_with_and_without_prefix() {
-        let fields = vec![make_field("description", FieldLocation::Body)];
+        let fields = vec![make_field("description", FieldLocationIr::Body)];
         let data = json!({"description": "updated"});
 
         // Empty prefix → standard RFC 6902 path "/description".
@@ -345,7 +351,7 @@ mod tests {
     fn test_also_query_field_routes_by_verb() {
         // A Body field with also_query stays in the body for body-bearing verbs (POST),
         // but becomes a query param for bodyless verbs (DELETE) instead of being dropped.
-        let mut field = make_field("space_id", FieldLocation::Body);
+        let mut field = make_field("space_id", FieldLocationIr::Body);
         field.also_query = true;
         let fields = vec![field];
         let data = json!({"space_id": "abc"});
@@ -395,10 +401,10 @@ mod tests {
     #[test]
     fn test_insert_nested_non_object_intermediate_returns_error() {
         // First field writes "additional_properties" as a plain string into body
-        let field1 = make_field("additional_properties", FieldLocation::Body);
+        let field1 = make_field("additional_properties", FieldLocationIr::Body);
         // Second field tries to nest under "additional_properties.icon"
-        let mut field2 = make_field("icon", FieldLocation::Body);
-        field2.api_field = Some("additional_properties.icon".to_string());
+        let mut field2 = make_field("icon", FieldLocationIr::Body);
+        field2.api_field = Some("additional_properties.icon");
         let fields = vec![field1, field2];
         let data = json!({"additional_properties": "not-an-object", "icon": "star"});
 

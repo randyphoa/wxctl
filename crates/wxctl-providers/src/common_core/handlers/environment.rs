@@ -176,8 +176,8 @@ mod tests {
     // every re-apply re-plans Create.
     #[test]
     fn environment_schema_identity_match_targets_cams_envelope() {
-        let schema = wxctl_schema::load_all_schemas().unwrap().into_iter().find(|s| s.resource.kind == "environment").expect("environment schema present");
-        let im = schema.resource.reconciliation.discovery.identity_match.expect("environment discovery must declare identity_match");
+        let schema = wxctl_schema::ir::RESOURCE_IR.get("environment").copied().expect("kind in RESOURCE_IR");
+        let im = schema.resource.reconciliation.discovery.identity_match.as_ref().expect("environment discovery must declare identity_match");
         assert_eq!(im.local_path, "display_name");
         assert_eq!(im.remote_path, "entity.environment.display_name");
     }

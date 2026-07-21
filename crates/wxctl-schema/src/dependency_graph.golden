@@ -96,7 +96,9 @@ data_asset
 data_mart
 data_set
   dep data_mart
+  dep subscription
   edge data_mart_id -> data_mart (required)
+  edge target.target_id -> subscription (required)
 database_connection
 database_registration
   dep database_connection
@@ -110,8 +112,18 @@ gcs_bucket
   edge connection -> storage_connection (required)
 guardrails_policy
 ingestion_job
+  dep database_registration
+  dep s3_bucket
+  dep s3_object
+  dep schema
   dep spark_engine
+  dep storage_registration
   edge engine_id -> spark_engine (optional)
+  edge source.file_paths -> s3_bucket (optional)
+  edge source.file_paths -> s3_object (optional)
+  edge target.catalog -> database_registration (optional)
+  edge target.catalog -> storage_registration (required)
+  edge target.schema -> schema (required)
 instana_alert
   dep instana_alerting_channel
   dep instana_custom_event_spec
@@ -182,7 +194,13 @@ milvus_service
   edge storage_name -> storage_registration (optional)
 model
   dep orchestrate_connection
+  dep project
+  dep space
+  dep wml_deployment
   edge connection_id -> orchestrate_connection (required)
+  edge provider_config.watsonx_deployment_id -> wml_deployment (optional)
+  edge provider_config.watsonx_project_id -> project (optional)
+  edge provider_config.watsonx_space_id -> space (optional)
 model_entry
   dep inventory
   edge catalog_id -> inventory (required)
@@ -209,7 +227,7 @@ monitor_instance
   dep subscription
   edge data_mart_id -> data_mart (required)
   edge monitor_definition_id -> monitor_definition (optional)
-  edge target.target_id -> subscription (optional)
+  edge target.target_id -> subscription (required)
 notebook
   dep environment
   dep project
@@ -218,6 +236,8 @@ notebook
 orchestrate_connection
 other_engine
 pa_chore
+  dep pa_process
+  edge tasks.process -> pa_process (required)
 pa_cube
   dep pa_dimension
   edge dimensions -> pa_dimension (required)
@@ -281,6 +301,10 @@ s3_object
   edge bucket -> s3_bucket (required)
   edge region -> s3_bucket (required)
 sal_enrichment_job
+  dep database_registration
+  dep storage_registration
+  edge changes.catalog -> database_registration (optional)
+  edge changes.catalog -> storage_registration (required)
 sal_enrichment_settings
 sal_global_settings
 sal_glossary
@@ -332,7 +356,10 @@ storage_registration
 subscription
   dep data_mart
   dep service_provider
+  dep wml_deployment
+  edge asset.asset_id -> wml_deployment (required)
   edge data_mart_id -> data_mart (required)
+  edge deployment.deployment_id -> wml_deployment (required)
   edge service_provider_id -> service_provider (required)
 tool
   dep orchestrate_connection

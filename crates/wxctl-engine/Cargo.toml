@@ -32,6 +32,7 @@ schema = ["dep:schemars"]
 [dev-dependencies]
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+wxctl-schema = { path = "../wxctl-schema", version = "0.1", features = ["test-support"] }
 
 [lints]
 workspace = true
