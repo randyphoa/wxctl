@@ -72,16 +72,16 @@ url = "2.5"
 regex = "1.12"
 tempfile = "3.27"
 tokio-util = { version = "0.7", features = ["rt"] }
-base64 = "0.22"
+base64 = "0.23"
 sha2 = "0.11"
-dirs = "6.0"
+dirs = "7.0"
 parking_lot = "0.12"
 flate2 = "1.1.9"
 tokio = { version = "1.52", features = ["full"] }
 tracing = "0.1"
 thiserror = "2.0"
 anyhow = "1.0"
-syn = { version = "2.0", features = ["full", "extra-traits"] }
+syn = { version = "3.0", features = ["full", "extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 reqwest = { version = "0.13", features = ["json", "multipart"] }
@@ -93,11 +93,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "registry", "j
 colored = "3.1"
 chrono = "0.4"
 uuid = { version = "1.23", features = ["v4", "serde"] }
-opentelemetry = "0.32"
-opentelemetry_sdk = "0.32"
-opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
+opentelemetry = "0.33"
+opentelemetry_sdk = "0.33"
+opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.33"
-rmcp = { version = "1.8", features = ["server", "transport-io", "macros"] }
+rmcp = { version = "3.4", features = ["server", "transport-io", "macros"] }
 schemars = "1.2"
 
 [profile.release]
